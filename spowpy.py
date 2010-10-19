@@ -5,7 +5,7 @@
 
 # Import libs
 #------------
-import pylab, sys, ConfigParser, numpy, types, pickle, h5py
+import pylab, sys, ConfigParser, numpy, types, pickle
 
 
 ELEMENTS_FILE = open('elements.dat','r')
@@ -496,14 +496,16 @@ class Sample:
         for key in self.__dict__.keys():
             if key[0] == 'c':
                 elkey_list.append(key[1:])
-                exec "c_tmp = self." + key 
+                exec "c_tmp = self." + key
+                #print key
                 c_list.append(c_tmp)
         cnorm_array = numpy.array(c_list) / float(sum(c_list))   
+        #print cnorm_array
         mav = 0
         fav = 0
         for i in range(0,len(elkey_list)):
             # sum up average atom density
-            mav = mav + cnorm_array[i]*DICT_atomic_mass[elkey_list[i]]
+            mav = mav + cnorm_array[i]*DICT_atomic_mass[elkey_list[i]]*u
             # sum up average atom factor
             fav = fav + cnorm_array[i]*self._fX(globals()["SF_" + elkey_list[i]])
         n0 = self.massdensity/mav
