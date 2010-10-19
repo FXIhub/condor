@@ -655,41 +655,127 @@ class Output:
             print "ERROR: %s is no valid scaling." % scaling
             return
 
-    def plot_radial_distribution(self):
-        """ Creates 1-dimensional plots showing radial sum of scattered photons."""  
-        # draw radial sums of scattered photons (per binned pixel)
-        f1d = pylab.figure(figsize=(10,5))
-        f1d.suptitle("\nRadial distribution of scattered photons in detector plane", fontsize=16)
-        f1d_ax_left = f1d.add_axes([0.1, 0.1, 0.35, 0.7],title='Radial scaling: binned-pixel',xlabel="r [binned-pixel]",ylabel="N(r) [photons/binned-pixel]")
-        r_pix = numpy.arange(0,len(self.intensity_radial_sum),1)
-        f1d_ax_left.semilogy(r_pix,self.photons_radial_sum*self.pixel_size**2,'k',r_pix,self.photons_radial_average*self.pixel_size**2,'k:')
-        f1d_ax_left.legend(('Radial sum', 'Radial average'),'upper right', shadow=True)
-        # draw radial sums of scattered photons (per Nyquist-pixel)
-        f1d_ax_right = f1d.add_axes([0.55, 0.1, 0.35, 0.7],title="Radial scaling: Nyquist-pixel",xlabel="r [Nyquist-pixel]",ylabel="N(r) [photons/Nyquist-pixel])")
-        r_nypix = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))
-        f1d_ax_right.semilogy(r_nypix,self.photons_radial_sum*self.nyquistpixel_size**2,'k',r_nypix,self.photons_radial_average*self.nyquistpixel_size**2,'k:')
-        f1d_ax_right.legend(('Radial sum', 'Radial average'),'upper right', shadow=True)
-        f1d.show()
+    def plot_radial_distribution(self,scaling="both pixel",mode="all"):
+        """
+        Creates 1-dimensional plot(s) showing radial distribution of scattered photons.
+        Usage: plot_radial_distribution([scaling],[mode])
+        Arguments:
+        - scaling: Specifies spatial scaling.
+                   Can be set to 'pixel', 'nyquist pixel', 'both pixel' or 'meter'.
+                   'both pixel' leads to creation of two plots in one figure using pixel- and Nyquist-pixel-scaling.
+        - mode:    Mode specifies whether the radial average or the radial sum will be plotted.
+                   Can be set to 'radial average', 'radial sum' or 'all'.
+        """
+        def get_arguments(r,area):
+            if mode == "all":
+                legend_args = [('Radial sum', 'Radial average'),'upper right']
+                plot_args = [r,self.photons_radial_sum*area,'k',r,self.photons_radial_average*area,'k:']
+            elif mode == "radial sum":
+                legend_args = [('Radial sum'),'upper right']
+                plot_args = [r,self.photons_radial_sum*area,'k']
+            elif mode == "radial average":
+                legend_args = [('Radial average'),'upper right']
+                plot_args = [r,self.photons_radial_average*area,'k']
+            else:
+                print "ERROR: %s is no valid mode" % mode
+            return [plot_args,legend_args]
 
-    def plot_pattern(self):
-        """ Creates 2-dimensional plots showing radial sum of scattered photons."""  
-        # draw intensity plot (N/pixel)
-        f2d = pylab.figure(figsize=(10,6))
+        if scaling == "both pixel":
+            f1d = pylab.figure(figsize=(10,5))
+            f1d.suptitle("\nRadial distribution of scattered photons in detector plane", fontsize=16)
+            str_scaling = "binned-pixel"
+            f1d_ax_left = f1d.add_axes([0.1, 0.1, 0.35, 0.7],title='Radial scaling:' + str_scaling,xlabel="r [" + str_scaling + "]",ylabel="I(r) [photons/" + str_scaling + "]")
+            str_scaling = "Nyquist-pixel"
+            f1d_ax_right = f1d.add_axes([0.55, 0.1, 0.35, 0.7],title='Radial scaling:' + str_scaling,xlabel="r [" + str_scaling + "]",ylabel="I(r) [photons/" + str_scaling + "]")
+            r = numpy.arange(0,len(self.intensity_radial_sum),1)
+            area = self.pixel_size**2
+            [plot_arguments,legend_arguments] = get_arguments(r,area)
+            f1d_ax_left.semilogy(*plot_args)
+            f1d_ax_left.legend(*legend_args)
+            r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))       
+            area = self.nyquistpixel_size**2
+            [plot_arguments,legend_arguments] = get_arguments(r,area)
+            f1d_ax_right.semilogy(*plot_args)
+            f1d_ax_right.legend(*legend_args)
+            f1d.show()
+            return
+        elif scaling == "pixel":
+            str_scaling = "binned pixel"
+            r = numpy.arange(0,len(self.intensity_radial_sum),1)
+            area = self.pixel_size**2
+        elif scaling == "nyquist pixel":
+            str_scaling == "Nyquist-pixel"
+            r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))
+            area = self.nyquistpixel_size**2       
+        elif scaling == "meter":
+            str_scaling = "meter"
+            r = numpy.arange(0,min([self.pixel_number_x,self.pixel_number_y])/2*self.pixel_size,min([self.pixel_number_x,self.pixel_number_y])/2*self.pixel_size/len(self.intensity_radial_sum))
+            area = 1.0
+        else:
+            print "ERROR: %s is no valid scaling" % scaling
+            return
+        [plot_arguments,legend_arguments] = get_arguments(r,area)
+        f1d = pylab.figure(figsize=(5,5))
+        f1d.suptitle("\nRadial distribution of scattered photons in detector plane", fontsize=16)
+        f1d_ax = f1d.add_axes([0.2, 0.1, 0.7, 0.7],title='Radial scaling:' + str_scaling,xlabel="r [" + str_scaling + "]",ylabel="I(r) [photons/" + str_scaling + "]")
+        f1d_ax.semilogy(*plot_args)
+        f1d_ax.legend(*legend_args)
+        f1d.show()
+        
+    def plot_pattern(self,scaling="both pixels"):
+        """
+        Creates 2-dimensional plot(s) of the distribution of scattered photons.
+        Usage:
+        """
+        if scaling == "both pixels":
+            f2d = pylab.figure(figsize=(10,6))
+            # draw intensity plot (N/pixel)
+            str_scaling = "binned-pixel"
+            area = self.pixel_size**2
+            max_x = self.pixel_number_x
+            max_y = self.pixel_number_y
+            f2d.suptitle("\n2-dimensional distribution of scattered photons in detector plane", fontsize=16)
+            f2d_ax_left = f2d.add_axes([3/30.0,5/18.0,10/30.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
+            f2d_axcolor_left = f2d.add_axes([3/30.0,3/18.0,10/30.0,0.5/18.0])
+            im_left = f2d_ax_left.matshow(numpy.log10(self.intensity_pattern*area),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+            cb1 = f2d.colorbar(im_left, cax=f2d_axcolor_left,orientation='horizontal')
+            cb1.set_label("log10( I [photons/" + str_scaling + "] )")
+            # draw intensity plot (N/Nyquist-pixel)
+            str_scaling = "Nyquist-pixel"
+            area = self.nyquistpixel_size**2
+            max_x = self.nyquistpixel_number_x
+            max_y = self.nyquistpixel_number_y
+            f2d_ax_right = f2d.add_axes([17/30.0,5/18.0,10/30.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
+            f2d_axcolor_right = f2d.add_axes([17/30.0,3/18.0,10/30.0,0.5/18.0])
+            im_right = f2d_ax_right.matshow(numpy.log10(self.intensity_pattern*area),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+            cb2 = f2d.colorbar(im_right, cax=f2d_axcolor_right,orientation='horizontal')
+            cb2.set_label("log10( I [photons/" + str_scaling + "] )")
+            f2d.show()
+            return
+        elif scaling == "meter":
+            str_scaling = "meter"
+            area = 1.0
+            max_x = self.pixel_number_x*self.pixel_size
+            max_y = self.pixel_number_y*self.pixel_size
+        elif scaling == "pixel":
+            str_scaling = "binned-pixel"
+            area = self.pixel_size**2
+            max_x = self.pixel_number_x
+            max_y = self.pixel_number_y
+        elif scaling == "nyquist pixel":
+            str_scaling = "Nyquist-pixel"
+            area = self.nyquistpixel_size**2
+            max_x = self.nyquistpixel_number_x
+            max_y = self.nyquistpixel_number_y
+        f2d = pylab.figure(figsize=(5,6))
         f2d.suptitle("\n2-dimensional distribution of scattered photons in detector plane", fontsize=16)
-        f2d_ax_left = f2d.add_axes([3/30.0,5/18.0,10/30.0,10/18.0],title='Scaling: binned-pixel',xlabel="x [binned-pixel]",ylabel="y [binned-pixel]")
-        f2d_axcolor_left = f2d.add_axes([3/30.0,3/18.0,10/30.0,0.5/18.0])
-        im_left = f2d_ax_left.matshow(numpy.log10(self.intensity_pattern*self.pixel_size**2),extent=[-self.pixel_number_x/2,self.pixel_number_x/2,-self.pixel_number_y/2,self.pixel_number_y/2])
-        cb1 = f2d.colorbar(im_left, cax=f2d_axcolor_left,orientation='horizontal')
-        cb1.set_label("log10( N [photons/binned-pixel] )")
-        # draw intensity plot (N/Nyquist-pixel)
-        f2d_ax_right = f2d.add_axes([17/30.0,5/18.0,10/30.0,10/18.0],title='Scaling: Nyquist-pixel',xlabel="x [Nyquist-pixel]",ylabel="y [Nyquist-pixel]")
-        f2d_ax_right.minorticks_on()
-        #f2d_ax_right.grid(linestyle='-', linewidth=1)
-        f2d_axcolor_right = f2d.add_axes([17/30.0,3/18.0,10/30.0,0.5/18.0])
-        im_right = f2d_ax_right.matshow(numpy.log10(self.intensity_pattern*self.nyquistpixel_size**2),extent=[-self.nyquistpixel_number_x/2,self.nyquistpixel_number_x/2,-self.nyquistpixel_number_y/2,self.nyquistpixel_number_y/2], cmap=pylab.cm.jet)
-        cb2 = f2d.colorbar(im_right, cax=f2d_axcolor_right,orientation='horizontal')
-        cb2.set_label("log10( N [photons/Nyquist-pixel] )")
+        f2d_ax = f2d.add_axes([3/15.0,5/18.0,10/15.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
+        f2d_axcolor = f2d.add_axes([3/15.0,3/18.0,10/15.0,0.5/18.0])
+        im = f2d_ax.matshow(numpy.log10(self.intensity_pattern*area),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+        cb = f2d.colorbar(im, cax=f2d_axcolor,orientation='horizontal')
+        cb.set_label("log10( I [photons/" + str_scaling + "] )")
         f2d.show()
+            
 
 class Outdata:
     """ Output data storage object
@@ -870,7 +956,7 @@ def spow(input_obj=False):
         de_Ny_binned = de_Ny_binned + int(de_gapsize/de_psize)
     elif de_gaporientation == 'y':
         de_Nx_binned = de_Nx_binned + int(de_gapsize/de_psize)
-    de_pdOmega = 1/de_distance**2    
+    de_pdOmega = 1.0/de_distance**2    
     dm_d = so_wavelength*de_distance/(de_psize*de_N_binned)
     dm_dA = dm_d**2
     PRES = int(de_N_binned/input_obj.output.downsamplingfactor)
@@ -1050,14 +1136,6 @@ def spow(input_obj=False):
     # Delete gaps between detector halves and cut to real size
     N_delete_gap(Npattern)
     Npattern = N_cut_to_real_size(Npattern)
-
-    #if input_obj.detector.noise == 'none':
-    #    pass
-    #elif input_obj.detector.noise == 'poisson':
-    #    pylab.poisson(Npattern)
-    #else:
-    #    print "ERROR: No valid noise given: %s = %s" % (vars()[input_obj.detector.noise],input_obj.detector.noise)
-
 
     # Determine radial sums of scattered photons
     [Nradsum,Nradav] = N_radial(Npattern)
