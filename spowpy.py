@@ -9,13 +9,14 @@ import pylab, sys, ConfigParser, numpy, types, pickle, h5py
 
 
 ELEMENTS_FILE = open('elements.dat','r')
-[_tmp_dict_masses,[SF_Ac,SF_Ag,SF_Al,SF_Ar,SF_As,SF_At,SF_Au,SF_Ba,SF_Be,SF_Bi,SF_B,SF_Br,SF_Ca,SF_Cd,SF_Ce,SF_Cl,SF_C,SF_Co,SF_Cr,SF_Cs,SF_Cu,SF_Dy,SF_Er,SF_Eu,SF_Fe,SF_F,SF_Fr,SF_Ga,SF_Gd,SF_Ge,SF_He,SF_Hf,SF_Hg,SF_H,SF_Ho,SF_I,SF_In,SF_Ir,SF_K,SF_Kr,SF_La,SF_Li,SF_Lu,SF_Mg,SF_Mn,SF_Mo,SF_Na,SF_Nb,SF_Nd,SF_Ne,SF_Ni,SF_N,SF_O,SF_Os,SF_Pa,SF_Pb,SF_Pd,SF_Pm,SF_P,SF_Po,SF_Pr,SF_Pt,SF_Ra,SF_Rb,SF_Re,SF_Rh,SF_Rn,SF_Ru,SF_Sb,SF_Sc,SF_Se,SF_Si,SF_Sm,SF_S,SF_Sn,SF_Sr,SF_Ta,SF_Tb,SF_Tc,SF_Te,SF_Th,SF_Ti,SF_Tl,SF_Tm,SF_U,SF_V,SF_W,SF_Xe,SF_Yb,SF_Y,SF_Zn,SF_Zr]] = pickle.load(ELEMENTS_FILE)
+loaded_elements = pickle.load(ELEMENTS_FILE)
+[_tmp_dict_masses,[SF_Ac,SF_Ag,SF_Al,SF_Ar,SF_As,SF_At,SF_Au,SF_Ba,SF_Be,SF_Bi,SF_B,SF_Br,SF_Ca,SF_Cd,SF_Ce,SF_Cl,SF_C,SF_Co,SF_Cr,SF_Cs,SF_Cu,SF_Dy,SF_Er,SF_Eu,SF_Fe,SF_F,SF_Fr,SF_Ga,SF_Gd,SF_Ge,SF_He,SF_Hf,SF_Hg,SF_H,SF_Ho,SF_I,SF_In,SF_Ir,SF_K,SF_Kr,SF_La,SF_Li,SF_Lu,SF_Mg,SF_Mn,SF_Mo,SF_Na,SF_Nb,SF_Nd,SF_Ne,SF_Ni,SF_N,SF_O,SF_Os,SF_Pa,SF_Pb,SF_Pd,SF_Pm,SF_P,SF_Po,SF_Pr,SF_Pt,SF_Ra,SF_Rb,SF_Re,SF_Rh,SF_Rn,SF_Ru,SF_Sb,SF_Sc,SF_Se,SF_Si,SF_Sm,SF_S,SF_Sn,SF_Sr,SF_Ta,SF_Tb,SF_Tc,SF_Te,SF_Th,SF_Ti,SF_Tl,SF_Tm,SF_U,SF_V,SF_W,SF_Xe,SF_Yb,SF_Y,SF_Zn,SF_Zr]] = loaded_elements
 ELEMENTS_FILE.close()
 
 F_MIN_ENERGY_EV = 0
 F_MAX_ENERGY_EV = 0
 SF_pairlist = 0
-for var in globals():
+for var in loaded_elements[1]:
     if var[:3] == 'SF_':
         exec "SF_pairlist = " + var
         if F_MIN_ENERGY_EV < SF_pairlist[0][0] or F_MIN_ENERGY_EV == 0: F_MIN_ENERGY_EV = SF_pairlist[0][0]
