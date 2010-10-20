@@ -9,13 +9,15 @@ import pylab, sys, ConfigParser, numpy, types, pickle
 
 
 ELEMENTS_FILE = open('elements.dat','r')
-_loaded_elements = pickle.load(ELEMENTS_FILE)
-[_tmp_dict_masses,[SF_Ac,SF_Ag,SF_Al,SF_Ar,SF_As,SF_At,SF_Au,SF_Ba,SF_Be,SF_Bi,SF_B,SF_Br,SF_Ca,SF_Cd,SF_Ce,SF_Cl,SF_C,SF_Co,SF_Cr,SF_Cs,SF_Cu,SF_Dy,SF_Er,SF_Eu,SF_Fe,SF_F,SF_Fr,SF_Ga,SF_Gd,SF_Ge,SF_He,SF_Hf,SF_Hg,SF_H,SF_Ho,SF_I,SF_In,SF_Ir,SF_K,SF_Kr,SF_La,SF_Li,SF_Lu,SF_Mg,SF_Mn,SF_Mo,SF_Na,SF_Nb,SF_Nd,SF_Ne,SF_Ni,SF_N,SF_O,SF_Os,SF_Pa,SF_Pb,SF_Pd,SF_Pm,SF_P,SF_Po,SF_Pr,SF_Pt,SF_Ra,SF_Rb,SF_Re,SF_Rh,SF_Rn,SF_Ru,SF_Sb,SF_Sc,SF_Se,SF_Si,SF_Sm,SF_S,SF_Sn,SF_Sr,SF_Ta,SF_Tb,SF_Tc,SF_Te,SF_Th,SF_Ti,SF_Tl,SF_Tm,SF_U,SF_V,SF_W,SF_Xe,SF_Yb,SF_Y,SF_Zn,SF_Zr]] = _loaded_elements
-ELEMENTS_FILE.close()
+# _loaded_elements = pickle.load(ELEMENTS_FILE)
+# [_tmp_dict_masses,[SF_Ac,SF_Ag,SF_Al,SF_Ar,SF_As,SF_At,SF_Au,SF_Ba,SF_Be,SF_Bi,SF_B,SF_Br,SF_Ca,SF_Cd,SF_Ce,SF_Cl,SF_C,SF_Co,SF_Cr,SF_Cs,SF_Cu,SF_Dy,SF_Er,SF_Eu,SF_Fe,SF_F,SF_Fr,SF_Ga,SF_Gd,SF_Ge,SF_He,SF_Hf,SF_Hg,SF_H,SF_Ho,SF_I,SF_In,SF_Ir,SF_K,SF_Kr,SF_La,SF_Li,SF_Lu,SF_Mg,SF_Mn,SF_Mo,SF_Na,SF_Nb,SF_Nd,SF_Ne,SF_Ni,SF_N,SF_O,SF_Os,SF_Pa,SF_Pb,SF_Pd,SF_Pm,SF_P,SF_Po,SF_Pr,SF_Pt,SF_Ra,SF_Rb,SF_Re,SF_Rh,SF_Rn,SF_Ru,SF_Sb,SF_Sc,SF_Se,SF_Si,SF_Sm,SF_S,SF_Sn,SF_Sr,SF_Ta,SF_Tb,SF_Tc,SF_Te,SF_Th,SF_Ti,SF_Tl,SF_Tm,SF_U,SF_V,SF_W,SF_Xe,SF_Yb,SF_Y,SF_Zn,SF_Zr]] = _loaded_elements
+# ELEMENTS_FILE.close()
+DICT_atomic_mass,DICT_scattering_factors = pickle.load(ELEMENTS_FILE)
 
 F_MIN_ENERGY_EV = 0
 F_MAX_ENERGY_EV = 0
-for var in _loaded_elements[1]:
+#for var in _loaded_elements[1]:
+for var in DICT_scattering_factors.values():
     if F_MIN_ENERGY_EV < var[0][0] or F_MIN_ENERGY_EV == 0: F_MIN_ENERGY_EV = var[0][0]
     if F_MAX_ENERGY_EV > var[-1][0] or F_MAX_ENERGY_EV == 0: F_MAX_ENERGY_EV = var[-1][0]
 
@@ -39,8 +41,8 @@ DICT_atomic_composition = {'protein':[86,52,13,15,0,3],'virus':[72.43,47.52,13.5
 # Typical realative atomic compositions (order: H,C,N.O,P,S)
 DICT_massdensity = {'protein':1350,'virus':1455,'cell':1000,'latexball':1050,'water':998,'Au':19300}
 # Massnumbers [weight per atom in u]
-DICT_atomic_mass =  dict(_tmp_dict_masses)
-del _tmp_dict_masses
+#DICT_atomic_mass =  dict(_tmp_dict_masses)
+#del _tmp_dict_masses
 # Physical constants [SI-units]
 DICT_physical_constants = {'e':1.602176487E-19,'c':299792458,'h':6.62606896E-34,'re':2.8179402894E-15,'barn':1E-28,'u':1.66053886E-27}
 
@@ -226,8 +228,11 @@ class Sample:
     def get_material(self):
         return self.material
         
-    def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3):
-        """ Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles eul_ang1, eul_ang2 and eul_ang3 [rad]. Function finally sets samplemode to MODE_SAMPLE_DENSITYMAP. """
+    def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3,f):
+        """
+        Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles eul_ang1, eul_ang2 and eul_ang3 [rad]. Function finally sets samplemode to MODE_SAMPLE_DENSITYMAP.
+        Densitymap resolution is set to highest resolution that can be achieved by the given detector geometry. That can be changed by putting
+        """
         densitymap_d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
         self.set_material('virus')
         f_times_n0 = self.determine_f_times_n0_average()
@@ -356,6 +361,9 @@ class Sample:
                 return True
             else:
                 return False
+        def rotate_Y(v,alpha):
+            rotM = numpy.array([[numpy.cos(alpha),0,numpy.sin(alpha)],[0,1,0],[-numpy.sin(alpha),0,numpy.cos(alpha)]])
+            return numpy.dot(rotM,v)
         def rotate_X(v,alpha):
             rotM = numpy.array([[1,0,0],[0,numpy.cos(alpha),-numpy.sin(alpha)],[0,numpy.sin(alpha),numpy.cos(alpha)]])
             return numpy.dot(rotM,v)
@@ -505,7 +513,8 @@ class Sample:
             # sum up average atom density
             mav = mav + cnorm_array[i]*DICT_atomic_mass[elkey_list[i]]*u
             # sum up average atom factor
-            fav = fav + cnorm_array[i]*self._fX(globals()["SF_" + elkey_list[i]])
+            #fav = fav + cnorm_array[i]*self._fX(globals()["SF_" + elkey_list[i]])
+            fav += cnorm_array[i]*self._fX(DICT_scattering_factors[elkey_list[i]])
         n0 = self.massdensity/mav
         return n0*fav
 
@@ -522,8 +531,9 @@ class Sample:
         ph_energy_eV = c*h/e/self._parent.source.wavelength
         u = DICT_physical_constants['u']
         mX = DICT_atomic_mass[elementX]*u
-        exec "%s" % SF_X + ' = SF_' + el
-        fX = self._fX(SF_X)
+        #exec "%s" % SF_X + ' = SF_' + el
+        #fX = self._fX(SF_X)
+        fX = self._fX(DICT_scattering_factors[el])
         n0X = rhoX/mX
         return fX*n0X
 
@@ -619,7 +629,7 @@ class Source:
         self._parent = parent
 
 class Output:
-    """ Output object that is normally generated by 'spow'
+    """ Output object of 'spow'
     - contains data generated by 'spow':
       - intensity_pattern
       - intensity_radial_sum
@@ -631,10 +641,10 @@ class Output:
     - contains function for saving data
       - save_to_file: saves data to png- or h5-file
       - save_Output_object_to_file: pickles the whole data to file that can be recovered by using load_Output_object_from_file  
+    
     """
-
     def __init__(self):
-        self.loglist = _WritableObject()
+        self.loglist = _WritableObject() # still needed?
 
     def get_pattern(self,scaling="meter"):
         if scaling == "meter":
@@ -843,6 +853,57 @@ def load_Output_object_from_file(filename):
     for i in range(0,len(keys)):
         exec "output_obj." + keys[i] + " = unpickled_list[i+1]"
     return output_obj
+            
+
+class Outdata:
+    """ Output data storage object
+    Datasets created by spow Outdata-objects.
+    Datasets can be exported to h5-files or can be pickled using appropriate functions of Outdata.
+    Initialization: data_obj = Outdata(<filename>) -> reads saved output-data from pickled file"""
+    def __init__(self,filename=False):
+        if filename:
+            self.load_from_file(filename)
+
+    def _init_rad(self,r_array,N_array,scalingmode):
+        self.plotmode = MODE_PLOT_1D
+        self.scalingmode = scalingmode
+        self.r_array = r_array
+        self.N_array = N_array
+
+    def _init_2d(self,N_pattern,number_of_pixels_x,number_of_pixels_y,scalingmode):
+        self.plotmode = MODE_PLOT_2D        
+        self.scalingmode = scalingmode
+        self.N_pattern = N_pattern
+        self.number_of_pixels_x = number_of_pixels_x
+        self.number_of_pixels_y = number_of_pixels_y
+ 
+    def from_picklefile(self,filename):
+        """ Reads saved output-data from pickled file. """   
+        picklefile = open(filename,'r')
+        pickled = pickle.load(picklefile)
+        if pickled[0] == MODE_PLOT_1D:
+            self.plotmode = MODE_PLOT_1D
+            self.scalingmode = pickled[1]
+            self.r_array = pickled[2]
+            self.N_array = pickled[3]
+            try:
+                del self.N_pattern
+                del self.number_of_pixels_x
+                del self.number_of_pixels_y
+            except:
+                pass
+        elif pickled[0] == MODE_PLOT_2D:
+            self.plotmode = MODE_PLOT_2D        
+            self.scalingmode = pickled[1]
+            self.N_pattern = pickled[2]
+            self.number_of_pixels_x = pickled[3]
+            self.number_of_pixels_y = pickled[4]
+            try:
+                del self.r_array
+                del self.N_array
+            except:
+                pass
+        picklefile.close()
         
 
 # Class for commandline-output
@@ -903,7 +964,8 @@ def spow(input_obj=False):
         print "       Minimal photon energy = %f eV" % F_MIN_ENERGY_EV
         print "       Maximal photon energy = %f eV" % F_MAX_ENERGY_EV
         return
-    input_obj.sample._fX(SF_H)
+    #input_obj.sample._fX(SF_H)
+    input_obj.sample._fX(DICT_scattering_factors['H'])
     so_wavelength = input_obj.source.wavelength 
     output.wavelength = so_wavelength
     ph_energy_eV = c*h/e/so_wavelength
