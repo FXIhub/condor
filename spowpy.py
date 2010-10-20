@@ -377,7 +377,7 @@ class Sample:
         for i in range(0,len(overs_nNlist)):
             overs_nNlist[i] = rotate_Z(overs_nNlist[i],eul_ang1)
             overs_nNlist[i] = rotate_X(overs_nNlist[i],eul_ang2)
-            overs_nNlist[i] = rotate_Y(overs_nNlist[i],eul_ang3)
+            overs_nNlist[i] = rotate_Z(overs_nNlist[i],eul_ang3)
         cutpos = []
         for iz in range(0,overs_N):
             for iy in range(0,overs_N):
