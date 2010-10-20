@@ -228,8 +228,11 @@ class Sample:
     def get_material(self):
         return self.material
         
-    def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3):
-        """ Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles eul_ang1, eul_ang2 and eul_ang3 [rad]. Function finally sets samplemode to MODE_SAMPLE_DENSITYMAP. """
+    def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3,f):
+        """
+        Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles eul_ang1, eul_ang2 and eul_ang3 [rad]. Function finally sets samplemode to MODE_SAMPLE_DENSITYMAP.
+        Densitymap resolution is set to highest resolution that can be achieved by the given detector geometry. That can be changed by putting
+        """
         densitymap_d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
         self.set_material('virus')
         f_times_n0 = self.determine_f_times_n0_average()
