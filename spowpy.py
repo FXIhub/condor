@@ -6,17 +6,14 @@
 # Import libs
 #------------
 import pylab, sys, ConfigParser, numpy, types, pickle
+import pylab, sys, ConfigParser, numpy, types, pickle
 
 
 ELEMENTS_FILE = open('elements.dat','r')
-# _loaded_elements = pickle.load(ELEMENTS_FILE)
-# [_tmp_dict_masses,[SF_Ac,SF_Ag,SF_Al,SF_Ar,SF_As,SF_At,SF_Au,SF_Ba,SF_Be,SF_Bi,SF_B,SF_Br,SF_Ca,SF_Cd,SF_Ce,SF_Cl,SF_C,SF_Co,SF_Cr,SF_Cs,SF_Cu,SF_Dy,SF_Er,SF_Eu,SF_Fe,SF_F,SF_Fr,SF_Ga,SF_Gd,SF_Ge,SF_He,SF_Hf,SF_Hg,SF_H,SF_Ho,SF_I,SF_In,SF_Ir,SF_K,SF_Kr,SF_La,SF_Li,SF_Lu,SF_Mg,SF_Mn,SF_Mo,SF_Na,SF_Nb,SF_Nd,SF_Ne,SF_Ni,SF_N,SF_O,SF_Os,SF_Pa,SF_Pb,SF_Pd,SF_Pm,SF_P,SF_Po,SF_Pr,SF_Pt,SF_Ra,SF_Rb,SF_Re,SF_Rh,SF_Rn,SF_Ru,SF_Sb,SF_Sc,SF_Se,SF_Si,SF_Sm,SF_S,SF_Sn,SF_Sr,SF_Ta,SF_Tb,SF_Tc,SF_Te,SF_Th,SF_Ti,SF_Tl,SF_Tm,SF_U,SF_V,SF_W,SF_Xe,SF_Yb,SF_Y,SF_Zn,SF_Zr]] = _loaded_elements
-# ELEMENTS_FILE.close()
 DICT_atomic_mass,DICT_scattering_factors = pickle.load(ELEMENTS_FILE)
 
 F_MIN_ENERGY_EV = 0
 F_MAX_ENERGY_EV = 0
-#for var in _loaded_elements[1]:
 for var in DICT_scattering_factors.values():
     if F_MIN_ENERGY_EV < var[0][0] or F_MIN_ENERGY_EV == 0: F_MIN_ENERGY_EV = var[0][0]
     if F_MAX_ENERGY_EV > var[-1][0] or F_MAX_ENERGY_EV == 0: F_MAX_ENERGY_EV = var[-1][0]
@@ -40,9 +37,6 @@ MODE_SCALING_NYQUISTPIX = 1
 DICT_atomic_composition = {'protein':[86,52,13,15,0,3],'virus':[72.43,47.52,13.55,17.17,1.11,0.7],'cell':[23,3,1,10,0,1],'latexball':[1,1,0,0,0,0],'water':[2,0,0,1,0,0]}
 # Typical realative atomic compositions (order: H,C,N.O,P,S)
 DICT_massdensity = {'protein':1350,'virus':1455,'cell':1000,'latexball':1050,'water':998,'Au':19300}
-# Massnumbers [weight per atom in u]
-#DICT_atomic_mass =  dict(_tmp_dict_masses)
-#del _tmp_dict_masses
 # Physical constants [SI-units]
 DICT_physical_constants = {'e':1.602176487E-19,'c':299792458,'h':6.62606896E-34,'re':2.8179402894E-15,'barn':1E-28,'u':1.66053886E-27}
 
@@ -228,17 +222,15 @@ class Sample:
     def get_material(self):
         return self.material
         
-    def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3,f):
+    def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor=1):
         """
-        Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles eul_ang1, eul_ang2 and eul_ang3 [rad]. Function finally sets samplemode to MODE_SAMPLE_DENSITYMAP.
-        Densitymap resolution is set to highest resolution that can be achieved by the given detector geometry. That can be changed by putting
+        Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles euler_angle1, euler_angle2 and euler_angle3 [rad]. Function finally sets samplemode to MODE_SAMPLE_DENSITYMAP.
+        Usage: create_virus(radius,euler-angle1,euler-angle2,euler-angle3,[speedup_factor])
+        Densitymap resolution is set to highest resolution that can be achieved by the given detector geometry. For rough simulations that can be changed by setting the optional argument 'speedup_factor' to an integer bigger than 1.
         """
-        densitymap_d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
         self.set_material('virus')
-        f_times_n0 = self.determine_f_times_n0_average()
-        PRES = int(self._parent.detector._N()/self._parent.detector.binned)
-        [self.densitymap,self.densitymap3d] = self._makedm_icosahedron(radius,densitymap_d,f_times_n0,2,PRES,eul_ang1,eul_ang2,eul_ang3)  
-        self._parent.set_samplemode_to_densitymap(self.densitymap,densitymap_d)
+        [self.densitymap,self.densitymap3d,self.densitymap_d] = self._makedm_icosahedron(radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor)  
+        self._parent.set_samplemode_to_densitymap(self.densitymap,self.densitymap_d)
 
     def put_sphere(self,element,radius,x,y):
         """ Adds goldball to 2-dimensional denstiymap (3-dimensional densitymap is not changed).
@@ -314,27 +306,36 @@ class Sample:
         else:
             return dm3d
 
-    def _makedm_icosahedron(self,radius,densitymap_d,f_times_n0,oversampling_factor,RES,eul_ang1,eul_ang2,eul_ang3):  
-        """ Returns densitymaps [densitymap_2d,densitymap_3d] of homogeneous icosahedron (volume equals volume of a sphere with given radius)
+    def _makedm_icosahedron(self,radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor):  
+        """
+        Returns densitymaps [densitymap_2d,densitymap_3d] of homogeneous icosahedron (volume equals volume of a sphere with given radius)
         arguments:
         - radius in m
-        - densitymap_d: gridconstant in m
-        - f_times_n0 (atomic scattering factor times atom number density) in 1/m3
-        - oversampling_factor = 1,2,3,... can be set >1 to avoid sampling artefacts
-        - RES edgelength of 2-dimensional densitymap after framing in number of datapoints"""
+        - 3 Euler-angles for rotation in 3d-space
+        - speedup_factor = 1,2,3,... can be set >1 to get a rough densitymap that has a lower resolution as the highest resolution that can be resolved by detector.
+        """
+
         if self._parent._printmode == MODE_PRINT_STD:
             clout = sys.stdout
         if self._parent._printmode == MODE_PRINT_OBJ:
             self._parent.output._loglist = _WritableObject()
             clout = loglist
+
         a = radius*(16*numpy.pi/5.0/(3+numpy.sqrt(5)))**(1/3.0)
         Rmax = numpy.sqrt(10.0+2*numpy.sqrt(5))*a/4.0
         Rmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*a
-        overs_densitymap_d = 1.0*densitymap_d/oversampling_factor
-        overs_nRmax = (Rmax/overs_densitymap_d)
-        overs_nRmin = (Rmin/overs_densitymap_d) 
-        overs_N = int(2*overs_nRmax)
-        dm3d = numpy.ones((overs_N,overs_N,overs_N))
+
+        f_times_n0 = self.determine_f_times_n0_average()
+        d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()*speedup_factor
+
+        nRmax = (Rmax/d)
+        nRmin = (Rmin/d) 
+        N = int(2*nRmax)
+
+        dm3d = numpy.ones((N,N,N))
+
+        r_pix = d*(3/4/numpy.pi)**(1/3.0)
+
         clout.write("... build icosahedron geometry ...\n")
         phi = (1+numpy.sqrt(5))/2.0
         R = 1.0
@@ -361,9 +362,6 @@ class Sample:
                 return True
             else:
                 return False
-        def rotate_Y(v,alpha):
-            rotM = numpy.array([[numpy.cos(alpha),0,numpy.sin(alpha)],[0,1,0],[-numpy.sin(alpha),0,numpy.cos(alpha)]])
-            return numpy.dot(rotM,v)
         def rotate_X(v,alpha):
             rotM = numpy.array([[1,0,0],[0,numpy.cos(alpha),-numpy.sin(alpha)],[0,numpy.sin(alpha),numpy.cos(alpha)]])
             return numpy.dot(rotM,v)
@@ -371,46 +369,48 @@ class Sample:
             rotM = numpy.array([[numpy.cos(alpha),-numpy.sin(alpha),0],[numpy.sin(alpha),numpy.cos(alpha),0],[0,0,1]])
             return numpy.dot(rotM,v)
         X = [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12]
-        overs_nNlist = []
+        n_list = []
         for i in range(0,len(X)):
             for j in range(0,len(X)):
                 for k in range(0,len(X)):
-                    n = (X[i]+X[j]+X[k])/6*a/overs_densitymap_d
-                    if angles_match(X[i],X[j],X[k]) and not cont_element(n,overs_nNlist):
-                        overs_nNlist.append(n)
-        clout.write("... build icosahedron in %i x %i x %i grid (%i datapoints)...\n" % (overs_N,overs_N,overs_N,overs_N**3))
-        for i in range(0,len(overs_nNlist)):
-            overs_nNlist[i] = rotate_Z(overs_nNlist[i],eul_ang1)
-            overs_nNlist[i] = rotate_X(overs_nNlist[i],eul_ang2)
-            overs_nNlist[i] = rotate_Z(overs_nNlist[i],eul_ang3)
+                    n = (X[i]+X[j]+X[k])/6*a/d
+                    if angles_match(X[i],X[j],X[k]) and not cont_element(n,n_list):
+                        n_list.append(n)
+        clout.write("... build icosahedron in %i x %i x %i grid (%i datapoints)...\n" % (N,N,N,N**3))
+
+        for i in range(0,len(n_list)):
+            print n_list[i][0]**2+n_list[i][1]**2+n_list[i][2]**2
+            n_list[i] = rotate_Z(n_list[i],eul_ang1)
+            n_list[i] = rotate_X(n_list[i],eul_ang2)
+            n_list[i] = rotate_Z(n_list[i],eul_ang3)
+            print n_list[i][0]**2+n_list[i][1]**2+n_list[i][2]**2
+            print "done"
+
         cutpos = []
-        for iz in range(0,overs_N):
-            for iy in range(0,overs_N):
-                for ix in range(0,overs_N):
-                    r = numpy.sqrt((ix-overs_nRmax)**2+(iy-overs_nRmax)**2+(iz-overs_nRmax)**2)
-                    if r > overs_nRmax:
+        for iz in range(0,N):
+            for iy in range(0,N):
+                for ix in range(0,N):
+                    r = (ix-nRmax)**2+(iy-nRmax)**2+(iz-nRmax)**2
+                    if r > nRmax**2:
                         dm3d[iz,iy,ix] = 0
-                    elif r>= overs_nRmin:
+                    elif r >= nRmin**2:
                         cutpos.append([iz,iy,ix])
         clout.write("... reduced number of datapoints to %i ...\n" % len(cutpos))
-        for m in range(0,len(overs_nNlist)):
-            n = overs_nNlist[m]
+        for m in range(0,len(n_list)):
+            n = n_list[m]
             for pos in cutpos:
-                r = numpy.array([pos[0]-overs_nRmax,pos[1]-overs_nRmax,pos[2]-overs_nRmax])
-                if numpy.dot(n,(r-n)) > 0:
+                r = numpy.array([pos[0]-nRmax,pos[1]-nRmax,pos[2]-nRmax])
+                delta = numpy.dot((r-n),n/Rmin)
+                if delta > r_pix:
                     dm3d[pos[0],pos[1],pos[2]] = 0
-            clout.write("... %i percent done ...\n" % (int(100.0*(m+1)/len(overs_nNlist))))
-        clout.write("... project icosahedron to plane (%i x %i) ...\n" % (overs_N,overs_N))
-        dm2d = self._densitymap_project(dm3d,overs_densitymap_d)
-        if not overs_N == RES*oversampling_factor:
-            clout.write("... framing (%i x %i) ...\n" % (RES*oversampling_factor,RES*oversampling_factor))
-            dm2d = self._densitymap_frame(dm2d,RES*oversampling_factor)
-        if not oversampling_factor == 1:
-            clout.write("... resize to (%i x %i) ...\n" % (RES,RES))
-            dm2d = self._densitymap_resize(dm2d,RES)
+                elif delta > -r_pix:
+                    dm3d[pos[0],pos[1],pos[2]] = 0.5+delta**3/4/r_pix**3
+            clout.write("... %i percent done ...\n" % (int(100.0*(m+1)/len(n_list))))
+        clout.write("... project icosahedron to plane (%i x %i) ...\n" % (N,N))
+        dm2d = self._densitymap_project(dm3d,d)
         dm3d = dm3d*f_times_n0
         dm2d = dm2d*f_times_n0
-        return [dm2d,dm3d]
+        return [dm2d,dm3d,d]
 
     def _densitymap_project(self,dm3d,densitymap_d):
         """ Projects 3-dimensional densitymap on 2-dimensional plane """
