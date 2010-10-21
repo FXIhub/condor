@@ -27,8 +27,9 @@ for infile in glob.glob(os.path.join(path, 'sf/*.nff') ):
     for line in lines:
         arg = line.split()
         if float(arg[1]) > 0:
-            OUT[el].append(numpy.array([float(arg[0]),float(arg[1])]))
+            OUT[el].append([float(arg[0]),float(arg[1])])
     FILE.close()
+    OUT[el] = numpy.array(OUT[el])
  
     symlen = len(el)
     for massline in masslines:

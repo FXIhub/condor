@@ -18,8 +18,8 @@ F_MIN_ENERGY_EV = 0
 F_MAX_ENERGY_EV = 0
 #for var in _loaded_elements[1]:
 for var in DICT_scattering_factors.values():
-    if F_MIN_ENERGY_EV < var[0][0] or F_MIN_ENERGY_EV == 0: F_MIN_ENERGY_EV = var[0][0]
-    if F_MAX_ENERGY_EV > var[-1][0] or F_MAX_ENERGY_EV == 0: F_MAX_ENERGY_EV = var[-1][0]
+    if F_MIN_ENERGY_EV < var[0,0] or F_MIN_ENERGY_EV == 0: F_MIN_ENERGY_EV = var[0,0]
+    if F_MAX_ENERGY_EV > var[-1,0] or F_MAX_ENERGY_EV == 0: F_MAX_ENERGY_EV = var[-1,0]
 
 # Define global variables
 #------------------------
@@ -470,17 +470,19 @@ class Sample:
                         resized_dm[iy,ix] = resized_dm[iy,ix] + dm[iy*w+jy,ix*w+jx]/w/w
         return resized_dm
    
-    def _fX(self,SF_X):
+    def _fX_discrete(self,SF_X):
+        """get the scattering factor for an element without interpolation.
+        Instead it changes the wavelength to closest sampled one."""
         e = DICT_physical_constants['e']
         c = DICT_physical_constants['c']
         h = DICT_physical_constants['h']
         ph_energy_eV = c*h/e/self._parent.source.wavelength
         bestmatch = -1
-        for line in range(0,len(SF_X)):
-            if (abs(SF_X[line][0]-ph_energy_eV) < bestmatch) | (bestmatch == -1):
-                bestmatch = abs(SF_X[line][0]-ph_energy_eV)
-                energy = SF_X[line][0]
-                f = SF_X[line][1]
+        for line in range(0,pylab.shape(SF_X)[0]):
+            if (abs(SF_X[line,0]-ph_energy_eV) < bestmatch) | (bestmatch == -1):
+                bestmatch = abs(SF_X[line,0]-ph_energy_eV)
+                energy = SF_X[line,0]
+                f = SF_X[line,1]
         if abs(energy-ph_energy_eV) > 0.0000001:
            if self._parent._printmode == MODE_PRINT_STD:
                clout = sys.stdout
@@ -490,6 +492,14 @@ class Sample:
            clout.write("Energymismatch = %f eV -> change wavelength to %e m\n" % (energy-ph_energy_eV,c*h/e/energy))
            self._parent.source.wavelength = c*h/e/energy        
         return f
+
+    def _fX(self,SF_X):
+        """get the scattering factor for an element through linear interpolation."""
+        e = DICT_physical_constants['e']
+        c = DICT_physical_constants['c']
+        h = DICT_physical_constants['h']
+        ph_energy_eV = c*h/e/self._parent.source.wavelength
+        return pylab.interp(ph_energy_eV,SF_X[:,0],SF_X[:,1])
  
     def determine_f_times_n0_average(self):
         """ Obtains average atomic scattering factor times average atom number density of using relative atomic composition in sample-object and wavelength  in source-object."""
