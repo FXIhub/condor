@@ -32,8 +32,8 @@ MODE_SCALING_NYQUISTPIX = 1
 
 # Define global dictionaries
 #---------------------------
-# Typical realative atomic compositions (order: H,C,N.O,P,S)
-DICT_atomic_composition = {'protein':[86,52,13,15,0,3],'virus':[72.43,47.52,13.55,17.17,1.11,0.7],'cell':[23,3,1,10,0,1],'latexball':[1,1,0,0,0,0],'water':[2,0,0,1,0,0]}
+# Typical realative atomic compositions (order: H,C,N.O,P,S,Au)
+DICT_atomic_composition = {'protein':[86,52,13,15,0,3,0],'virus':[72.43,47.52,13.55,17.17,1.11,0.7,0],'cell':[23,3,1,10,0,1,0],'latexball':[1,1,0,0,0,0,0],'water':[2,0,0,1,0,0,0],'Au':[0,0,0,0,0,0,1]}
 # Typical realative atomic compositions (order: H,C,N.O,P,S)
 DICT_massdensity = {'protein':1350,'virus':1455,'cell':1000,'latexball':1050,'water':998,'Au':19300}
 # Physical constants [SI-units]
@@ -111,8 +111,12 @@ class Input:
         return self._plotmode
 
     def set_samplemode_to_homogeneoussphere(self,new_radius = None, new_material = None):
-        """ Samplemode determines which kind of object will be simulated by 'spow()'
-        If a new_radius and a new_material as arguments are given these values are set to the appropriate variables of the sample-object. """
+        """
+        Sets the samplemode to the 'MODE_SAMPLE_HOMOGENOUSSPHERE'.
+        Samplemode determines which kind of object will be simulated by 'spow()'.
+        If a new_radius and a new_material as arguments are given these values are set to the appropriate variables of the sample-object.
+        If there are no arguments given the variables of radius, material, atomic composition and massdensity stay unchanged.
+        """
         if new_radius != None:
             self.sample.radius = new_radius
         elif new_material != None:
@@ -228,10 +232,7 @@ class Sample:
                 el_conc =  float(ac_pair[2*i+1])
                 exec "self.c" + el_str.capitalize() + " = el_conc"
         self._parent._samplemode = MODE_SAMPLE_HOMOGENEOUSSPHERE
-        
-    def get_material(self):
-        return self.material
-        
+       
     def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor=1):
         """
         Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles euler_angle1, euler_angle2 and euler_angle3 [rad]. Function finally sets samplemode to MODE_SAMPLE_DENSITYMAP.
@@ -242,34 +243,39 @@ class Sample:
         [self.densitymap,self.densitymap3d,self.densitymap_d] = self._makedm_icosahedron(radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor)  
         self._parent.set_samplemode_to_densitymap(self.densitymap,self.densitymap_d)
 
-    def put_sphere(self,element,radius,x,y):
-        """ Adds goldball to 2-dimensional denstiymap (3-dimensional densitymap is not changed).
+    def put_sphere(self,material,radius,x,y):
+        """
+        Superpose densitymap of spherical object to 2-dimensional denstiymap (3-dimensional densitymap is not changed).
         Arguments:
-        - radius in m
-        - x,y: positions measured from the center of the image in m)"""
-        densitymap_d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
-        try:
-            self.densitymap[0][0][0]
-            print "ERROR: Need a 2-dimensional densitymap."
-            return
-        except:
-            dm2d_balled = self.densitymap 
-            massdensity = DICT_massdensity[element]
-            f_times_n0 = self.determine_f_times_n0_element(element,massdensity)
-            N = len(self.densitymap)
-            nradius = int(radius/densitymap_d)
-            nx = int(x/densitymap_d)
-            ny = int(y/densitymap_d)
-            oversampling_factor = int(40/(2*radius/densitymap_d))+1
-            dm_sphere = self._makedm_sphere(radius,densitymap_d,f_times_n0,2,2*nradius,2)
-            Nsphere = len(dm_sphere)
-            for iy in range(0,Nsphere):
-                for ix in range(0,Nsphere):
-                    if not dm2d_balled[N/2+x/densitymap_d-Nsphere/2+iy,N/2+y/densitymap_d-Nsphere/2+ix] == 0 and not dm_sphere[iy,ix] == 0:
-                        print "WARNING: overlap of goldball and given dm-object. Further increase density value of pixel."
-                    dm2d_balled[N/2+x/densitymap_d-Nsphere/2+iy,N/2+y/densitymap_d-Nsphere/2+ix] = dm2d_balled[N/2+x/densitymap_d-Nsphere/2+iy,N/2+y/densitymap_d-Nsphere/2+ix] + dm_sphere[iy,ix]
-            self.densitymap = dm2d_balled
+        - material ('protein','virus','cell','latexball','water','Au')
+        - radius [SI-unit]
+        - x,y: sphere positions measured from the center of the densitymap [SI-unit]
+        """
+        if self._parent._printmode == MODE_PRINT_STD:
+            clout = sys.stdout
+        if self._parent._printmode == MODE_PRINT_OBJ:
+            clout = self._parent._tmploglist
 
+        d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
+        dm2d_sphere = self._makedm_sphere(radius,material)[0]
+        #try:
+        dm2d_balled = self.densitymap
+        N_balled = len(dm2d_balled)
+        N_sphere = int(round(radius/d))
+        if 2*(max([x,y])/d+radius/d) > N_balled:
+            N_balled = 2*(max([x,y])/d+radius/d)
+            dm2d_balled = self._densitymap_frame(dm2d_balled,N_balled)                
+        for iy in range(0,N_sphere):
+            for ix in range(0,N_sphere):
+                if dm2d_balled[N_balled/2+int(round(y/d-N_sphere/2.0))+iy,N_balled/2+int(round(x/d-N_sphere/2.0))+ix] != 0 and dm2d_sphere[iy,ix] != 0:
+                    clout.write("WARNING: overlap of sphere and given densitymap-object. Further increase density-value of pixel.")
+                dm2d_balled[int(round(N_balled/2.0+y/d-N_sphere/2.0))+iy,int(round(N_balled/2+x/d-N_sphere/2.0))+ix] += dm2d_sphere[iy,ix] 
+        #except:
+         #   dm2d_balled = dm2d_sphere
+        self.densitymap = dm2d_balled
+
+
+        
     def create_homogeneoussphere(self,radius,material='virus'):
         """ Creates homogeneous sphere. Radius is set to given value and atomic composition values and massdensity are set according to the given material argument.
         material: Biological sample can be specified as 'protein', 'virus', 'cell', 'latexball', 'water', 'Au' or 'custom'.
@@ -277,43 +283,34 @@ class Sample:
         self.radius = radius
         self.set_material(material)
 
-    def _makedm_sphere(self,radius,densitymap_d,f_times_n0,oversampling_factor,RES,dm_numdim):
+    def _makedm_sphere(self,radius,material):
         """ Creates densitymap of homogeneous sphere """
         if self._parent._printmode == MODE_PRINT_STD:
             clout = sys.stdout
         if self._parent._printmode == MODE_PRINT_OBJ:
             clout = self._parent._tmploglist
- 
-        overs_densitymap_d = densitymap_d/oversampling_factor
-        overs_nradius = int(radius/overs_densitymap_d)
-        overs_N = int(2*radius/overs_densitymap_d)
-        if dm_numdim == 2:
-            dm2d = numpy.zeros((overs_N,overs_N))
-        elif dm_numdim == 3:
-            dm3d = numpy.zeros((overs_N,overs_N,overs_N))
-        else:
-            print "Error: Wrong number of dimensions."
-            return
-        for iy in range(0,overs_N):
-            for ix in range(0,overs_N):
-                f_z = 0
-                for iz in range(0,overs_N):
-                    if (ix-overs_nradius)**2+(iy-overs_nradius)**2+(iz-overs_nradius)**2 < overs_nradius**2:
-                        f_z = f_z + f_times_n0*overs_densitymap_d
-                        if dm_numdim == 3:
-                            dm3d[iz][iy][ix] = f_times_n0
-                if dm_numdim == 2:
-                    dm2d[iz][iy][ix] = f_z
-        if dm_numdim == 2:
-            if not RES == overs_N/oversampling_factor:
-                clout.write("... framing ...\n")
-                dm2d = self._densitymap_frame(dm2d,RES*oversampling_factor)
-            if not oversampling_factor == 1:
-                clout.write("... resizing ...\n")
-                dm2d = self._densitymap_resize(dm2d,overs_densitymap_d,densitymap_d)
-            return dm2d
-        else:
-            return dm3d
+
+        f_times_n0 = self.determine_f_times_n0_average(material)
+
+        d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
+        r_pix = d*(3/4/numpy.pi)**(1/3.0)
+
+        N = int(2*radius/d)
+        dm2d = numpy.ones((N,N))*N
+        dm3d = numpy.ones((N,N,N))
+
+        for iz in range(0,N):
+            for iy in range(0,N):
+                for ix in range(0,N):
+                    delta = numpy.sqrt((ix*d-radius)**2+(iy*d-radius)**2+(iz*d-radius)**2) - radius 
+                    if  delta > r_pix:
+                        dm2d[iy,ix] -= 1 
+                        dm3d[iz,iy,ix] = 0
+                    elif delta > -r_pix:
+                        dm3d[iz,iy,ix] = 0.5+delta**3/4/r_pix**3
+                        dm2d[iy,ix] -= 0.5-delta**3/4/r_pix**3
+        dm2d = dm2d*d
+        return [f_times_n0*dm2d,f_times_n0*dm3d]
 
     def _makedm_icosahedron(self,radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor):  
         """
@@ -512,8 +509,11 @@ class Sample:
         ph_energy_eV = c*h/e/self._parent.source.wavelength
         return pylab.interp(ph_energy_eV,SF_X[:,0],SF_X[:,1])
  
-    def determine_f_times_n0_average(self):
+    def determine_f_times_n0_average(self,material=None):
         """ Obtains average atomic scattering factor times average atom number density of using relative atomic composition in sample-object and wavelength  in source-object."""
+        if material != None:
+            self.set_material(material)
+
         e = DICT_physical_constants['e']
         c = DICT_physical_constants['c']
         h = DICT_physical_constants['h']
@@ -534,7 +534,6 @@ class Sample:
             # sum up average atom density
             mav = mav + cnorm_array[i]*DICT_atomic_mass[elkey_list[i]]*u
             # sum up average atom factor
-            #fav = fav + cnorm_array[i]*self._fX(globals()["SF_" + elkey_list[i]])
             fav += cnorm_array[i]*self._fX(DICT_scattering_factors[elkey_list[i]])
         n0 = self.massdensity/mav
         return n0*fav
@@ -553,7 +552,7 @@ class Sample:
         mX = DICT_atomic_mass[elementX]*u
         #exec "%s" % SF_X + ' = SF_' + el
         #fX = self._fX(SF_X)
-        fX = self._fX(DICT_scattering_factors[el])
+        fX = self._fX(DICT_scattering_factors[elementX])
         n0X = rhoX/mX
         return fX*n0X
 
