@@ -128,7 +128,7 @@ class Input:
         """ Sets samplemode of spow to MODE_SAMPLE_DENSITYMAP.
         If a densitymap and grid-constant densitymap_d are given these arguments are set to the sample-object """
         self._samplemode = MODE_SAMPLE_DENSITYMAP
-        if not densitymap == None and not densitymap_d == None:
+        if not densitymap == None:
             self.sample.densitymap = densitymap
             self.sample.densitymap_d = densitymap_d
 
@@ -223,6 +223,7 @@ class Sample:
             self.cO = DICT_atomic_composition[material][3]
             self.cP = DICT_atomic_composition[material][4]
             self.cS = DICT_atomic_composition[material][5]
+            self.cAu = DICT_atomic_composition[material][6]
             self.massdensity = DICT_massdensity[material]
         else:
             self.massdensity = massdensity
@@ -231,7 +232,6 @@ class Sample:
                 el_str = ac_pair[2*i]
                 el_conc =  float(ac_pair[2*i+1])
                 exec "self.c" + el_str.capitalize() + " = el_conc"
-        self._parent._samplemode = MODE_SAMPLE_HOMOGENEOUSSPHERE
        
     def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor=1):
         """
@@ -258,23 +258,26 @@ class Sample:
 
         d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
         dm2d_sphere = self._makedm_sphere(radius,material)[0]
-        #try:
         dm2d_balled = self.densitymap
         N_balled = len(dm2d_balled)
-        N_sphere = int(round(radius/d))
-        if 2*(max([x,y])/d+radius/d) > N_balled:
-            N_balled = 2*(max([x,y])/d+radius/d)
+        N_sphere = len(dm2d_sphere)
+        if round(2*(max([x,y])/d+radius/d)) > N_balled:
+            N_balled = round(2*(max([x,y])/d+radius/d))
             dm2d_balled = self._densitymap_frame(dm2d_balled,N_balled)                
         for iy in range(0,N_sphere):
             for ix in range(0,N_sphere):
-                if dm2d_balled[N_balled/2+int(round(y/d-N_sphere/2.0))+iy,N_balled/2+int(round(x/d-N_sphere/2.0))+ix] != 0 and dm2d_sphere[iy,ix] != 0:
+                if dm2d_balled[int(round(N_balled/2.0+y/d-N_sphere/2.0))+iy,int(round(N_balled/2+x/d-N_sphere/2.0))+ix] != 0 and dm2d_sphere[iy,ix] != 0:
                     clout.write("WARNING: overlap of sphere and given densitymap-object. Further increase density-value of pixel.")
                 dm2d_balled[int(round(N_balled/2.0+y/d-N_sphere/2.0))+iy,int(round(N_balled/2+x/d-N_sphere/2.0))+ix] += dm2d_sphere[iy,ix] 
-        #except:
-         #   dm2d_balled = dm2d_sphere
         self.densitymap = dm2d_balled
 
-
+    def create_empty_densitymap(self,size):
+        """
+        Create empty densitymap. Edgelengths are specified by given argument 'size' in m.
+        Densitymap resolution is set appropriately to the detector geometry.
+        """
+        self.densitymap_d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
+        self.densitymap = numpy.zeros((int(round(size/self.densitymap_d)),int(round(size/self.densitymap_d),)))
         
     def create_homogeneoussphere(self,radius,material='virus'):
         """ Creates homogeneous sphere. Radius is set to given value and atomic composition values and massdensity are set according to the given material argument.
@@ -289,14 +292,12 @@ class Sample:
             clout = sys.stdout
         if self._parent._printmode == MODE_PRINT_OBJ:
             clout = self._parent._tmploglist
-
         f_times_n0 = self.determine_f_times_n0_average(material)
-
         d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
-        r_pix = d*(3/4/numpy.pi)**(1/3.0)
 
-        N = int(2*radius/d)
-        dm2d = numpy.ones((N,N))*N
+        r_pix = d*pow(3/(4*numpy.pi),1/3.0)
+        N = int(round(2*radius/d))+1
+        dm2d = numpy.ones((N,N+1))*N
         dm3d = numpy.ones((N,N,N))
 
         for iz in range(0,N):
@@ -332,14 +333,14 @@ class Sample:
 
         f_times_n0 = self.determine_f_times_n0_average()
         d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()*speedup_factor
-
+ 
         nRmax = (Rmax/d)
         nRmin = (Rmin/d) 
         N = int(2*nRmax)
 
         dm3d = numpy.ones((N,N,N))
 
-        r_pix = d*(3/4/numpy.pi)**(1/3.0)
+        r_pix = d*(3/(4*numpy.pi))**(1/3.0)
 
         clout.write("... build icosahedron geometry ...\n")
         phi = (1+numpy.sqrt(5))/2.0
@@ -401,11 +402,14 @@ class Sample:
             n = n_list[m]
             for pos in cutpos:
                 r = numpy.array([pos[0]-nRmax,pos[1]-nRmax,pos[2]-nRmax])
-                delta = numpy.dot((r-n),n/Rmin)
+                delta = numpy.dot((r-n)*d,1.0*n/nRmin)
                 if delta > r_pix:
+                    #print "haha"
                     dm3d[pos[0],pos[1],pos[2]] = 0
-                elif delta > -r_pix:
+                elif delta > -r_pix and dm3d[pos[0],pos[1],pos[2]] != 0:
+                    #print "huhu"
                     dm3d[pos[0],pos[1],pos[2]] = 0.5+delta**3/4/r_pix**3
+                #else: print "ho"
             clout.write("... %i percent done ...\n" % (int(100.0*(m+1)/len(n_list))))
         clout.write("... project icosahedron to plane (%i x %i) ...\n" % (N,N))
         dm2d = self._densitymap_project(dm3d,d)
@@ -589,7 +593,7 @@ class Sample:
         if plotmap2d == 'self':
             plotmap2d = self.densitymap
         fig =  pylab.figure()
-        pylab.imshow(plotmap2d)
+        pylab.imshow(plotmap2d,interpolation='nearest')
         fig.show()
 
 
