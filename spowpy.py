@@ -52,18 +52,33 @@ class Input:
       -> creates <input_obj> and sets all values to default values\n
     - <input_obj> = Inout(<conffilename>)
       -> creates <input_obj>. All variables are set to the values specified in the given configuration file"""
-    def __init__(self,configfile=False):
-        self._printmode = MODE_PRINT_STD
-        self._plotmode = MODE_PLOT_2D
-        self._samplemode = MODE_SAMPLE_HOMOGENEOUSSPHERE
+    def __init__(self,configfile=None,samplemode='homogeneous sphere',printmode='loglist',plotmode='none'):
+        self.set_printmode(printmode)
+        self.output = Output()
+        self.output._tmploglist = _WritableObject()
+        if printmode == 'stdout':
+            clout = sys.stdout
+        elif printmode == 'loglist':
+            clout = self.output._tmploglist
+        else:
+            print "ERROR: %s is no valid printmode." % printmode
+            return
+        self.set_plotmode(plotmode)
         self.source = Source(self)
         self.sample = Sample(self)
+        if samplemode == 'homogeneous sphere':
+            self.set_samplemode_to_homogeneoussphere()
+        elif samplemode == 'densitymap':
+            self.set_samplemode_to_densitymap()
+        else:
+            print "ERROR: %s is not a valid samplemode." % samplemode
+            return
         self.detector = Detector(self)
         if configfile:
             self.read_configfile(configfile)
-            print "... set configuration in accordance to given configuration-file ..."
+            clout.write("... set configuration in accordance to given configuration-file: %s ...\n" % configfile)
         else:
-            print "... initial values set to default values ..."
+            clout.write("... initial values set to default values ...\n")
     
     def set_printmode(self,mode):
         """ Printmode determines the target of 'spow()'-commandline outputs:
@@ -77,12 +92,6 @@ class Input:
             print "ERROR: No valid given argument."
 
     def get_printmode(self):
-        if self._printmode == MODE_PRINT_STD:
-            print "_printmode = MODE_PRINT_STD -> Comments will be printed to standard output."
-        elif self._printmode == MODE_PRINT_OBJ:
-            print "_printmode = MODE_PRINT_OBJ -> Comments will be printed to [Output].loglist."
-        else:
-            print "ERROR: No valid printmode."
         return self._printmode
 
     def set_plotmode(self,mode):
@@ -100,14 +109,6 @@ class Input:
             print "ERROR: No valid argument."
 
     def get_plotmode(self):
-        if self._plotmode == MODE_PLOT_NONE:
-            print "_plotmode == MODE_PLOT_NONE -> no figures will be generated."
-        elif self._plotmode == MODE_PRINT_1D:
-            print "_plotmode == MODE_PLOT_1D -> 1-dimensional graphs will be generated. It will show the radial sum of scattered photons per pixel / Nyquist-pixel."
-        elif self._plotmode == MODE_PRINT_2D:
-            print "_plotmode == MODE_PLOT_2D -> 2-dimensional pattern will be generated. It will show the distribution of scattered photons per pixel / Nyquist-pixel."
-        else:
-            print "ERROR: No valid plotmode."
         return self._plotmode
 
     def set_samplemode_to_homogeneoussphere(self,new_radius = None, new_material = None):
@@ -133,14 +134,7 @@ class Input:
             self.sample.densitymap_d = densitymap_d
 
     def get_samplemode(self):
-        if self._samplemode == MODE_SAMPLE_HOMOGENEOUSSPHERE:
-            print "_samplemode == MODE_SAMPLE_HOMOGENEOUSSPHERE -> scattering by homogeneous sphere will be simulated."
-        elif self._samplemode == MODE_SAMPLE_DENSITYMAP:
-            print "_samplemode == MODE_SAMPLE_DENSITYMAP -> scattering by object according to given densitymap will be simulated."
-            print "_plotmode == MODE_PLOT_2D -> 2-dimensional pattern will be generated. It will show the distribution of scattered photons."
-        else:
-            print "ERROR: No valid samplemode."
-        return self._plotmode
+        return self._samplemode
     
     def read_configfile(self,configfile):
         """ Reads given configuration file and sets configuration to input-object """
@@ -254,7 +248,7 @@ class Sample:
         if self._parent._printmode == MODE_PRINT_STD:
             clout = sys.stdout
         if self._parent._printmode == MODE_PRINT_OBJ:
-            clout = self._parent._tmploglist
+            clout = self._parent.output._tmploglist
 
         d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
         dm2d_sphere = self._makedm_sphere(radius,material)[0]
@@ -291,7 +285,7 @@ class Sample:
         if self._parent._printmode == MODE_PRINT_STD:
             clout = sys.stdout
         if self._parent._printmode == MODE_PRINT_OBJ:
-            clout = self._parent._tmploglist
+            clout = self._parent.output._tmploglist
         f_times_n0 = self.determine_f_times_n0_average(material)
         d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
 
@@ -325,7 +319,7 @@ class Sample:
         if self._parent._printmode == MODE_PRINT_STD:
             clout = sys.stdout
         if self._parent._printmode == MODE_PRINT_OBJ:
-            clout = self._parent._tmploglist
+            clout = self._parent.output._tmploglist
 
         a = radius*(16*numpy.pi/5.0/(3+numpy.sqrt(5)))**(1/3.0)
         Rmax = numpy.sqrt(10.0+2*numpy.sqrt(5))*a/4.0
@@ -436,7 +430,7 @@ class Sample:
                 densitymap_framed[(RES-N)/2+iy,(RES-N)/2+ix] = dm2d[iy,ix]
         return densitymap_framed
 
-    def _densitymap_write(self,dm,n_dimensions,filename):
+    def densitymap_write(self,dm,n_dimensions,filename):
         """ Writes 2-dimensional / 3-dimensional densitymap to file """
         file_dm = open(filename,'w')
         if n_dimensions == 2:
@@ -500,7 +494,7 @@ class Sample:
            if self._parent._printmode == MODE_PRINT_STD:
                clout = sys.stdout
            if self._parent._printmode == MODE_PRINT_OBJ:
-               clout = self._parent._tmploglist
+               clout = self._parent.output._tmploglist
            clout.write("Energymismatch = %f eV -> change wavelength to %e m\n" % (energy-ph_energy_eV,c*h/e/energy))
            self._parent.source.wavelength = c*h/e/energy        
         return f
@@ -547,7 +541,7 @@ class Sample:
         if self._parent._printmode == MODE_PRINT_STD:
             clout = sys.stdout
         if self._parent._printmode == MODE_PRINT_OBJ:
-            clout = self._parent._tmploglist
+            clout = self._parent.output._tmploglist
         e = DICT_physical_constants['e']
         c = DICT_physical_constants['c']
         h = DICT_physical_constants['h']
@@ -925,8 +919,7 @@ def spow(input_obj=False):
     if printmode == MODE_PRINT_STD:
         clout = sys.stdout
     if printmode == MODE_PRINT_OBJ:
-        input_obj._tmploglist = _WritableObject()
-        clout = input_obj._tmploglist
+        clout = input_obj.output._tmploglist
  
     # read physical constants from dictionary (SI units):
     e = DICT_physical_constants['e']
@@ -1181,8 +1174,8 @@ def spow(input_obj=False):
     #--------------------
     if printmode == MODE_PRINT_OBJ:
         # write commandline output to loglist   
-        output.loglist = input_obj._tmploglist
-        del input_obj._tmploglist
+        output.loglist = input_obj.output._tmploglist
+        input_obj.output._tmploglist = _WritableObject()
 
     return output
 
