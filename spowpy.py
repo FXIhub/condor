@@ -1186,6 +1186,43 @@ def spow(input_obj=False):
 
     return output
 
+def transform_density(density):
+    """Fourier transforms a density like the one found in
+    Sample.densitymap3d."""
+    return fftn(density)
+
+def sample_3d_density(density,wavelength,detector,rotation):
+    """We assume that the pixel size in the density is
+    the same as the maximum resolution allowed by the
+    detector setup"""
+    #create 3 arrays with fourier coordinates
+    x = pylab.arange(-detector.Nx/2,detector.Nx/2,detector.binned)*detector.psize
+    y = pylab.arange(-detector.Ny/2,detector.Ny/2,detector.binned)*detector.psize
+    x_angle = pylab.arctan2(x,detector.distance)
+    y_angle = pylab.arctan2(y,detector.distance)
+    x_fourier = pylab.sin(x_angle)/wavelength
+    y_fourier = pylab.sin(y_angle)/wavelength
+    X,Y = pylab.meshgrid(x_fourier,y_fourier)
+    Z = (1.0 - pylab.sqrt(1.0 - (X**2+Y**2)/wavelength**2))/wavelength
+    #this should be updated later (transform from fourier coordinates to pixels)
+    X_pixels = X*detector.distance/detector.Nx/detector.psize*wavelength*2
+    Y_pixels = Y*detector.distance/detector.Yx/detector.psize*wavelength*2
+    Z_pixels = Z*detector.distance/detector.Nx/detector.psize*wavelength*2 #bad
+    coord_matrix = matrix([X_pixels.flatten(),Y_pixels.flatten(),Z_pixels.flatten()])
+
+    #rotate coordinates
+    c1 = cos(rotation[0]); c2 = cos(rotation[1]); c3 = cos(rotation[2])
+    s1 = sin(rotation[0]); s2 = sin(rotation[1]); s3 = sin(rotation[2])
+    rot_mat = matrix([[c1*c3-c2*s1*s3, -c1*s3-c3*c2*s1, s2*s1],
+                      [c2*c1*s3+c3*s1, c1*c2*c3-s1*s3, -c1*s2],
+                      [s3*s2, c3*s2, c2]])
+    pixels_rot = rot_mat*coord_matrix
+    #sample
+
+    values = zeros(shape(pixels_rot)[1])
+    
+    #rescale depending on solid angle of pixel
+    #something else?
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
