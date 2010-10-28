@@ -227,7 +227,7 @@ class Sample:
                 el_conc =  float(ac_pair[2*i+1])
                 exec "self.c" + el_str.capitalize() + " = el_conc"
        
-    def create_virus(self,radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor=1):
+    def create_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,speedup_factor=1):
         """
         Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles euler_angle1, euler_angle2 and euler_angle3 [rad]. Function finally sets samplemode to MODE_SAMPLE_DENSITYMAP.
         Usage: create_virus(radius,euler-angle1,euler-angle2,euler-angle3,[speedup_factor])
@@ -1179,12 +1179,20 @@ def spow(input_obj=False):
 
     return output
 
-def transform_density(density):
+def transform_density(density,density_d,oversampling,limit_resolution = 1):
     """Fourier transforms a density like the one found in
     Sample.densitymap3d."""
-    return fftn(density)
+    if limit_resolution != 1:
+        x = pylab.arange(0,pylab.shape(density)[0],limit_resolution)
+        y = pylab.arange(0,pylab.shape(density)[1],limit_resolution)
+        z = pylab.arange(0,pylab.shape(density)[2],limit_resolution)
+        density = density[x][:,y][:,:,z]
+    pattern = ((density_d*limit_resolution)**3*abs(pylab.fftshift(pylab.fftn(density,pylab.array(pylab.shape(density))*oversampling))))**2
+    pixel_size = 1.0/((density_d*limit_resolution)*pylab.shape(pattern)[0])
 
-def sample_3d_density(density,wavelength,detector,rotation):
+    return [pattern, pixel_size]
+
+def sample_3d_density(density,density_d,source,detector,rotation):
     """We assume that the pixel size in the density is
     the same as the maximum resolution allowed by the
     detector setup"""
@@ -1193,29 +1201,73 @@ def sample_3d_density(density,wavelength,detector,rotation):
     y = pylab.arange(-detector.Ny/2,detector.Ny/2,detector.binned)*detector.psize
     x_angle = pylab.arctan2(x,detector.distance)
     y_angle = pylab.arctan2(y,detector.distance)
-    x_fourier = pylab.sin(x_angle)/wavelength
-    y_fourier = pylab.sin(y_angle)/wavelength
+    x_fourier = pylab.sin(x_angle)/source.wavelength
+    y_fourier = pylab.sin(y_angle)/source.wavelength
     X,Y = pylab.meshgrid(x_fourier,y_fourier)
-    Z = (1.0 - pylab.sqrt(1.0 - (X**2+Y**2)/wavelength**2))/wavelength
+    Z = (1.0 - pylab.sqrt(1.0 - (X**2+Y**2)*source.wavelength**2))/source.wavelength
+
     #this should be updated later (transform from fourier coordinates to pixels)
-    X_pixels = X*detector.distance/detector.Nx/detector.psize*wavelength*2
-    Y_pixels = Y*detector.distance/detector.Yx/detector.psize*wavelength*2
-    Z_pixels = Z*detector.distance/detector.Nx/detector.psize*wavelength*2 #bad
-    coord_matrix = matrix([X_pixels.flatten(),Y_pixels.flatten(),Z_pixels.flatten()])
+    # X_pixels = X*detector.distance/detector.Nx/detector.psize*wavelength*2
+    # Y_pixels = Y*detector.distance/detector.Ny/detector.psize*wavelength*2
+    # Z_pixels = Z*detector.distance/detector.Nx/detector.psize*wavelength*2 #bad
+    X_pixels = X/density_d
+    Y_pixels = Y/density_d
+    Z_pixels = Z/density_d
+
+    coord_matrix = pylab.matrix([X_pixels.flatten(),Y_pixels.flatten(),Z_pixels.flatten()])
 
     #rotate coordinates
-    c1 = cos(rotation[0]); c2 = cos(rotation[1]); c3 = cos(rotation[2])
-    s1 = sin(rotation[0]); s2 = sin(rotation[1]); s3 = sin(rotation[2])
-    rot_mat = matrix([[c1*c3-c2*s1*s3, -c1*s3-c3*c2*s1, s2*s1],
-                      [c2*c1*s3+c3*s1, c1*c2*c3-s1*s3, -c1*s2],
-                      [s3*s2, c3*s2, c2]])
+    c1 = pylab.cos(rotation[0]); c2 = pylab.cos(rotation[1]); c3 = pylab.cos(rotation[2])
+    s1 = pylab.sin(rotation[0]); s2 = pylab.sin(rotation[1]); s3 = pylab.sin(rotation[2])
+    rot_mat = pylab.matrix([[c1*c3-c2*s1*s3, -c1*s3-c3*c2*s1, s2*s1],
+                            [c2*c1*s3+c3*s1, c1*c2*c3-s1*s3, -c1*s2],
+                            [s3*s2, c3*s2, c2]])
     pixels_rot = rot_mat*coord_matrix
+    pixels_rot += pylab.outer(pylab.array(pylab.shape(density))/2,
+                              pylab.ones(pylab.shape(pixels_rot)[1]))
+    #pixels_rot += pylab.outer([detector.Nx/detector.binned/2,detector.Ny/detector.binned/2,detector.Nx/detector.binned/2],pylab.ones(pylab.shape(pixels_rot)[1]))
     #sample
 
-    values = zeros(shape(pixels_rot)[1])
+    values = pylab.zeros(pylab.shape(pixels_rot)[1])
+    cases = [pylab.floor,lambda x: 1.0 + pylab.floor(x)]
+    try:
+        for i in range(len(values)):
+            if min(pixels_rot[:,i]) >= 0.0 and max(pixels_rot[:,i]) <= pylab.shape(density)[0]-1: #bad
+                for x_func in cases:
+                    for y_func in cases:
+                        for z_func in cases:
+                            values[i] +=\
+                                (1.0-abs(x_func(pixels_rot[0,i]) - pixels_rot[0,i]))*\
+                                (1.0-abs(y_func(pixels_rot[1,i]) - pixels_rot[1,i]))*\
+                                (1.0-abs(z_func(pixels_rot[2,i]) - pixels_rot[2,i]))*\
+                                density[int(x_func(pixels_rot[0,i])),
+                                        int(y_func(pixels_rot[1,i])),
+                                        int(z_func(pixels_rot[2,i]))]
+    except:
+        print "%d %d %d" % (pixels_rot[0,i],pixels_rot[1,i],pixels_rot[2,i])
+
+    print pylab.shape(values)
+    print (detector.Nx,detector.Ny)
     
     #rescale depending on solid angle of pixel
+    total_angle = pylab.arctan2(pylab.sqrt(x**2+y[:,pylab.newaxis]**2),detector.distance)
+    #solid_angle = (detector.psize*detector.binned/detector.distance*pylab.cos(total_angle))**2
+    solid_angle = (detector.psize*detector.binned)**2/detector.distance**2*pylab.cos(total_angle)**3
+    
+    print solid_angle
+
+    values = values.reshape((detector.Nx/detector.binned,detector.Ny/detector.binned))*solid_angle
+
+    #beam intensity and electron cross section
+    I0 = source.energy/(DICT_physical_constants['c']*DICT_physical_constants['h']/source.wavelength)/source.sizex/source.sizey
+    print "I0 = ",I0
+    print "re = ",DICT_physical_constants['re']
+    values = I0*DICT_physical_constants['re']**2*values
     #something else?
+
+    #print sys.argv[3]
+
+    return values
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
