@@ -19,8 +19,7 @@ for var in DICT_scattering_factors.values():
 
 # Define global variables
 #------------------------
-MODE_SAMPLE_DENSITYMAP = 1
-MODE_SAMPLE_HOMOGENEOUSSPHERE = 2
+
 MODE_PRINT_NONE = 0
 MODE_PRINT_STD = 1
 MODE_PRINT_OBJ = 2
@@ -309,16 +308,42 @@ class DensitymapSample:
         material_obj = Material(self,**materialargs)
         dm2d_sphere = self._makedm_sphere(radius,material_obj)[0]
         dm2d_balled = self.densitymap2d
-        N_balled = len(dm2d_balled)
-        N_sphere = len(dm2d_sphere)
-        if round(2*(max([x,y])/d+radius/d)) > N_balled:
-            N_balled = round(2*(max([x,y])/d+radius/d))
-            self.frame(N_balled)                
-        for iy in range(0,N_sphere):
-            for ix in range(0,N_sphere):
-                if self.densitymap2d[int(round(N_balled/2.0+y/d-N_sphere/2.0))+iy,int(round(N_balled/2+x/d-N_sphere/2.0))+ix] != 0 and dm2d_sphere[iy,ix] != 0:
-                    clout.write("WARNING: overlap of sphere and given densitymap-object. Further increase density-value of pixel.")
-                self.densitymap2d[int(round(N_balled/2.0+y/d-N_sphere/2.0))+iy,int(round(N_balled/2+x/d-N_sphere/2.0))+ix] += dm2d_sphere[iy,ix]
+        self.put_densitymap(dm2d_sphere,x,y)
+
+    def put_goldball(self,radius,x,y):
+        """
+        Superpose densitymap of spherical gold object to 2-dimensional denstiymap (3-dimensional densitymap is not changed).
+        Arguments:
+        - radius [SI-unit]
+        - x,y: sphere positions measured from the center of the densitymap [SI-unit]
+ 
+        """
+        self.put_sphere(radius,x,y,cAu=1,massdensity=DICT_massdensity['Au'])        
+
+    def put_densitymap(self,dm2d_toput,x,y):
+        """
+        Superpose given densitymap to 2-dimensional denstiymap (3-dimensional densitymap is not changed).
+        Arguments:
+        - x,y: positions measured from the center of the densitymap [SI-unit]
+
+        """
+        if self._parent._printmode == MODE_PRINT_STD:
+            clout = sys.stdout
+        if self._parent._printmode == MODE_PRINT_OBJ:
+            clout = self._parent.output._tmploglist
+ 
+        d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
+        N_new = len(self.densitymap2d)
+        N_toput = len(dm2d_toput)
+        if round(2*(max([abs(x),abs(y)])/d+N_toput/2.0)) > N_new:
+            N_new = round(2*(max([abs(x),abs(y)])/d+N_toput/2.0))
+            self.frame(N_new)            
+        for iy in range(0,N_toput):
+            for ix in range(0,N_toput):
+                if self.densitymap2d[int(round(N_new/2.0+y/d-N_toput/2.0))+iy,int(round(N_new/2+x/d-N_toput/2.0))+ix] != 0 and dm2d_toput[iy,ix] != 0:
+                    clout.write("WARNING: overlap of given densitymap and old densitymap. Further increase density-value of pixel.\n")
+                self.densitymap2d[int(round(N_new/2.0+y/d-N_toput/2.0))+iy,int(round(N_new/2+x/d-N_toput/2.0))+ix] += dm2d_toput[iy,ix]
+
 
     def _makedm_sphere(self,radius,material_obj):
         """ Creates densitymap of homogeneous sphere """
@@ -737,7 +762,7 @@ class Output:
         f1d_ax.legend(*legend_args)
         f1d.show()
         
-    def plot_pattern(self,scaling="pixel and nyquist pixel",noise=None):
+    def plot_pattern(self,scaling="pixel and nyquist pixel",noise=None,logscale=True):
         """
         Creates 2-dimensional plot(s) of the distribution of scattered photons.
         Usage: plot_pattern([scaling],[noise])
@@ -747,6 +772,12 @@ class Output:
                    'pixel and nyquist pixel' leads to creation of two plots in one figure using pixel- and Nyquist-pixel-scaling.
         - noise:   Specifies noise and can be set to 'poisson'.
         """
+        if logscale == True:
+            def scale(val):
+                return numpy.log10(val)
+        else:
+            def scale(val):
+                return val
         if noise == 'poisson':
             def noise(data): return pylab.poisson(data)
         else:
@@ -760,7 +791,7 @@ class Output:
             f2d.suptitle("\n2-dimensional distribution of scattered photons in detector plane", fontsize=16)
             f2d_ax_left = f2d.add_axes([3/30.0,5/18.0,10/30.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
             f2d_axcolor_left = f2d.add_axes([3/30.0,3/18.0,10/30.0,0.5/18.0])
-            im_left = f2d_ax_left.matshow(numpy.log10(noise(self.get_pattern('pixel'))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+            im_left = f2d_ax_left.matshow(scale(noise(self.get_pattern('pixel'))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
             cb1 = f2d.colorbar(im_left, cax=f2d_axcolor_left,orientation='horizontal')
             cb1.set_label("log10( I [photons/" + str_scaling + "] )")
             # draw intensity plot (N/Nyquist-pixel)
@@ -769,7 +800,7 @@ class Output:
             max_y = self.nyquistpixel_number_y
             f2d_ax_right = f2d.add_axes([17/30.0,5/18.0,10/30.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
             f2d_axcolor_right = f2d.add_axes([17/30.0,3/18.0,10/30.0,0.5/18.0])
-            im_right = f2d_ax_right.matshow(numpy.log10(noise(self.get_pattern('nyquist pixel'))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+            im_right = f2d_ax_right.matshow(scale(noise(self.get_pattern('nyquist pixel'))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
             cb2 = f2d.colorbar(im_right, cax=f2d_axcolor_right,orientation='horizontal')
             cb2.set_label("log10( I [photons/" + str_scaling + "] )")
             f2d.show()
@@ -790,7 +821,7 @@ class Output:
         f2d.suptitle("\n2-dimensional distribution of scattered photons in detector plane", fontsize=16)
         f2d_ax = f2d.add_axes([3/15.0,5/18.0,10/15.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
         f2d_axcolor = f2d.add_axes([3/15.0,3/18.0,10/15.0,0.5/18.0])
-        im = f2d_ax.matshow(numpy.log10(noise(self.get_pattern(scaling))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+        im = f2d_ax.matshow(scale(noise(self.get_pattern(scaling))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
         cb = f2d.colorbar(im, cax=f2d_axcolor,orientation='horizontal')
         cb.set_label("log10( I [photons/" + str_scaling + "] )")
         f2d.show()
