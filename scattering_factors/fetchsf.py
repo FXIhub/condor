@@ -29,7 +29,7 @@ def generate_datafile(inpath,outpath):
         for line in lines:
             arg = line.split()
             if float(arg[1]) > 0:
-                OUT[el].append([float(arg[0]),float(arg[1])])
+                OUT[el].append([float(arg[0]),float(arg[1]),float(arg[2])])
         FILE.close()
         OUT[el] = numpy.array(OUT[el])
 

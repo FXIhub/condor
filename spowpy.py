@@ -5,7 +5,7 @@
 
 # Import libs
 #------------
-import pylab, sys, ConfigParser, numpy, types, pickle
+import pylab, sys, ConfigParser, numpy, types, pickle, time, spimage, math
 
 ELEMENTS_FILE = open('elements.dat','r')
 DICT_atomic_mass,DICT_scattering_factors = pickle.load(ELEMENTS_FILE)
@@ -31,14 +31,50 @@ MODE_SCALING_NYQUISTPIX = 1
 
 # Define global dictionaries
 #---------------------------
-# Typical realative atomic compositions (order: H,C,N.O,P,S,Au)
-DICT_atomic_composition = {'protein':[86,52,13,15,0,3],'virus':[72.43,47.52,13.55,17.17,1.11,0.7],'cell':[23,3,1,10,0,1],'latexball':[1,1,0,0,0,0],'water':[2,0,0,1,0,0]}
+# Typical realative atomic compositions (order: H,C,N.O,P,S), collected from Filipe Maia's webpage and paper Bergh et al. 2008
+DICT_atomic_composition = {'protein':[86,52,13,15,0,3],'virus':[72.43,47.52,13.55,17.17,1.11,0.7],'cell':[23,3,1,10,0,1],'latexball':[1,1,0,0,0,0],'water':[2,0,0,1,0,0],'dna':[11,10,4,6,1,0],'lipid':[69,36,0,6,1,0],'genophore':[205,134,38,48,3,6]}
 # Typical realative atomic compositions (order: H,C,N.O,P,S)
-DICT_massdensity = {'protein':1350,'virus':1455,'cell':1000,'latexball':1050,'water':998,'Au':19300}
+DICT_massdensity = {'protein':1350,'virus':1455,'cell':1000,'latexball':1050,'water':998,'Au':19300,'dna':1700,'lipid':1000,'genophore':1560}
 # Physical constants [SI-units]
 DICT_physical_constants = {'e':1.602176487E-19,'c':299792458,'h':6.62606896E-34,'re':2.8179402894E-15,'barn':1E-28,'u':1.66053886E-27}
 
-# Input object in configuration
+# Define useful conversion tools
+def convert_photon(value,input_unit,output_unit):
+    units = ["nm","m","eV","keV","J"]
+    energy_units = ["eV","keV","J"]
+    wavelength_units = ["nm","m"]
+    if not input_unit in units or not output_unit in units:
+        print "%s is not a valid unit."
+        return
+    e = DICT_physical_constants['e']
+    c = DICT_physical_constants['c']
+    h = DICT_physical_constants['h'] 
+    # convert to SI
+    if input_unit[-2:] == "eV":
+        value *= e
+    if input_unit[0] == "k":
+        value *= 1.0E03
+    elif input_unit[0] == "n":
+        value *= 1.0E-09
+    # both energies
+    if input_unit in energy_units and output_unit in energy_units:
+        pass
+    # both wavelengths
+    elif input_unit in wavelength_units and input_unit in wavelength_units:
+        pass
+    # conversion
+    else:
+        value = c*h/value
+    # convert to chosen unit
+    if output_unit[-2:] == "eV":
+        value /= e
+    if output_unit[0] == "k":
+        value /= 1.0E03
+    elif output_unit[0] == "n":
+        value /= 1.0E-09
+    return value
+
+# Input object with configuration
 #------------------------------
 class Input:
     """ INPUT CONFIGURATION OBJECT FOR 'spow()'\n\n
@@ -108,7 +144,6 @@ class Input:
         else:
             print "ERROR: No valid argument."
 
-
     def set_sample_empty_densitymap(self,size):
         """
         Create empty densitymap. Edgelengths are specified by given argument 'size' in m.
@@ -137,7 +172,7 @@ class Input:
           set_sample_homogeneous_sphere(radius,materialtype='protein')
         available materialtypes: 'protein', 'virus', 'cell', 'latexball', 'water', 'Au'
         """ 
-        self.sample = HomogeneoussphereSample(radius,**materialargs)
+        self.sample = HomogeneoussphereSample(self,radius,**materialargs)
 
     def read_configfile(self,configfile):
         """ Reads given configuration file and sets configuration to the input-object """
@@ -182,7 +217,9 @@ class Input:
         self.detector.Ny = config.getint('detector','Ny')
         self.detector.gapsize = config.getfloat('detector','gapsize')
         self.detector.gaporientation = config.get('detector','gaporientation')
-
+        self.detector.mask = config.get('detector','mask')
+        if self.detector.mask == "None":
+            self.detector.mask = None
 
 class Material:
     """
@@ -225,7 +262,8 @@ class Material:
             if (abs(SF_X[line,0]-ph_energy_eV) < bestmatch) | (bestmatch == -1):
                 bestmatch = abs(SF_X[line,0]-ph_energy_eV)
                 energy = SF_X[line,0]
-                f = SF_X[line,1]
+                f1 = SF_X[line,1]
+                f2 = SF_X[line,2]
         if abs(energy-ph_energy_eV) > 0.0000001:
            if self._parent._parent._printmode == MODE_PRINT_STD:
                clout = sys.stdout
@@ -233,7 +271,7 @@ class Material:
                clout = self._parent._parent.output._tmploglist
            clout.write("Energymismatch = %f eV -> change wavelength to %e m\n" % (energy-ph_energy_eV,c*h/e/energy))
            self._parent._parent.source.wavelength = c*h/e/energy        
-        return f
+        return [f1,f2]
 
     def get_fX(self,SF_X):
         """
@@ -243,7 +281,9 @@ class Material:
         c = DICT_physical_constants['c']
         h = DICT_physical_constants['h']
         ph_energy_eV = c*h/e/self._parent._parent.source.wavelength
-        return pylab.interp(ph_energy_eV,SF_X[:,0],SF_X[:,1])
+        f1 = pylab.interp(ph_energy_eV,SF_X[:,0],SF_X[:,1])
+        f2 = pylab.interp(ph_energy_eV,SF_X[:,0],SF_X[:,2])
+        return [f1,f2] 
  
     def get_f_times_n0(self):
         """
@@ -265,14 +305,17 @@ class Material:
                 c_list.append(c_tmp)
         cnorm_array = numpy.array(c_list) / float(sum(c_list))   
         mav = 0
-        fav = 0
+        f1av = 0
+        f2av = 0
         for i in range(0,len(elkey_list)):
             # sum up average atom density
             mav = mav + cnorm_array[i]*DICT_atomic_mass[elkey_list[i]]*u
             # sum up average atom factor
-            fav += cnorm_array[i]*self.get_fX(DICT_scattering_factors[elkey_list[i]])
+            f = self.get_fX(DICT_scattering_factors[elkey_list[i]])
+            f1av += cnorm_array[i]*f[0]
+            f2av += cnorm_array[i]*f[1]
         n0 = self.massdensity/mav
-        return n0*fav
+        return [n0*f1av,n0*f2av,n0]
 
 class DensitymapSample:
     """
@@ -310,6 +353,29 @@ class DensitymapSample:
         dm2d_balled = self.densitymap2d
         self.put_densitymap(dm2d_sphere,x,y)
 
+    def put_sphere3d(self,radius,x,y,z,**materialargs):
+        """
+        Superpose densitymap of spherical object to 2-dimensional denstiymap (3-dimensional densitymap is not changed).
+        Arguments:
+        - radius [SI-unit]
+        - x,y: sphere positions measured from the center of the densitymap [SI-unit]
+        - materialarguments:
+          specify a materialtype (example: materialtype='protein',materialtype='virus',materialtype='cell',materialtype='latexball',materialtype='water')
+          OR
+          relative atomic composition and massdensity (example: cH=2,cO=1,massdensity=1000)
+
+        """
+        if self._parent._printmode == MODE_PRINT_STD:
+            clout = sys.stdout
+        if self._parent._printmode == MODE_PRINT_OBJ:
+            clout = self._parent.output._tmploglist
+
+        d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
+        material_obj = Material(self,**materialargs)
+        dm3d_sphere = self._makedm_sphere(radius,material_obj)[1]
+        dm3d_balled = self.densitymap3d
+        self.put_densitymap3d(dm3d_sphere,x,y,z)
+
     def put_goldball(self,radius,x,y):
         """
         Superpose densitymap of spherical gold object to 2-dimensional denstiymap (3-dimensional densitymap is not changed).
@@ -345,19 +411,44 @@ class DensitymapSample:
                 self.densitymap2d[int(round(N_new/2.0+y/d-N_toput/2.0))+iy,int(round(N_new/2+x/d-N_toput/2.0))+ix] += dm2d_toput[iy,ix]
 
 
+    def put_densitymap3d(self,dm3d_toput,x,y,z):
+        """
+        Superpose given 3d densitymap to 3-dimensional denstiymap (2-dimensional densitymap is not changed).
+        Arguments:
+        - x,y,z: positions measured from the center of the densitymap [SI-unit]
+
+        """
+        if self._parent._printmode == MODE_PRINT_STD:
+            clout = sys.stdout
+        if self._parent._printmode == MODE_PRINT_OBJ:
+            clout = self._parent.output._tmploglist
+ 
+        d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
+        N_new = len(self.densitymap3d)
+        N_toput = len(dm3d_toput)
+        if round(2*(max([abs(x),abs(y),abs(z)])/d+N_toput/2.0)) > N_new:
+            N_new = round(2*(max([abs(x),abs(y),abs(z)])/d+N_toput/2.0))
+            self.frame3d(N_new)            
+        for iy in range(0,N_toput):
+            for ix in range(0,N_toput):
+                for iz in range(0,N_toput):
+                    if self.densitymap3d[int(round(N_new/2.0+z/d-N_toput/2.0))+iz,int(round(N_new/2.0+y/d-N_toput/2.0))+iy,int(round(N_new/2+x/d-N_toput/2.0))+ix] != 0 and dm3d_toput[iz,iy,ix] != 0:
+                        clout.write("WARNING: overlap of given densitymap and old densitymap. Further increase density-value of pixel.\n")
+                    self.densitymap3d[int(round(N_new/2.0+z/d-N_toput/2.0))+iz,int(round(N_new/2.0+y/d-N_toput/2.0))+iy,int(round(N_new/2+x/d-N_toput/2.0))+ix] += dm3d_toput[iz,iy,ix]
+
     def _makedm_sphere(self,radius,material_obj):
         """ Creates densitymap of homogeneous sphere """
         if self._parent._printmode == MODE_PRINT_STD:
             clout = sys.stdout
         if self._parent._printmode == MODE_PRINT_OBJ:
             clout = self._parent.output._tmploglist
-        f_times_n0 = material_obj.get_f_times_n0()
+        f_times_n0 = material_obj.get_f_times_n0()[0]
         d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()
 
         r_pix = d*pow(3/(4*numpy.pi),1/3.0)
         N = int(round(2*radius/d))+1
-        dm2d = numpy.ones((N,N+1))*N
-        dm3d = numpy.ones((N,N,N))
+        dm2d = numpy.ones((N,N+1),dtype="complex64")*N
+        dm3d = numpy.ones((N,N,N),dtype="complex64")
 
         for iz in range(0,N):
             for iy in range(0,N):
@@ -391,14 +482,14 @@ class DensitymapSample:
         Rmax = numpy.sqrt(10.0+2*numpy.sqrt(5))*a/4.0
         Rmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*a
 
-        f_times_n0 = material_obj.get_f_times_n0()
+        f_times_n0 = material_obj.get_f_times_n0()[0]
         d = self._parent.source.wavelength*self._parent.detector.distance/self._parent.detector.psize/self._parent.detector._N()*speedup_factor
  
         nRmax = (Rmax/d)
         nRmin = (Rmin/d) 
         N = int(2*nRmax)
-
-        dm3d = numpy.ones((N,N,N))
+        
+        dm3d = numpy.ones((N,N,N),dtype="complex64")
 
         r_pix = d*(3/(4*numpy.pi))**(1/3.0)
 
@@ -484,7 +575,7 @@ class DensitymapSample:
         for iz in range(0,N):
             for iy in range(0,N):
                 for ix in range(0,N):
-                    dm2d[iy,ix] = dm2d[iy,ix] + dm3d[iz,iy,ix]*dm_d
+                    dm2d[iy,ix] = dm2d[iy,ix] + dm3d[iz,iy,ix].real*dm_d*math.exp(-dm3d[iz,iy,ix].imag*dm_d)
         return dm2d
 
     def frame(self,N_new):
@@ -495,6 +586,12 @@ class DensitymapSample:
             for ix in range(0,N_old):
                 densitymap2d_new[(N_new-N_old)/2+iy,(N_new-N_old)/2+ix] = self.densitymap2d[iy,ix]
         self.densitymap2d = densitymap2d_new
+        
+    def frame3d(self,N_new):
+        """ Adds to 3-dimensional densitymap frame (values = zero) in order to enlarge densitymap to N_new x N_new x N_new """
+        N_old = len(self.densitymap3d)
+        densitymap3d_new = numpy.zeros((N_new,N_new,N_new))
+        densitymap3d_new[(N_new-N_old)/2:(N_new-N_old)/2+N_old+1,(N_new-N_old)/2:(N_new-N_old)/2+N_old+1,(N_new-N_old)/2:(N_new-N_old)/2+N_old+1] = self.densitymap3d[:,:,:] 
 
     def pickle_to_file(self,dm,n_dimensions,filename):
         """ Writes 2-dimensional / 3-dimensional densitymap to file """
@@ -533,13 +630,13 @@ class DensitymapSample:
                 for ix in range(0,N_new):
                     for jy in range(0,n_to_merge):
                         for jx in range(0,n_to_merge):
-                            dm2d_new[iy,ix] = dm2d_new[iy,ix] + self.dm2d_old[iy*n_to_merge+jy,ix*n_to_merge+jx]/n_to_merge**2
+                            dm2d_new[iy,ix] = dm2d_new[iy,ix] + dm2d_old[iy*n_to_merge+jy,ix*n_to_merge+jx]/n_to_merge**2
         elif N_new > N_old:
             dm2d_new = numpy.zeros(shape=(N_new,N_new))
             n_to_copy = N_new/N_old
             for iy in range(0,N_new):
                 for ix in range(0,N_new):
-                    dm2d_new[iy,ix] = self.dm2d_old[iy/n_to_copy,ix/n_to_copy]
+                    dm2d_new[iy,ix] = dm2d_old[iy/n_to_copy,ix/n_to_copy]
         else:
             dm2d_new = dm2d_old
 
@@ -582,6 +679,12 @@ class DensitymapSample:
         fig =  pylab.figure()
         pylab.imshow(plotmap2d,interpolation='nearest')
         fig.show()
+        
+    def write_densitymap3d_to_h5(filename):
+        dm3d = spimage.sp_image_alloc(self.densitymap3d.shape[2],self.densitymap3d.shape[1],self.densitymap3d.shape[0])
+        dm3d.image[:,:,:] = self.densitymap3d[:,:,:]
+        spimage.sp_image_write(dm3d,filename,0)
+        spimage.sp_image_free(dm3d)
 
 class HomogeneoussphereSample:
     """
@@ -602,8 +705,9 @@ class Detector:
         self.binned = 16
         self.Nx = 4096
         self.Ny = 4096
-        self.gapsize = 0.0007
-        self.gaporientation = 'x'
+        self.gapsize = 0.002144
+        self.mask = None
+        self.gaporientation = 'y'
         self._parent = parent
         
     def _N(self):
@@ -661,12 +765,13 @@ class Output:
     """
     
     def get_pattern(self,scaling="meter"):
+        pat = self.intensity_pattern*self.intensity_mask
         if scaling == "meter":
-            return self.intensity_pattern
-        elif scaling == "pixel":
-            return self.intensity_pattern*self.pixel_size**2
+            return pat
+        elif scaling == "binned pixel":
+            return pat*self.pixel_size**2
         elif scaling == "nyquist pixel":
-            return self.intensity_pattern*self.nyquistpixel_size**2
+            return pat*self.nyquistpixel_size**2
         else:
             print "ERROR: %s is no valid scaling." % scaling
 
@@ -680,7 +785,7 @@ class Output:
             return
         if scaling == "meter":
             return data
-        elif scaling == "pixel":
+        elif scaling == "binned pixel":
             return data*self.pixel_size**2
         elif scaling == "nyquist pixel":
             return data*self.nyquistpixel_size**2
@@ -688,14 +793,14 @@ class Output:
             print "ERROR: %s is no valid scaling." % scaling
             return
 
-    def plot_radial_distribution(self,scaling="pixel and nyquist pixel",mode="all",noise=None):
+    def plot_radial_distribution(self,scaling="binned pixel and nyquist pixel",mode="all",noise=None):
         """
         Creates 1-dimensional plot(s) showing radial distribution of scattered photons.
         Usage: plot_radial_distribution([scaling],[mode],[noise])
         Arguments:
         - scaling: Specifies spatial scaling.
-                   Can be set to 'pixel', 'nyquist pixel', 'pixel and nyquist pixel' or 'meter'.
-                   'pixel and nyquist pixel' leads to creation of two plots in one figure using pixel- and Nyquist-pixel-scaling.
+                   Can be set to 'binned pixel', 'nyquist pixel', 'binned pixel and nyquist pixel' or 'meter'.
+                   'binned pixel and nyquist pixel' leads to creation of two plots in one figure using pixel- and Nyquist-pixel-scaling.
         - mode:    Mode specifies whether the radial average or the radial sum will be plotted.
                    Can be set to 'radial average', 'radial sum' or 'all'.
         - noise:   Specifies noise and can be set to 'poisson'.
@@ -707,13 +812,13 @@ class Output:
         def get_arguments(sc):
             if mode == "all":
                 legend_args = [('Radial sum', 'Radial average'),'upper right']
-                if sc == "pixel":
+                if sc == "binned pixel":
                     r = numpy.arange(0,len(self.intensity_radial_sum),1)
                 elif sc == "nyquist pixel":
                     r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))
                 plot_args = [r,noise(self.get_radial_distribution(sc,'radial sum')),'k',r,noise(self.get_radial_distribution(sc,'radial average')),'k:']
             else:
-                if sc == "pixel":
+                if sc == "binned pixel":
                     r = numpy.arange(0,len(self.intensity_radial_sum),1)
                 elif sc == "nyquist pixel":
                     r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))
@@ -727,14 +832,14 @@ class Output:
                     plot_args = [r,noise(self.get_radial_distribution(sc,mode)),'k']
             return [plot_args,legend_args]
 
-        if scaling == "pixel and nyquist pixel":
+        if scaling == "binned pixel and nyquist pixel":
             f1d = pylab.figure(figsize=(10,5))
             f1d.suptitle("\nRadial distribution of scattered photons in detector plane", fontsize=16)
-            str_scaling = "binned-pixel"
+            str_scaling = "binned pixel"
             f1d_ax_left = f1d.add_axes([0.1, 0.1, 0.35, 0.7],title='Radial scaling:' + str_scaling,xlabel="r [" + str_scaling + "]",ylabel="I(r) [photons/" + str_scaling + "]")
-            str_scaling = "Nyquist-pixel"
+            str_scaling = "nyquist pixel"
             f1d_ax_right = f1d.add_axes([0.55, 0.1, 0.35, 0.7],title='Radial scaling:' + str_scaling,xlabel="r [" + str_scaling + "]",ylabel="I(r) [photons/" + str_scaling + "]")
-            [plot_args,legend_args] = get_arguments('pixel')
+            [plot_args,legend_args] = get_arguments('binned pixel')
             f1d_ax_left.semilogy(*plot_args)
             f1d_ax_left.legend(*legend_args)
             [plot_args,legend_args] = get_arguments('nyquist pixel')
@@ -742,11 +847,11 @@ class Output:
             f1d_ax_right.legend(*legend_args)
             f1d.show()
             return
-        elif scaling == "pixel":
+        elif scaling == "binned pixel":
             str_scaling = "binned pixel"
             r = numpy.arange(0,len(self.intensity_radial_sum),1)
         elif scaling == "nyquist pixel":
-            str_scaling == "Nyquist-pixel"
+            str_scaling == "nyquist pixel"
             r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))
         elif scaling == "meter":
             str_scaling = "meter"
@@ -762,71 +867,97 @@ class Output:
         f1d_ax.legend(*legend_args)
         f1d.show()
         
-    def plot_pattern(self,scaling="pixel and nyquist pixel",noise=None,logscale=True):
+    def plot_pattern(self,scaling="binned pixel and nyquist pixel",poissonnoise=False,logscale=True,saturationlevel=None):
         """
         Creates 2-dimensional plot(s) of the distribution of scattered photons.
-        Usage: plot_pattern([scaling],[noise])
+        Usage: plot_pattern([scaling],[poissonnoise],[logscale],[saturationlevel])
         Arguments:
-        - scaling: Specifies spatial scaling.
-                   Can be set to 'pixel', 'nyquist pixel', 'pixel and nyquist pixel' (default) or 'meter'.
-                   'pixel and nyquist pixel' leads to creation of two plots in one figure using pixel- and Nyquist-pixel-scaling.
-        - noise:   Specifies noise and can be set to 'poisson'.
+        - scaling:        Specifies spatial scaling.
+                          Can be set to 'binned pixel', 'nyquist pixel', 'binned pixel and nyquist pixel' (default) or 'meter'.
+                          'binned pixel and nyquist pixel' leads to creation of two plots in one figure using pixel- and Nyquist-pixel-scaling.
+        - poissonnoise:   True (default) or false.
+        - logscale:       True (default) or false.
+        - saturationlevel:None (default) or float-value.
         """
-        if logscale == True:
-            def scale(val):
-                return numpy.log10(val)
-        else:
-            def scale(val):
-                return val
-        if noise == 'poisson':
-            def noise(data): return pylab.poisson(data)
-        else:
-            def noise(data): return data
-        if scaling == "pixel and nyquist pixel":
+        
+        if scaling == "binned pixel and nyquist pixel":
             f2d = pylab.figure(figsize=(10,6))
             # draw intensity plot (N/pixel)
-            str_scaling = "binned-pixel"
+            str_scaling = "binned pixel"
+            if logscale == True:
+                str_Iscaling = "log10( I [photons/" + str_scaling + "] )"
+            else:
+                str_Iscaling = "I [photons/" + str_scaling + "]"
             max_x = self.pixel_number_x
             max_y = self.pixel_number_y
             f2d.suptitle("\n2-dimensional distribution of scattered photons in detector plane", fontsize=16)
             f2d_ax_left = f2d.add_axes([3/30.0,5/18.0,10/30.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
             f2d_axcolor_left = f2d.add_axes([3/30.0,3/18.0,10/30.0,0.5/18.0])
-            im_left = f2d_ax_left.matshow(scale(noise(self.get_pattern('pixel'))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+            im_left = f2d_ax_left.matshow(readout(self.get_pattern('binned pixel'),poissonnoise,logscale,saturationlevel),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
             cb1 = f2d.colorbar(im_left, cax=f2d_axcolor_left,orientation='horizontal')
-            cb1.set_label("log10( I [photons/" + str_scaling + "] )")
+            cb1.set_label(str_Iscaling)
             # draw intensity plot (N/Nyquist-pixel)
             str_scaling = "Nyquist-pixel"
+            if logscale == True:
+                str_Iscaling = "log10( I [photons/" + str_scaling + "] )"
+            else:
+                str_Iscaling = "I [photons/" + str_scaling + "]"
             max_x = self.nyquistpixel_number_x
             max_y = self.nyquistpixel_number_y
             f2d_ax_right = f2d.add_axes([17/30.0,5/18.0,10/30.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
             f2d_axcolor_right = f2d.add_axes([17/30.0,3/18.0,10/30.0,0.5/18.0])
-            im_right = f2d_ax_right.matshow(scale(noise(self.get_pattern('nyquist pixel'))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+            im_right = f2d_ax_right.matshow(readout(self.get_pattern('nyquist pixel'),poissonnoise,logscale,saturationlevel),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
             cb2 = f2d.colorbar(im_right, cax=f2d_axcolor_right,orientation='horizontal')
-            cb2.set_label("log10( I [photons/" + str_scaling + "] )")
+            cb2.set_label(str_Iscaling)
             f2d.show()
             return
         elif scaling == "meter":
             str_scaling = "meter"
             max_x = self.pixel_number_x*self.pixel_size
             max_y = self.pixel_number_y*self.pixel_size
-        elif scaling == "pixel":
-            str_scaling = "binned-pixel"
+        elif scaling == "binned pixel":
+        #    if self.input_object.detector.binned == 1:
+        #        str_scaling = "pixel"
+        #    else:
+            str_scaling = "binned pixel"
             max_x = self.pixel_number_x
             max_y = self.pixel_number_y
         elif scaling == "nyquist pixel":
-            str_scaling = "Nyquist-pixel"
+            str_scaling = "nyquist pixel"
             max_x = self.nyquistpixel_number_x
             max_y = self.nyquistpixel_number_y
-        f2d = pylab.figure(figsize=(5,6))
+        if logscale == True:
+            str_Iscaling = "log10( I [photons/" + str_scaling + "] )"
+        else:
+            str_Iscaling = "I [photons/" + str_scaling + "]"
+        f2d = pylab.figure(figsize=(7.5,9))
         f2d.suptitle("\n2-dimensional distribution of scattered photons in detector plane", fontsize=16)
-        f2d_ax = f2d.add_axes([3/15.0,5/18.0,10/15.0,10/18.0],title='Scaling: ' + str_scaling,xlabel="x [" + str_scaling + "]",ylabel="y [" + str_scaling + "]")
+        alignment = {'horizontalalignment':'center','verticalalignment':'center'}
+        f2d.text(0.5,(16.5/18.0),"E = %.0f eV ; w = %.1f nm ; d = %0.3f m" %  (convert_photon(self.input_object.source.wavelength,"m","eV"),self.input_object.source.wavelength/1.0E-09,self.input_object.detector.distance),**alignment) 
+        if str_scaling == "binned pixel":
+            if self.input_object.detector.binned == 1:
+                str_scaling_label = "pixel"
+            else:
+                str_scaling_label = "binned pixel"
+        else:
+            str_scaling_label = str_scaling
+        #f2d_ax = f2d.add_axes([3/15.0,5/18.0,10/15.0,10/18.0],title='Spatial scaling: ' + str_scaling_label,xlabel="x [" + str_scaling_label + "]",ylabel="y [" + str_scaling_label + "]") 
+        f2d_ax = f2d.add_axes([3/15.0,5/18.0,10/15.0,10/18.0]) 
         f2d_axcolor = f2d.add_axes([3/15.0,3/18.0,10/15.0,0.5/18.0])
-        im = f2d_ax.matshow(scale(noise(self.get_pattern(scaling))),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
+        im = f2d_ax.matshow(readout(self.get_pattern(str_scaling),poissonnoise,logscale,saturationlevel),extent=[-max_x/2,max_x/2,-max_y/2,max_y/2])
         cb = f2d.colorbar(im, cax=f2d_axcolor,orientation='horizontal')
-        cb.set_label("log10( I [photons/" + str_scaling + "] )")
+        cb.set_label(str_Iscaling)
+        res_edge = self.input_object.sample.densitymap_d*2
+        res_corner = self.input_object.sample.densitymap_d*2/math.sqrt(2)
+        f2d.text(0.5,(1.5/18.0),"Crystallographic resolution (full period): %.1f nm (edge) / %.1f nm (corner)" % (res_edge/1.0E-09,res_corner/1.0E-09),**alignment)
+        miss_Ny = self.input_object.detector.gapsize/self.nyquistpixel_size
+        if miss_Ny < 2.8:
+            f2d.text(0.5,(1/18.0),"No missing modes expected (gap width: %.1f Nyquist pixels)" % miss_Ny,**alignment)
+        else:
+            f2d.text(0.5,(1/18.0),"!!! Missing mode(s) expected (gap width: %.1f Nyquist pixels)" % miss_Ny,**alignment)
         f2d.show()
    
-    def save_pattern_to_file(self,filename,scaling="pixel",*arguments):
+    def save_pattern_to_file(self,filename,scaling="binned pixel",*arguments):
         """
         Saves dataset to file of specified format.
         Usage: fo_file(filename,[scaling],[colorscale])
@@ -942,7 +1073,7 @@ def spow(input_obj=False):
 
     # abbreviations
     so_wavelength = input_obj.source.wavelength 
-    ph_energy_eV = c*h/e/so_wavelength
+    ph_energy_eV = convert_photon(so_wavelength,"m","eV")
     so_sizex = input_obj.source.sizex
     so_sizey = input_obj.source.sizey
     so_energy = input_obj.source.energy
@@ -987,13 +1118,13 @@ def spow(input_obj=False):
         return N
     
     # calculate radial sum and radial average from given 2-dimensional pattern
-    def N_radial(pattern):
+    def N_radial(pattern,mask):
         Nsum = numpy.zeros(de_N_binned_short/2)
         Nav = numpy.zeros(de_N_binned_short/2)
         for iy in range(0,de_Ny_binned):
             for ix in range(0,de_Nx_binned):
                 ir = int(numpy.sqrt((de_Ny_binned/2-iy)**2+(de_Nx_binned/2-ix)**2))
-                if ir < de_N_binned_short/2:
+                if ir < de_N_binned_short/2 and mask[iy,ix] != 0:
                     Nsum[ir] = Nsum[ir] + pattern[iy][ix]
                     Nav[ir] = Nav[ir] + 1
         return [Nsum,Nsum/Nav]
@@ -1007,31 +1138,48 @@ def spow(input_obj=False):
         return res
     
     # delete gap between detector halves
-    def N_delete_gap(Npattern):
-        if de_gapsize > 0:
-            if de_gaporientation == 'x':
-                ix_list = range(0,de_N_binned_long)
-                iy_list = range(de_N_binned_long/2-input_obj.detector._get_i_from_r(de_gapsize/2.0),de_N_binned_long/2+input_obj.detector._get_i_from_r(de_gapsize/2.0))
-            elif de_gaporientation == 'y':
-                ix_list = range(de_N_binned_long/2-input_obj.detector._get_i_from_r(de_gapsize/2.0),de_N_binned_long/2+input_obj.detector._get_i_from_r(de_gapsize/2.0))
-                iy_list = range(0,de_N_binned_long)
-            for iy in iy_list:
-                for ix in ix_list:
-                    Npattern[iy,ix] = 0
+    #def N_delete_gap(Npattern):
+    #    if de_gapsize > 0:
+    #        if de_gaporientation == 'x':
+    #            ix_list = range(0,de_N_binned_long)
+    #            iy_list = range(de_N_binned_long/2-input_obj.detector._get_i_from_r(de_gapsize/2.0),de_N_binned_long/2+input_obj.detector._get_i_from_r(de_gapsize/2.0))
+    #        elif de_gaporientation == 'y':
+    #            ix_list = range(de_N_binned_long/2-input_obj.detector._get_i_from_r(de_gapsize/2.0),de_N_binned_long/2+input_obj.detector._get_i_from_r(de_gapsize/2.0))
+    #            iy_list = range(0,de_N_binned_long)
+    #        for iy in iy_list:
+    #            for ix in ix_list:
+    #                Npattern[iy,ix] = 0
 
     # cut border of 2d-pattern to real detector size
-    def N_cut_to_real_size(Npattern):
+    def N_cut_to_real_size(Npattern,Nmask):
         if de_N_binned_long != de_Nx_binned or de_N_binned_long != de_Ny_binned:
             Npattern_new = numpy.zeros((de_Ny_binned,de_Nx_binned))
-            dx = de_N_binned_long-de_Nx_binned
-            dy = de_N_binned_long-de_Ny_binned
-            for iy in range(0,de_Ny_binned):
-                for ix in range(0,de_Nx_binned):
-                    Npattern_new[iy][ix] = Npattern[dy/2+iy][dx/2+ix]
-            return Npattern_new
+            Nmask_new = numpy.zeros((de_Ny_binned,de_Nx_binned))
+            dx = (de_N_binned_long-de_Nx_binned)/2
+            dy = (de_N_binned_long-de_Ny_binned)/2
+            Npattern_new[:,:] = Npattern[dy:dy+de_Ny_binned,dx:dx+de_Nx_binned]
+            Nmask_new[:,:] = Nmask[dy:dy+de_Ny_binned,dx:dx+de_Nx_binned]
+            return [Npattern_new,Nmask_new]
         else:
-            return Npattern
- 
+            return [Npattern_new,Nmask_new]
+
+    # mask out gap between detector halves
+    def N_maskout(Npattern):
+        mask = numpy.ones(Npattern.shape)
+        if input_obj.detector.mask != None:
+            img = spimage.sp_image_read(input_obj.detector.mask,0)
+            mask =  img.image.real.copy()
+            mask = numpy.array(mask,dtype="int32")
+            spimage.sp_image_free(img)
+            mask = frame_array(mask,Npattern.shape[0])
+        if  de_gapsize > 0.0:
+                i_gap_start = de_N_binned_long/2-input_obj.detector._get_i_from_r(de_gapsize/2.0)
+                i_gap_stop = de_N_binned_long/2+input_obj.detector._get_i_from_r(de_gapsize/2.0)
+                if de_gaporientation == 'x':
+                    mask[:,i_gap_start:i_gap_stop] = 0
+                elif de_gaporientation == 'y':
+                    mask[i_gap_start:i_gap_stop,:] = 0
+        return mask
 
     if isinstance(input_obj.sample,HomogeneoussphereSample):
         # SAMPLEMODE: HOMOGENEOUSSPHERE
@@ -1044,7 +1192,7 @@ def spow(input_obj=False):
         sa_radius = input_obj.sample.radius
 
         # calculate average atom density and average atomic scattering factor
-        f_times_n0 = input_obj.sample.material.get_f_times_n0()
+        f_times_n0 = input_obj.sample.material.get_f_times_n0()[0]
      
         # DEFINE SPECIAL FUNCTIONS
         # ------------------------
@@ -1131,12 +1279,12 @@ def spow(input_obj=False):
         print "ERROR: No valid sample-object given."
         return
 
-    # Delete gaps between detector halves and cut to real size
-    N_delete_gap(Npattern)
-    Npattern = N_cut_to_real_size(Npattern)
+    # Cut to real size and mask out gap between detector halves
+    Nmask = N_maskout(Npattern)
+    [Npattern,Nmask] = N_cut_to_real_size(Npattern,Nmask) 
 
     # Determine radial sums of scattered photons
-    [Nradsum,Nradav] = N_radial(Npattern)
+    [Nradsum,Nradav] = N_radial(Npattern,Nmask)
 
 
     # COPY OUTPUT TO OUTPUT-OBJECT
@@ -1149,6 +1297,7 @@ def spow(input_obj=False):
     output.wavelength = so_wavelength
     output.scattered_photons_detector =  abs_scat_photons(Npattern)
 
+    output.intensity_mask = Nmask 
     output.intensity_pattern = Npattern
     output.intensity_radial_sum = Nradsum
     output.intensity_radial_average = Nradav
@@ -1200,3 +1349,128 @@ if __name__ == "__main__":
         spow(input_obj)
         if input_obj._plotmode != MODE_PLOT_NONE:
             pylab.show()
+
+            
+def readout(inpattern,poissonnoise=False,logscale=True,saturationlevel=None):
+    if poissonnoise == True:
+        outpattern =  pylab.poisson(inpattern)
+    else:
+        outpattern = inpattern
+    if saturationlevel != None:
+        for i in range(0,len(inpattern)):
+            for j in range(0,len(inpattern[0])):
+                if inpattern[i,j] > saturationlevel:
+                    outpattern[i,j] = saturationlevel     
+    if logscale == True:
+        outpattern = numpy.log10(outpattern)
+    return outpattern
+
+def transform_density(density,density_d,oversampling,limit_resolution = 1):
+    """Fourier transforms a density like the one found in
+    Sample.densitymap3d."""
+    if limit_resolution != 1:
+        x = pylab.arange(0,pylab.shape(density)[0],limit_resolution)
+        y = pylab.arange(0,pylab.shape(density)[1],limit_resolution)
+        z = pylab.arange(0,pylab.shape(density)[2],limit_resolution)
+        density = density[x][:,y][:,:,z]
+    pattern = ((density_d*limit_resolution)**3*abs(pylab.fftshift(pylab.fftn(density,pylab.array(pylab.shape(density))*oversampling))))**2
+    pixel_size = 1.0/((density_d*limit_resolution)*pylab.shape(pattern)[0])
+
+    return [pattern, pixel_size]
+
+def get_fourier_coord_matrix(detector,source,density_d):
+    # create 3 arrays with fourier coordinates
+    x = pylab.arange(-detector.Nx/2,detector.Nx/2,detector.binned)*detector.psize
+    y = pylab.arange(-detector.Ny/2,detector.Ny/2,detector.binned)*detector.psize
+    x_angle = pylab.arctan2(x,detector.distance)
+    y_angle = pylab.arctan2(y,detector.distance)
+    x_fourier = pylab.sin(x_angle)/source.wavelength
+    y_fourier = pylab.sin(y_angle)/source.wavelength
+    X,Y = pylab.meshgrid(x_fourier,y_fourier)
+    Z = (1.0 - pylab.sqrt(1.0 - (X**2+Y**2)*source.wavelength**2))/source.wavelength
+    #this should be updated later (transform from fourier coordinates to pixels)
+    # X_pixels = X*detector.distance/detector.Nx/detector.psize*wavelength*2
+    # Y_pixels = Y*detector.distance/detector.Ny/detector.psize*wavelength*2
+    # Z_pixels = Z*detector.distance/detector.Nx/detector.psize*wavelength*2 #bad
+    X_pixels = X/density_d
+    Y_pixels = Y/density_d
+    Z_pixels = Z/density_d
+    coord_matrix = pylab.matrix([X_pixels.flatten(),Y_pixels.flatten(),Z_pixels.flatten()])
+    return [coord_matrix,x,y]
+
+def sample_3d_density(density,density_d,source,detector,rotation,coord_matrix=None,x=None,y=None,interpolation='linear'):
+    """We assume that the pixel size in the density is
+    the same as the maximum resolution allowed by the
+    detector setup"""
+    
+    if coord_matrix == None:
+        [coord_matrix,x,y] = get_fourier_coord_matrix(detector,source)
+
+    #rotate coordinates
+    c1 = pylab.cos(rotation[0]); c2 = pylab.cos(rotation[1]); c3 = pylab.cos(rotation[2])
+    s1 = pylab.sin(rotation[0]); s2 = pylab.sin(rotation[1]); s3 = pylab.sin(rotation[2])
+    rot_mat = pylab.matrix([[c1*c3-c2*s1*s3, -c1*s3-c3*c2*s1, s2*s1],
+                            [c2*c1*s3+c3*s1, c1*c2*c3-s1*s3, -c1*s2],
+                            [s3*s2, c3*s2, c2]])
+    pixels_rot = rot_mat*coord_matrix
+    pixels_rot += pylab.outer(pylab.array(pylab.shape(density))/2,
+                              pylab.ones(pylab.shape(pixels_rot)[1]))
+    #pixels_rot += pylab.outer([detector.Nx/detector.binned/2,detector.Ny/detector.binned/2,detector.Nx/detector.binned/2],pylab.ones(pylab.shape(pixels_rot)[1]))
+    #sample
+
+
+    if interpolation == "linear":
+        values = pylab.zeros(pylab.shape(pixels_rot)[1])
+        cases = [pylab.floor,lambda x: 1.0 + pylab.floor(x)]
+
+        for i in range(len(values)):
+            if min(pixels_rot[:,i]) >= 0.0 and max(pixels_rot[:,i]) <= pylab.shape(density)[0]-1: #bad
+                for x_func in cases:
+                    for y_func in cases:
+                        for z_func in cases:
+                            values[i] +=\
+                                (1.0-abs(x_func(pixels_rot[0,i]) - pixels_rot[0,i]))*\
+                                (1.0-abs(y_func(pixels_rot[1,i]) - pixels_rot[1,i]))*\
+                                (1.0-abs(z_func(pixels_rot[2,i]) - pixels_rot[2,i]))*\
+                                density[int(x_func(pixels_rot[0,i])),
+                                        int(y_func(pixels_rot[1,i])),
+                                        int(z_func(pixels_rot[2,i]))]
+    elif interpolation == "nn":
+        for i in range(len(values)):
+            if min(pixels_rot[:,i]) >= 0.0 and max(pixels_rot[:,i]) <= pylab.shape(density)[0]-1: #bad
+                x_rounded = pylab.round_(pixels_rot[0,i]) 
+                y_rounded = pylab.round_(pixels_rot[1,i]) 
+                z_rounded = pylab.round_(pixels_rot[2,i]) 
+                values[i] = density[int(x_rounded),int(y_rounded),int(z_rounded)]
+
+    #rescale depending on solid angle of pixel
+    total_angle = pylab.arctan2(pylab.sqrt(x**2+y[:,pylab.newaxis]**2),detector.distance)
+    #solid_angle = (detector.psize*detector.binned/detector.distance*pylab.cos(total_angle))**2
+    solid_angle = (detector.psize*detector.binned)**2/detector.distance**2*pylab.cos(total_angle)**3
+    
+    values = values.reshape((detector.Nx/detector.binned,detector.Ny/detector.binned))*solid_angle
+
+    #beam intensity and electron cross section
+    I0 = source.energy/(DICT_physical_constants['c']*DICT_physical_constants['h']/source.wavelength)/source.sizex/source.sizey
+
+    values = I0*DICT_physical_constants['re']**2*values
+    #something else?
+
+    #print sys.argv[3]
+
+    return values
+
+# useful tools
+
+def frame_array(a,new_edge_length):
+    dLy = new_edge_length - a.shape[0]
+    dLx = new_edge_length - a.shape[1]
+    if dLy < 0 or dLx < 0:
+        print "ERROR: Edge length is shorter than given array."
+        return
+    #if dL%2 != 0 or a.shape[0]%2 != 0:
+    #    print "ERROR: frame_array only takes even edgelengths."
+    #    return  
+    a_new = numpy.zeros(shape=(new_edge_length,new_edge_length))
+    a_new[dLy/2:dLy/2+a.shape[0],dLx/2:dLx/2+a.shape[1]] = a[:,:]
+    return a_new
