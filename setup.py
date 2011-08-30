@@ -1,4 +1,4 @@
 import sys, os
-import scattering_factors.fetchsf as sf
+import constants.fetchsf as sf
 
-sf.generate_datafile("scattering_factors/sf",".")
+sf.generate_datafile("constants/sf",".")
