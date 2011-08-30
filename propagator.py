@@ -17,13 +17,13 @@ from source import *
 from sample import *
 from detector import *
 
-import constants,source,sample,detector,tools
-reload(constants)
-reload(source)
-reload(sample)
-reload(detector)
-reload(tools)
-reload(imgtools)
+#import constants,source,sample,detector,tools
+#reload(constants)
+#reload(source)
+#reload(sample)
+#reload(detector)
+#reload(tools)
+#reload(imgtools)
 
 def propagator(input_obj=False):
     """ MAIN FUNCTION of 'propagator.py': 'spow' calculates diffraction under defined conditions specified in the input object.

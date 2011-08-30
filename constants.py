@@ -5,8 +5,6 @@ SPOWPY_PATH = "/home/hantke/programs/propagator"
 IMGTOOLS_PATH = "/home/hantke/pythonscripts/tools"
 sys.path.append(IMGTOOLS_PATH)
 
-print "jjdskfl"
-
 def unpickle_scattering_factors():
 
     global DICT_atomic_mass
@@ -38,7 +36,6 @@ def commandline_out_activate():
     global OUT
     OUT = sys.stdout
 
-
 # Define global dictionaries
 #---------------------------
 
@@ -50,8 +47,6 @@ DICT_massdensity = {'protein':1350,'cell':1000,'latex':1050,'water':998,'Au':193
 
 # Physical constants [SI-units]
 DICT_physical_constants = {'e':1.602176487E-19,'c':299792458,'h':6.62606896E-34,'re':2.8179402894E-15,'barn':1E-28,'u':1.66053886E-27}
-
-print DICT_physical_constants["e"]
 
 # Load scattering factors and atomic masses from file
 DICT_atomic_mass = {}
