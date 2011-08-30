@@ -1,4 +1,5 @@
 from constants import *
+import pylab
 
 class Source:
     """ FEL x-ray pulse.
@@ -6,13 +7,12 @@ class Source:
     def __init__(self,parent=None):
         self._parent = parent
         self.photon = Photon(wavelength=5.7E-09)
-        self.sizex = 20E-06
-        self.sizey = 20E-06
+        self.spotsize = 20E-06
         self.energy = 100E-06
 
     def get_area(self):
-        return self.sizex*self.sizey
-
+        return pylab.pi*(self.spotsize/2.0)**2
+    
 class Photon:
     def __init__(self,**kwarg):
         if "wavelength" in kwarg.keys(): self.set_wavelength(kwarg["wavelength"])

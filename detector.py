@@ -14,7 +14,7 @@ class Detector:
         self.saturationlevel = -1
         self._parent = parent
         gappixel = 127
-        self.set_mask(gappixel*self.pixelsize,'y')
+        self.set_mask(gappixel*self.pixelsize,'x')
 
     def get_effective_pixelsize(self):
         return self.pixelsize*self.binning         
