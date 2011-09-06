@@ -6,12 +6,11 @@
 # -----------------------------------------------------------------------------------------------------
 
 import pylab, sys, ConfigParser, numpy, types, pickle, time, math
-sys.path.append("/home/hantke/pythonscripts/tools")
 from matplotlib import rc
 import matplotlib.pyplot as mpy
 rc('text', usetex=True)
 rc('font', family='serif')
-import imgtools,tools
+import imgutils,tools
 from constants import *
 from source import *
 from sample import *
@@ -23,7 +22,7 @@ from detector import *
 #reload(sample)
 #reload(detector)
 #reload(tools)
-#reload(imgtools)
+#reload(imgutils)
 
 def propagator(input_obj=False):
     """ MAIN FUNCTION of 'propagator.py': 'spow' calculates diffraction under defined conditions specified in the input object.
@@ -58,7 +57,7 @@ def propagator(input_obj=False):
             print "ERROR: Field of view in object domain too big for chosen detector pixel size."
             return
         if abs((input_obj.sample.dX-dX)/dX) > 1.0E-3:
-            dn_perp = imgtools.resize2d(dn_perp,input_obj.sample.dX,dX)
+            dn_perp = imgutils.resize2d(dn_perp,input_obj.sample.dX,dX)
         F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*pylab.fftshift(pylab.fftn(dn_perp,(input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1])))*dX**2
     
     OUT.write("Propagation finished.\n")
@@ -103,7 +102,7 @@ class Input:
         self.sample.dX /= oversampling
         self.sample.put_virus(radius,eul_ang1,eul_ang2,eul_ang3,None,None,None,speedup_factor)
         if oversampling != 1.0:
-            self.sample.map3d = imgtools.downsample3d_fourier(self.sample.map3d,1/oversampling)
+            self.sample.map3d = imgutils.downsample3d_fourier(self.sample.map3d,1/oversampling)
             self.sample.dX *= oversampling
 
     def set_sample_sphere_map(self,radius=225E-09,oversampling=1.0,**materialargs):
@@ -114,7 +113,7 @@ class Input:
         self.sample.dX /= oversampling
         self.sample.put_sphere(radius,**materialargs)
         if oversampling != 1.0:
-            self.sample.map3d = imgtools.downsample3d_fourier(self.sample.map3d,1.0/oversampling)
+            self.sample.map3d = imgutils.downsample3d_fourier(self.sample.map3d,1.0/oversampling)
             self.sample.dX *= oversampling
 
     def set_sample_homogeneous_sphere(self,radius=225E-09,**materialargs):
@@ -188,14 +187,14 @@ class Output:
         Returns 1-dimensional array with intensity average in photons per pixel (binned). x-coordinate sampling is pixel (binned). 
         """
         I = self.get_intensities_pattern()
-        return imgtools.radial_pixel_average(I)
+        return imgutils.radial_pixel_average(I)
 
     def get_intensity_radial_average(self,noise=None):
         """
         Returns 1-dimensional array with intensity sum in photons. x-coordinate sampling is pixel (binned). 
         """
         I = self.get_intensities_pattern()
-        return imgtools.radial_pixel_sum(I)
+        return imgutils.radial_pixel_sum(I)
             
     def plot_radial_distribution(self,scaling="binned pixel and nyquist pixel",mode="all",noise=None):
         """

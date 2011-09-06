@@ -10,7 +10,7 @@ def generate_datafile(inpath,outpath):
     MASS_FILE = open('%s/masses.txt' % (inpath),'r')
     masslines = MASS_FILE.readlines()
 
-    sys.stdout.write('[')
+    #sys.stdout.write('[')
     dmasses = {}
     OUT = {}
 
@@ -48,7 +48,7 @@ def generate_datafile(inpath,outpath):
     pickle.dump([dmasses,OUT],PICKLEFILE)
 
 
-    sys.stdout.write(']\n')
+    #sys.stdout.write(']\n')
 
 
 

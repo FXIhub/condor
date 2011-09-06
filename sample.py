@@ -1,6 +1,6 @@
 import constants as phy
-import imgtools
-reload(imgtools)
+import imgutils
+#reload(imgutils)
 from constants import *
 import pylab
 
@@ -126,7 +126,7 @@ class SampleMap:
                    xmin:xmin+map_add.shape[2]] += map_add[:,:,:]
 
     def smooth_map3d(self,factor):
-        self.map3d = imgtools.smooth3d(self.map3d,factor)
+        self.map3d = imgutils.smooth3d(self.map3d,factor)
 
     def put_sphere(self,radius,x=None,y=None,z=None,**materialargs):
         """
