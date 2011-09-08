@@ -132,7 +132,7 @@ class Input:
         """ Reads given configuration file and sets configuration to the input-object """
         self.source = Source(self)
         self.sample = SampleSphere(self)
-        self.source = Detector(self)
+        self.detector = Detector(self)
         config = ConfigParser.ConfigParser()
         try:
             config.readfp(open(configfile))
@@ -140,8 +140,7 @@ class Input:
             print "ERROR: Can't read configuration-file."
             return
         self.source.photon.set_wavelength(config.getfloat('source','wavelength'))
-        self.source.sizex = config.getfloat('source','sizex')
-        self.source.sizey = config.getfloat('source','sizey')
+        self.source.spotsize = config.getfloat('source','spotsize')
         self.source.energy = config.getfloat('source','energy')
         mat = config.get('sample','material')
         args = []
@@ -160,13 +159,14 @@ class Input:
                 args.append((keys[i],DICT_atomic_composition[mat][i]))
             args.append(('massdensity',DICT_massdensity[mat]))
         args= dict(args)
-        self.sample = SampleSphere(config.getfloat('sample','radius'),self,**args)
+        self.set_sample_homogeneous_sphere(config.getfloat('sample','radius'),**args)
         self.detector.distance = config.getfloat('detector','distance')
-        self.detector.pixelsize = config.getfloat('detector','psize')
-        self.detector.binning = config.getint('detector','binned')
+        self.detector.pixelsize = config.getfloat('detector','pixelsize')
+        self.detector.binning = config.getint('detector','binning')
         self.detector.Nx = config.getint('detector','Nx')
         self.detector.Ny = config.getint('detector','Ny')
         self.detector.set_mask(config.getfloat('detector','gapsize'),config.get('detector','gaporientation'))
+        self.detector.saturationlevel = config.getfloat('detector','saturationlevel')
 
 class Output:
     """
