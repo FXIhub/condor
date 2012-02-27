@@ -1,8 +1,10 @@
+import sys
+sys.path.append("utils")
 import constants as phy
 import imgutils
 #reload(imgutils)
 from constants import *
-import pylab
+import pylab,time,multiprocessing
 
 class Material:
     """
@@ -54,19 +56,66 @@ class Material:
         rho_q: atomic number density of atom species q
         f_q(0): atomic scattering factor (forward scattering) of atom species q
         """
- 
-        u = phy.DICT_physical_constants['u']
+
         re = phy.DICT_physical_constants['re']
         h = phy.DICT_physical_constants['h']
         c = phy.DICT_physical_constants['c']
         qe = phy.DICT_physical_constants['e']
-        
-        atomic_composition = {}
 
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
         photon_wavelength = h*c/photon_energy_eV/qe
-           
+
+        f = self.get_f(photon_energy_eV)
+            
+        n = 1 - re/2/pylab.pi * photon_wavelength**2 * f
+
+        return n
+
+
+    def get_f(self,photon_energy_eV=None):
+
+        h = phy.DICT_physical_constants['h']
+        c = phy.DICT_physical_constants['c']
+        qe = phy.DICT_physical_constants['e']
+        
+        atom_density = self.get_atom_density()
+
+        if not photon_energy_eV:
+            photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
+        photon_wavelength = h*c/photon_energy_eV/qe
+
+        atomic_composition = self.get_atomic_composition_dict()
+
+        rhof_sum = 0
+        for element in atomic_composition.keys():
+            # sum up average atom factor
+            f = self.get_fX(element,photon_energy_eV)
+            rhof_sum += atomic_composition[element] * atom_density * f
+
+        return rhof_sum
+
+
+    def get_atom_density(self):
+                
+        u = phy.DICT_physical_constants['u']
+
+        atomic_composition = self.get_atomic_composition_dict()
+
+        M = 0
+        for element in atomic_composition.keys():
+            # sum up average atom density
+            M += atomic_composition[element]*phy.DICT_atomic_mass[element]*u
+
+        number_density = self.massdensity/M
+        
+        return number_density
+
+        
+    def get_atomic_composition_dict(self):
+
+        atomic_composition = {}
+        
         for key in self.__dict__.keys():
             if key[0] == 'c':
                 exec "c_tmp = self." + key
@@ -75,21 +124,10 @@ class Material:
         tmp_sum = float(sum(atomic_composition.values()))
         for element in atomic_composition.keys():
             atomic_composition[element] /= tmp_sum 
+        
+        return atomic_composition
 
-        M = 0
-        for element in atomic_composition.keys():
-            # sum up average atom density
-            M += atomic_composition[element]*phy.DICT_atomic_mass[element]*u
 
-        rhof_sum = 0
-        for element in atomic_composition.keys():
-            # sum up average atom factor
-            f = self.get_fX(element,photon_energy_eV)
-            rhof_sum += atomic_composition[element] * (self.massdensity/M) * f
- 
-        n = 1 - re/2/pylab.pi * photon_wavelength**2 * rhof_sum
-
-        return n            
 
 class SampleMap:
     """
@@ -97,42 +135,54 @@ class SampleMap:
     Initialization in SI-units.
     Map values in map3d are n-1 = delta n. 
     """
+
     def __init__(self,parent=None,size=None,dX=None):
+
         self._parent = parent
+        self.radius = None
         if not size:
-            self.dX = self._parent.source.photon.get_wavelength()*self._parent.detector.distance/self._parent.detector.get_effective_pixelsize()/max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])
-            self.N = max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.detector.binning
+            self.dX = self._parent.source.photon.get_wavelength()*self._parent.detector.distance/self._parent.detector.get_effective_pixelsize()/max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.propagation.rs_oversampling
+            self.N = max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.detector.binning*self._parent.propagation.rs_oversampling
         else:
-            self.dX = dX
+            self.dX = dX                
             self.N = int(round(size/dX))
-        self.map3d = pylab.zeros(shape=(self.N,self.N,self.N))
+        self.map3d = pylab.zeros(shape=(1,1,1))
         self.euler_angle_1 = 0.0
         self.euler_angle_2 = 0.0
         self.euler_angle_3 = 0.0
 
     def new_configuration_test(self):
         if not self._parent:
-            dX_new = self._parent.source.photon.get_wavelength()*self._parent.detector.distance/self._parent.detector.get_effective_pixelsize()/max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])
-            N_new = max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.detector.binning
+            dX_new = self._parent.source.photon.get_wavelength()*self._parent.detector.distance/self._parent.detector.get_effective_pixelsize()/max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.propagation.rs_oversampling
+            N_new = max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.detector.binning*self._parent.propagation.rs_oversampling
             if not self.dX == dX_new or not self.N == N_new:
                 print "WARNING: Configuration changed. Please reinitialize your sample."
         
     def put_custom_map(self,map_add,x,y,z):
-        zmin = round(z-map_add.shape[0]/2.0)
-        ymin = round(z-map_add.shape[1]/2.0)
-        xmin = round(z-map_add.shape[2]/2.0)
+        origin = pylab.array([(self.map3d.shape[2]-1)/2.0,
+                              (self.map3d.shape[1]-1)/2.0,
+                              (self.map3d.shape[0]-1)/2.0])
+        zmin = round(origin[2]+z-map_add.shape[0]/2.0)
+        ymin = round(origin[1]+y-map_add.shape[1]/2.0)
+        xmin = round(origin[0]+x-map_add.shape[2]/2.0)
+        #print zmin
+        #print xmin
+        #print ymin
+        #print map_add.shape
+        #print self.map3d.shape
         self.map3d[zmin:zmin+map_add.shape[0],
                    ymin:ymin+map_add.shape[1],
                    xmin:xmin+map_add.shape[2]] += map_add[:,:,:]
 
     def smooth_map3d(self,factor):
+
         self.map3d = imgutils.smooth3d(self.map3d,factor)
 
-    def put_sphere(self,radius,x=None,y=None,z=None,**materialargs):
+    def put_sphere(self,radius,x=0,y=0,z=0,**materialargs):
         """
-        Add densitymap of spherical object to 3-dimensional densitymap.
+        Add densitymap of homogeneous sphere to 3-dimensional densitymap.
 
-        Radius r and center position x,y in SI-units.
+        Radius r and center position x, y in SI-units.
 
            Specify a materialtype (example: materialtype='protein',materialtype='virus',materialtype='cell',materialtype='latexball',materialtype='water')
         OR relative atomic composition and massdensity (example: cH=2,cO=1,massdensity=1000).
@@ -153,25 +203,89 @@ class SampleMap:
         if self.map3d.max() == 0 and not x and not y and not z:
             self.map3d = spheremap
         else:
-            if not x and not y and not z:
+            x_N = x/self.dX
+            y_N = y/self.dX
+            z_N = z/self.dX
+            self.put_custom_map(spheremap,x_N,y_N,z_N)
+ 
+    def put_spheroid(self,a,b,x=None,y=None,z=None,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,**materialargs):
+        """
+        Add densitymap of homogeneous ellipsoid to 3-dimensional densitymap.
+
+        Radii a, b and center position x, y in SI-units.
+
+           Specify a materialtype (example: materialtype='protein',materialtype='virus',materialtype='cell',materialtype='latexball',materialtype='water')
+        OR relative atomic composition and massdensity (example: cH=2,cO=1,massdensity=1000).
+
+        """
+
+        material_obj = Material(self,**materialargs)
+        dn = 1.0-material_obj.get_n()        
+        R_N = max([a,b])/self.dX
+        a_N = a/self.dX
+        b_N = b/self.dX
+        size = int(round((R_N*1.2)*2))
+        X,Y,Z = 1.0*pylab.mgrid[0:size,0:size,0:size]
+        for J in [X,Y,Z]: J -= size/2.0-0.5
+        
+        if eul_ang1 != 0.0 or eul_ang2 != 0.0 or eul_ang3 != 0.0:
+            def rotate_X(v,alpha):
+                rotM = pylab.array([[1,0,0],[0,pylab.cos(alpha),-pylab.sin(alpha)],[0,pylab.sin(alpha),pylab.cos(alpha)]])
+                return pylab.dot(rotM,v)
+            def rotate_Z(v,alpha):
+                rotM = pylab.array([[pylab.cos(alpha),-pylab.sin(alpha),0],[pylab.sin(alpha),pylab.cos(alpha),0],[0,0,1]])
+                return pylab.dot(rotM,v)
+            def do_basic_rotation(v,e1,e2,e3):
+                new = rotate_Z(v,e1)
+                new = rotate_X(new,e2)
+                new = rotate_Z(new,e3)
+                return new
+            print do_basic_rotation(pylab.array([2.3,2.3,2.3]),0.1,0.1,0.1)
+            for xi in pylab.arange(0,size,1.0):
+                for yi in pylab.arange(0,size,1.0):
+                    for zi in pylab.arange(0,size,1.0):
+                        new = pylab.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]])
+                        new = do_basic_rotation(new,eul_ang1,eul_ang2,eul_ang3)
+                        X[zi,yi,xi] = new[2]
+                        Y[zi,yi,xi] = new[1]
+                        Z[zi,yi,xi] = new[0]
+        #print X.shape
+        #print self.map3d.shape
+
+        spheroidmap = (X**2+Y**2)/a_N**2+Z**2/b_N**2
+        #print spheroidmap
+        #print spheroidmap.max()
+        #print spheroidmap.min()
+        spheroidmap[spheroidmap<=1] = 1
+        spheroidmap[spheroidmap>1] = 0
+        #spheroidmap[abs(R_N-R)<0.5] = 0.5+0.5*(R_N-R[abs(R_N-R)<0.5])
+        spheroidmap *= dn
+        if self.map3d.max() == 0 and not x and not y and not z:
+            self.map3d = spheroidmap
+        else:
+            if x == None and y == None and z == None:
                 x=round(self.map3d.shape[2]/2.0)-0.5
                 y=round(self.map3d.shape[1]/2.0)-0.5
                 z=round(self.map3d.shape[0]/2.0)-0.5
-            self.put_custom_map(spheremap,x,y,z)
-    
+            x_N = x/self.dX
+            y_N = y/self.dX
+            z_N = z/self.dX
+            self.put_custom_map(spheroidmap,x_N,y_N,z_N)
+ 
+   
     def put_goldball(self,radius,x=None,y=None,z=None):
         self.put_sphere(radius,x,y,z,cAu=1,massdensity=phy.DICT_massdensity['Au'])        
 
-    def put_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,x=None,y=None,z=None,speedup_factor=1):
+    def put_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,x=0.,y=0.,z=0.,speedup_factor=1):
         dn = self._makedm_icosahedron(radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor,materialtype="virus")
-        if self.map3d.max() == 0.0 and not x and not y and not z:
+        if self.map3d.max() == 0.0 and x==0. and y==0. and z==0.:
             self.map3d = dn
         else:
-            if not x and not y and not z:
-                x=round(self.map3d.shape[2]/2.0)-0.5
-                y=round(self.map3d.shape[1]/2.0)-0.5
-                z=round(self.map3d.shape[0]/2.0)-0.5
-            self.put_custom_map(dn,x,y,z)
+            x_N = x/self.dX
+            y_N = y/self.dX
+            z_N = z/self.dX
+            self.put_custom_map(dn,x_N,y_N,z_N)
+
 
     def _makedm_icosahedron(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,speedup_factor=1,verbose=True,smooth=1.0,**materialargs):  
         """
@@ -184,6 +298,8 @@ class SampleMap:
         """
         #self.new_configuration_test()
 
+        t_start = time.time()
+
         a = radius*(16*pylab.pi/5.0/(3+pylab.sqrt(5)))**(1/3.0)
         Rmax = pylab.sqrt(10.0+2*pylab.sqrt(5))*a/4.0 # radius at corners
         Rmin = pylab.sqrt(3)/12*(3.0+pylab.sqrt(5))*a # radius at faces
@@ -192,6 +308,8 @@ class SampleMap:
         s = smooth
         N = int(pylab.ceil(2*(nRmax+math.ceil(s))))
         r_pix = self.dX*(3/(4*pylab.pi))**(1/3.0)
+
+        #print N
 
         OUT.write("... build icosahedral geometry ...\n")
         
@@ -242,6 +360,9 @@ class SampleMap:
             n_list[i] = rotate_X(n_list[i],eul_ang2)
             n_list[i] = rotate_Z(n_list[i],eul_ang3)
 
+        t_1 = time.time()
+        #print "1"
+        
         OUT.write("... %i x %i x %i grid (%i voxels) ...\n" % (N,N,N,N**3))
         icomap = pylab.ones((N,N,N))
         positions = []
@@ -249,33 +370,37 @@ class SampleMap:
             for iy in range(0,N):
                 for ix in range(0,N):
                     positions.append([iz,iy,ix])
-        s = 2.0
-        for m in range(0,len(n_list)):
-            n = n_list[m]
-            poplist = []
-            for i in range(0,len(positions)):
-                [iz,iy,ix] = positions[i]
-                rsq = (iz-N/2.0-0.5)**2+(iy-N/2.0-0.5)**2+(ix-N/2.0-0.5)**2
-                if rsq < (nRmin-s/2.0)**2:
-                    poplist.append(i)
-                elif rsq > (nRmax+s/2.0)**2:
-                    poplist.append(i)
-                    icomap[iz,iy,ix] = 0.0
-                else:
-                    r = pylab.array([iz-N/2.0-0.5,iy-N/2.0-0.5,ix-N/2.0-0.5])
-                    delta = pylab.dot(1.0*r,1.0*n)/pylab.sqrt(pylab.dot(1.0*n,1.0*n)) - nRmin
-                    #print delta
-                    if delta > s/2.0:
-                        icomap[iz,iy,ix] = 0.0
-                    elif abs(delta) <= s/2.0 and icomap[iz,iy,ix] != 0.0:
-                        icomap[iz,iy,ix] = 0.5-delta/s
-                    #elif abs(delta) <= 0.5 and icomap[iz,iy,ix] != 0.0:
-                    #    icomap[iz,iy,ix] = 1.0
-                        
-            poplist.reverse()
-            for ipop in poplist:
-                positions.pop(ipop)
-            OUT.write("... %i percent done ...\n" % (int(100.0*(m+1)/(1.0*len(n_list)))))
+        positions = pylab.array(positions)
+
+        t_2 = time.time()
+        #print "2"
+
+        #print "3"        
+        pool = multiprocessing.Pool()
+        positions_pool = []
+        results_pool = []
+        #print "4"
+
+        N_chunks = multiprocessing.cpu_count()#int(pylab.ceil(len(positions)/(1.0*chunksize)))
+        chunksize = int(pylab.ceil(len(positions)/(1.0*N_chunks)))
+
+        for chunk in range(0,N_chunks):
+            print "Starting process %i / %i" % ((chunk+1),N_chunks)
+            if chunk < (N_chunks-1): positions_pool.append(positions[chunksize*chunk:chunksize*(chunk+1),:])
+            else: positions_pool.append(positions[chunksize*chunk:,:])
+            results_pool.append(pool.apply_async(imgutils.cut_edges,(positions_pool[-1],n_list,radius,self.dX)))
+        pool.close()
+        pool.join()
+        cuts = pylab.ones(len(positions))
+        for chunk in range(0,N_chunks):
+            print "Receiving results from process %i / %i" % ((chunk+1),N_chunks)
+            res = results_pool[chunk].get()
+            for i in range(0,len(positions_pool[chunk])):
+                [iz,iy,ix] = positions_pool[chunk][i]
+                icomap[iz,iy,ix] = res[i]
+        t_stop = time.time()
+
+        #print "Times: \n start->1: %f \n 1->2: %f \n 2->stop: %f" % (t_1-t_start,t_2-t_1,t_stop-t_2)
 
         material_obj = Material(self,**materialargs)
         dn = 1.0 - material_obj.get_n()
@@ -350,13 +475,32 @@ class SampleMap:
                 map2d = map2d_new
         return map2d
 
+    def save_map3d(self,filename):
+        import spimage
+        M = spimage.sp_image_alloc(self.map3d.shape[2],self.map3d.shape[1],self.map3d.shape[0])
+        M.image[:,:,:] = self.map3d[:,:,:]
+        M.mask[:,:,:] = 1
+        M.detector.pixel_size[0] = self.dX
+        M.detector.pixel_size[1] = self.dX
+        M.detector.pixel_size[2] = self.dX
+        spimage.sp_image_write(M,filename,0)
+        spimage.sp_image_free(M)
+
+    def load_map3d(self,filename):
+        import spimage
+        M = spimage.sp_image_read(filename,0)
+        self.map3d = M.image.copy()
+        self.dX = M.detector.pixel_size.copy()[0]
+        spimage.sp_image_free(M)
 
     def get_area(self,eul_ang1=None,eul_ang2=None,eul_ang3=None):
-        """ Calculates area of object in projected map3d """
-        projection = self.project(eul_ang1,eul_ang2,eul_ang3)
-        binary = pylab.ones_like(projection)
-        binary[abs(projection)<pylab.median(abs(projection))] = 0
-        area = binary.sum()*self.dX**2
+        if self.radius == None:
+            projection = self.project(eul_ang1,eul_ang2,eul_ang3)
+            binary = pylab.ones_like(projection)
+            binary[abs(projection)<pylab.median(abs(projection))] = 0
+            area = binary.sum()*self.dX**2
+        else:
+            area = pylab.pi*self.radius**2
         return area
         
 class SampleSphere:

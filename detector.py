@@ -1,6 +1,8 @@
+import sys
+sys.path.append("utils")
 import constants as phy
-import pylab
-import tools
+import tools,pylab
+
 
 class Detector:
     """ Area detector.
@@ -11,6 +13,8 @@ class Detector:
         self.binning = 8
         self.Nx = 4096
         self.Ny = 4096
+        self.cx = None
+        self.cy = None
         self.saturationlevel = -1
         self._parent = parent
         gappixel = 127
@@ -55,8 +59,10 @@ class Detector:
             wavelength = self._parent.source.photon.get_wavelength()
         qmap = pylab.ones_like(self.mask)
         X,Y = pylab.meshgrid(pylab.arange(0,self.mask.shape[1]),pylab.arange(0,self.mask.shape[0]))
-        cx = round(self.mask.shape[1]/2.0)
-        cy = round(self.mask.shape[0]/2.0)
+        if self.cx == None: cx = round(self.mask.shape[1]/2.0)
+        else: cx = self.cx
+        if self.cy == None: cy = round(self.mask.shape[0]/2.0)
+        else: cy = self.cy
         X -= cx
         Y -= cy
         R = pylab.sqrt(X**2+Y**2)

@@ -10,19 +10,22 @@ from matplotlib import rc
 import matplotlib.pyplot as mpy
 rc('text', usetex=True)
 rc('font', family='serif')
+sys.path.append("utils")
 import imgutils,tools
 from constants import *
 from source import *
 from sample import *
 from detector import *
 
-#import constants,source,sample,detector,tools
-#reload(constants)
-#reload(source)
-#reload(sample)
-#reload(detector)
-#reload(tools)
-#reload(imgutils)
+import constants,source,sample,detector,tools
+import xcorepropagation
+reload(constants)
+reload(source)
+reload(sample)
+reload(detector)
+reload(tools)
+reload(imgutils)
+reload(xcorepropagation)
 
 def propagator(input_obj=False):
     """ MAIN FUNCTION of 'propagator.py': 'spow' calculates diffraction under defined conditions specified in the input object.
@@ -48,18 +51,31 @@ def propagator(input_obj=False):
         F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q*R)-q*R*pylab.cos(q*R))/(q*R)**3*dn_real
         F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
 
+    #if isinstance(input_obj.sample,SampleMap):    
+        # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
+    #    dn_perp = input_obj.sample.project()
+    #    dQ = 2*pylab.pi/wavelength*pylab.sqrt(Omega_p)
+    #    dX = 2*pylab.pi/(dQ*max([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
+    #    if max([dn_perp.shape[0],dn_perp.shape[1]]) > input_obj.detector.mask.shape[0]:
+    #        print "ERROR: Field of view in object domain too big for chosen detector pixel size."
+    #        return
+    #    if abs((input_obj.sample.dX-dX)/dX) > 1.0E-3:
+    #        dn_perp = imgutils.resize2d(dn_perp,input_obj.sample.dX,dX)
+    #    F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*pylab.fftshift(pylab.fftn(dn_perp,(input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1])))*dX**2
+
+
     if isinstance(input_obj.sample,SampleMap):    
         # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
-        dn_perp = input_obj.sample.project()
         dQ = 2*pylab.pi/wavelength*pylab.sqrt(Omega_p)
-        dX = 2*pylab.pi/(dQ*max([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
-        if max([dn_perp.shape[0],dn_perp.shape[1]]) > input_obj.detector.mask.shape[0]:
-            print "ERROR: Field of view in object domain too big for chosen detector pixel size."
-            return
-        if abs((input_obj.sample.dX-dX)/dX) > 1.0E-3:
-            dn_perp = imgutils.resize2d(dn_perp,input_obj.sample.dX,dX)
-        F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*pylab.fftshift(pylab.fftn(dn_perp,(input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1])))*dX**2
-    
+        N = int(round(2*pylab.pi/dQ/input_obj.sample.dX/(1.0*input_obj.propagation.rs_oversampling)))
+        F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
+            * xcorepropagation.nfftXCore(input_obj.sample.map3d,
+                                         N,
+                                         [input_obj.sample.euler_angle_1,input_obj.sample.euler_angle_2,input_obj.sample.euler_angle_3]) \
+            * input_obj.sample.dX**3
+        
+        F = imgutils.crop(F,pylab.array([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
+
     OUT.write("Propagation finished.\n")
 
     return Output(F,input_obj)
@@ -83,6 +99,7 @@ class Input:
             self.source = Source(self)
             self.sample = SampleSphere(self)
             self.detector = Detector(self)
+            self.propagation = Propagation(self)
             OUT.write("... initial values set to default values ...\n")
     
     def set_sample_empty_map(self):
@@ -91,30 +108,31 @@ class Input:
         Densitymap resolution is set according to the detector geometry.
         """
         self.sample = SampleMap(self)
+        #self.sample.dX /= self.propagation.rs_oversampling
 
-    def set_sample_virus_map(self,radius,oversampling=1.0,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,speedup_factor=1):
+    def set_sample_virus_map(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,speedup_factor=1):
         """
         Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles euler_angle1, euler_angle2 and euler_angle3 [rad].
         Map resolution is set to highest resolution that can be achieved by the given detector geometry.
         For rough simulations the resolution can be changed by setting the optional argument 'speedup_factor' to an integer bigger than 1.
         """
         self.sample = SampleMap(self)
-        self.sample.dX /= oversampling
-        self.sample.put_virus(radius,eul_ang1,eul_ang2,eul_ang3,None,None,None,speedup_factor)
-        if oversampling != 1.0:
-            self.sample.map3d = imgutils.downsample3d_fourier(self.sample.map3d,1/oversampling)
-            self.sample.dX *= oversampling
+        #self.sample.dX /= self.propagation.rs_oversampling
+        self.sample.put_virus(radius,eul_ang1,eul_ang2,eul_ang3,0.,0.,0.,speedup_factor)
+        self.sample.radius = radius
+        #if oversampling != 1.0:
+        #    self.sample.map3d = imgutils.downsample3d_fourier(self.sample.map3d,1/oversampling)
+        #    self.sample.dX *= oversampling
 
-    def set_sample_sphere_map(self,radius=225E-09,oversampling=1.0,**materialargs):
+    def set_sample_sphere_map(self,radius=225E-09,**materialargs):
         """
         Creates sphere of given radius.
         """
         self.sample = SampleMap(self)
-        self.sample.dX /= oversampling
         self.sample.put_sphere(radius,**materialargs)
-        if oversampling != 1.0:
-            self.sample.map3d = imgutils.downsample3d_fourier(self.sample.map3d,1.0/oversampling)
-            self.sample.dX *= oversampling
+        #if oversampling != 1.0:
+        #    self.sample.map3d = imgutils.downsample3d_fourier(self.sample.map3d,1.0/oversampling)
+        #    self.sample.dX *= oversampling
 
     def set_sample_homogeneous_sphere(self,radius=225E-09,**materialargs):
         """
@@ -133,6 +151,7 @@ class Input:
         self.source = Source(self)
         self.sample = SampleSphere(self)
         self.detector = Detector(self)
+        self.propagation = Propagation(self)
         config = ConfigParser.ConfigParser()
         try:
             config.readfp(open(configfile))
@@ -165,8 +184,16 @@ class Input:
         self.detector.binning = config.getint('detector','binning')
         self.detector.Nx = config.getint('detector','Nx')
         self.detector.Ny = config.getint('detector','Ny')
-        self.detector.set_mask(config.getfloat('detector','gapsize'),config.get('detector','gaporientation'))
+        if config.get('detector','mask') == 'none':
+            self.detector.set_mask(config.getfloat('detector','gapsize'),config.get('detector','gaporientation'))
+        else:
+            M = pylab.imread(config.get('detector','mask'))
+            M = M[:,:,0]
+            M[abs(M)>0] = 1
+            M[M==0] = 0
+            self.detector.mask = M.copy()
         self.detector.saturationlevel = config.getfloat('detector','saturationlevel')
+        self.propagation.rs_oversampling = config.getfloat('propagation','rs_oversampling')
 
 class Output:
     """
@@ -272,7 +299,10 @@ class Output:
 
     def readout_pattern(self):
         return 0
-            
+
+    def get_nyquist_pixelsize(self):
+        return tools.get_nyquist_pixelsize(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),self.input_object.sample.get_area())
+
     def _get_gapsize(self,X_min,X_max,Y_min,Y_max):
         """
         Returns gapsize of pattern in pixels (binned)
@@ -387,7 +417,7 @@ class Output:
         I /= u**2
 
         if noise == "poisson":
-            I = pylab.poisson(I)
+            I = abs(pylab.poisson(I))
 
         if saturationlevel and self.input_object.detector.saturationlevel > 0:
             I *= u**2/(1.0*self.input_object.detector.binning**2)
@@ -513,3 +543,12 @@ class Output:
         tmp_data.image[:,:] = pattern[:,:]
         spimage.sp_image_write(tmp_data,filename,0)
         spimage.sp_image_free(tmp_data)
+
+class Propagation:
+    """
+    """
+    
+    def __init__(self,parent=None):
+        self._parent = parent
+        self.rs_oversampling = 2.0
+        self.mode = PROPAGATION_MODE_PROJECTION

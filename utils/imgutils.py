@@ -113,6 +113,12 @@ def downsample(array2d_raw,factor,mode="pick"):
         return array2d_new
 
 def crop(pattern,cropLength,center=None,bg=0,masking_threshold=None):
+    if pylab.isscalar(cropLength):
+        cropLength_x = cropLength
+        cropLength_y = cropLength
+    else:
+        cropLength_x = cropLength[1]
+        cropLength_y = cropLength[0]
     if not center:
         x_center = (pattern.shape[1] >> 1) - 0.5
         y_center = (pattern.shape[0] >> 1) - 0.5
@@ -123,8 +129,8 @@ def crop(pattern,cropLength,center=None,bg=0,masking_threshold=None):
         x_center = center[1]
         y_center = center[0]
 
-    x_start = x_center-0.5-((cropLength >> 1)-1)
-    x_stop = x_start + cropLength
+    x_start = x_center-0.5-((cropLength_x >> 1)-1)
+    x_stop = x_start + cropLength_x
     if x_start < 0:
         x_start = 0
         xc_start = -x_start
@@ -134,11 +140,11 @@ def crop(pattern,cropLength,center=None,bg=0,masking_threshold=None):
         x_stop = pattern.shape[1] 
         xc_stop = x_stop - pattern.shape[1] 
     else:
-        xc_stop = cropLength
+        xc_stop = cropLength_x
     Nx = x_stop - x_start
 
-    y_start = y_center-0.5-((cropLength >> 1)-1)
-    y_stop = y_start + cropLength
+    y_start = y_center-0.5-((cropLength_y >> 1)-1)
+    y_stop = y_start + cropLength_y
     if y_start < 0:
         y_start = 0
         yc_start = -y_start
@@ -148,10 +154,10 @@ def crop(pattern,cropLength,center=None,bg=0,masking_threshold=None):
         y_stop = pattern.shape[0] 
         yc_stop = y_stop - pattern.shape[0] 
     else:
-        yc_stop = cropLength
+        yc_stop = cropLength_y
     Ny = y_stop - y_start
 
-    patternCropped = pylab.ones(shape=(cropLength,cropLength),dtype=pattern.dtype)*bg
+    patternCropped = pylab.ones(shape=(cropLength_y,cropLength_x),dtype=pattern.dtype)*bg
     patternCropped[yc_start:yc_stop,xc_start:xc_stop] = pattern[y_start:y_stop,x_start:x_stop]
     return patternCropped
 
@@ -338,3 +344,31 @@ def interpolate2d(arr2d,factor):
     farr2d = pylab.fftshift(farr2d)
     arr2d_new = pylab.ifftn(farr2d)
     return arr2d_new
+
+def cut_edges(potential_cut_positions,normal_vectors,radius,dX):
+    a = radius*(16*pylab.pi/5.0/(3+pylab.sqrt(5)))**(1/3.0)
+    Rmax = pylab.sqrt(10.0+2*pylab.sqrt(5))*a/4.0 # radius at corners
+    Rmin = pylab.sqrt(3)/12*(3.0+pylab.sqrt(5))*a # radius at faces
+    nRmax = Rmax/dX
+    nRmin = Rmin/dX
+    N = int(pylab.ceil(2*(nRmax+1.0)))
+    r_pix = dX*(3/(4*pylab.pi))**(1/3.0)
+    s = 2.0
+    cutmap = pylab.ones(len(potential_cut_positions))
+    for m in range(0,len(normal_vectors)):
+        normal_vector = normal_vectors[m]
+        for i in range(0,len(potential_cut_positions)):
+            [iz,iy,ix] = potential_cut_positions[i]
+            rsq = (iz-N/2.0-0.5)**2+(iy-N/2.0-0.5)**2+(ix-N/2.0-0.5)**2
+            if rsq < (nRmin-s/2.0)**2:
+                pass
+            elif rsq > (nRmax+s/2.0)**2:
+                cutmap[i] = 0.0
+            elif cutmap[i] != 0.0:
+                r = pylab.array([iz-N/2.0-0.5,iy-N/2.0-0.5,ix-N/2.0-0.5])
+                delta = pylab.dot(1.0*r,1.0*normal_vector)/pylab.sqrt(pylab.dot(1.0*normal_vector,1.0*normal_vector)) - nRmin
+                if delta > s/2.0:
+                    cutmap[i] = 0.0
+                elif abs(delta) <= s/2.0:
+                    cutmap[i] = 0.5-delta/s
+    return cutmap

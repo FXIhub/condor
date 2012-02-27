@@ -4,7 +4,6 @@ PROPAGATOR_DIR = "/home/hantke/programs/propagator"
 
 
 
-
 def unpickle_scattering_factors():
     global DICT_atomic_mass
     global DICT_scattering_factors
@@ -24,6 +23,9 @@ class _WritableObject:
         self.content.append(string)
 
 
+PROPAGATION_MODE_PROJECTION = 0
+PROPAGATION_MODE_3DSAMPLING = 1
+
 def commandline_out_deactivate():
     global OUT
     OUT = _WritableObject()
@@ -37,11 +39,13 @@ def commandline_out_activate():
 #---------------------------
 # Typical realative atomic compositions (order: H,C,N.O,P,S), collected from Filipe Maia's webpage and paper Bergh et al. 2008
 
-DICT_atomic_composition = {'protein':[86,52,13,15,0,3],'cell':[23,3,1,10,0,1],'latex':[1,1,0,0,0,0],'water':[2,0,0,1,0,0],'dna':[11,10,4,6,1,0],'lipid':[69,36,0,6,1,0],'genophore':[205,134,38,48,3,6],'virus':[72.43,49.85,16.32,24.49,2.57,1.39]}
+DICT_atomic_composition = {'protein':[86,52,13,15,0,3],'cell':[23,3,1,10,0,1],'latex':[1,1,0,0,0,0],'water':[2,0,0,1,0,0],'dna':[11,10,4,6,1,0],'lipid':[69,36,0,6,1,0],'genophore':[205,134,38,48,3,6],'virus':[72.43,49.85,16.32,24.49,2.57,1.39],'mimivirus':[23,3,1,10,0,1],'carboxysome':[0.51,0.30,0.07,0.10,0.,0.02]}
 
 # Typical realative atomic compositions (order: H,C,N.O,P,S)
 
-DICT_massdensity = {'protein':1350,'cell':1000,'latex':1050,'water':998,'Au':19300,'dna':1700,'lipid':1000,'genophore':1560,'virus':1381}#Filipe: 'virus':1455,
+DICT_massdensity = {'protein':1350,'cell':1000,'latex':1050,'water':998,'Au':19300,'dna':1700,'lipid':1000,'genophore':1560,'virus':1381,'mimivirus':1100,'carboxysome':1250}
+# Filipe: 'virus': 1455
+# Carboxysome density guessed by Dirk, atomic composition deduced assuming protein and water being the only two components
 
 # Physical constants [SI-units]
 
@@ -58,6 +62,4 @@ unpickle_scattering_factors()
 # Direct output to OUT object.
 
 commandline_out_deactivate()
-
-
 
