@@ -44,6 +44,7 @@ def propagator(input_obj=False):
     Omega_p = input_obj.detector.get_effective_pixelsize()**2 / input_obj.detector.distance**2
 
     if isinstance(input_obj.sample,SampleSphere):    
+        # SO FAR I AM NEGLECTING EFFECTS OF A POLARIZATION FACTOR != 1!!! VALID ONLY FOR SMALL ANGLES
         # scattering amplitude from homogeneous sphere: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ 4/3 pi R^3  3 { sin(qR) - qR cos(qR) } / (qR)^3 ] dn_real
         dn_real = (1-input_obj.sample.material.get_n()).real
         R = input_obj.sample.radius
@@ -92,14 +93,14 @@ class Input:
     """
     
     def __init__(self,configfile=None):
+        self.source = Source(self)
+        self.sample = SampleSphere(self)
+        self.detector = Detector(self)
+        self.propagation = Propagation(self)
         if configfile != None:
             self.read_configfile(configfile)
             OUT.write("... set configuration in accordance to given configuration-file: %s ...\n" % configfile)
         else:
-            self.source = Source(self)
-            self.sample = SampleSphere(self)
-            self.detector = Detector(self)
-            self.propagation = Propagation(self)
             OUT.write("... initial values set to default values ...\n")
     
     def set_sample_empty_map(self):
@@ -148,10 +149,6 @@ class Input:
 
     def read_configfile(self,configfile):
         """ Reads given configuration file and sets configuration to the input-object """
-        self.source = Source(self)
-        self.sample = SampleSphere(self)
-        self.detector = Detector(self)
-        self.propagation = Propagation(self)
         config = ConfigParser.ConfigParser()
         try:
             config.readfp(open(configfile))

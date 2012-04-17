@@ -165,11 +165,6 @@ class SampleMap:
         zmin = round(origin[2]+z-map_add.shape[0]/2.0)
         ymin = round(origin[1]+y-map_add.shape[1]/2.0)
         xmin = round(origin[0]+x-map_add.shape[2]/2.0)
-        #print zmin
-        #print xmin
-        #print ymin
-        #print map_add.shape
-        #print self.map3d.shape
         self.map3d[zmin:zmin+map_add.shape[0],
                    ymin:ymin+map_add.shape[1],
                    xmin:xmin+map_add.shape[2]] += map_add[:,:,:]
@@ -298,7 +293,7 @@ class SampleMap:
         """
         #self.new_configuration_test()
 
-        t_start = time.time()
+        #t_start = time.time()
 
         a = radius*(16*pylab.pi/5.0/(3+pylab.sqrt(5)))**(1/3.0)
         Rmax = pylab.sqrt(10.0+2*pylab.sqrt(5))*a/4.0 # radius at corners
@@ -308,7 +303,7 @@ class SampleMap:
         s = smooth
         N = int(pylab.ceil(2*(nRmax+math.ceil(s))))
         r_pix = self.dX*(3/(4*pylab.pi))**(1/3.0)
-
+        
         #print N
 
         OUT.write("... build icosahedral geometry ...\n")
@@ -360,9 +355,7 @@ class SampleMap:
             n_list[i] = rotate_X(n_list[i],eul_ang2)
             n_list[i] = rotate_Z(n_list[i],eul_ang3)
 
-        t_1 = time.time()
-        #print "1"
-        
+        #t_1 = time.time()        
         OUT.write("... %i x %i x %i grid (%i voxels) ...\n" % (N,N,N,N**3))
         icomap = pylab.ones((N,N,N))
         positions = []
@@ -372,15 +365,10 @@ class SampleMap:
                     positions.append([iz,iy,ix])
         positions = pylab.array(positions)
 
-        t_2 = time.time()
-        #print "2"
-
-        #print "3"        
+        #t_2 = time.time()
         pool = multiprocessing.Pool()
         positions_pool = []
         results_pool = []
-        #print "4"
-
         N_chunks = multiprocessing.cpu_count()#int(pylab.ceil(len(positions)/(1.0*chunksize)))
         chunksize = int(pylab.ceil(len(positions)/(1.0*N_chunks)))
 
@@ -398,8 +386,7 @@ class SampleMap:
             for i in range(0,len(positions_pool[chunk])):
                 [iz,iy,ix] = positions_pool[chunk][i]
                 icomap[iz,iy,ix] = res[i]
-        t_stop = time.time()
-
+        #t_stop = time.time()
         #print "Times: \n start->1: %f \n 1->2: %f \n 2->stop: %f" % (t_1-t_start,t_2-t_1,t_stop-t_2)
 
         material_obj = Material(self,**materialargs)
