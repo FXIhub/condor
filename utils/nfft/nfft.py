@@ -5,7 +5,7 @@ This module is made for simulation of diffraction
 patterns and is not intended for general use.
 """
 
-import pylab,psutil
+import pylab
 import nfft_c as _nfft_c
 
 def nfft1d(coordinates, vin):
@@ -49,7 +49,7 @@ def nfft3d(coordinates, vin):
         print "ERROR: nfft coordinates have to lie between -0.5 and 0.5."
         print 'number of good values = %d (%d)' % (sum(good_values_1d), len(good_values_1d))
         return []
-    mem0 = psutil.avail_phymem()
+    #mem0 = psutil.avail_phymem()
     #print "1 %f" % (psutil.avail_phymem()/(1.0*mem0))
     if vin.dtype != "complex128":
         vin = pylab.complex128(vin)
@@ -68,24 +68,24 @@ def nfft3d(coordinates, vin):
     return vout
 
 def test_nfft3d(N_sample=1000,N_coordinates=1000):
-    mem0 = psutil.avail_phymem()
-    print "1 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    #mem0 = psutil.avail_phymem()
+    #print "1 %f" % (psutil.avail_phymem()/(1.0*mem0))
     cube = pylab.ones(shape=(N_sample,N_sample,N_sample))
-    print "2 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    #print "2 %f" % (psutil.avail_phymem()/(1.0*mem0))
     x = pylab.arange(0,N_coordinates,1)/(1.0*(N_coordinates-1))-0.5
-    print "3 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    #print "3 %f" % (psutil.avail_phymem()/(1.0*mem0))
     X,Y = pylab.meshgrid(x,x)
-    print "4 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    #print "4 %f" % (psutil.avail_phymem()/(1.0*mem0))
     #Z = pylab.zeros(shape=(N,N))
     print N_coordinates
     print len(X.flatten())
     coordinates = pylab.zeros(shape=(N_coordinates*N_coordinates,3))
-    print "5 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    #print "5 %f" % (psutil.avail_phymem()/(1.0*mem0))
     coordinates[:,1] = Y.flatten()
-    print "6 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    #print "6 %f" % (psutil.avail_phymem()/(1.0*mem0))
     coordinates[:,2] = X.flatten()
-    print "7 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    #print "7 %f" % (psutil.avail_phymem()/(1.0*mem0))
     coordinates = coordinates.flatten()
-    print "8 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    #print "8 %f" % (psutil.avail_phymem()/(1.0*mem0))
     return nfft3d(coordinates,cube)
 
