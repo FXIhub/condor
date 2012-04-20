@@ -2,7 +2,7 @@ import sys,pylab,multiprocessing
 import constants
 sys.path.append(constants.PROPAGATOR_DIR+"/utils/nfft")
 import nfft
-import psutil,time
+import time
 
 def generate_fourier_coordinates(y_min,y_steps,x_min,x_steps,stepsize):
     X,Y = pylab.meshgrid((pylab.arange(0,x_steps,1)*stepsize+x_min),(pylab.arange(0,y_steps,1)*stepsize+y_min))
