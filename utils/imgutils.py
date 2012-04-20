@@ -372,3 +372,4 @@ def cut_edges(potential_cut_positions,normal_vectors,radius,dX):
                 elif abs(delta) <= s/2.0:
                     cutmap[i] = cutmap[i]*(0.5-delta/s)
     return cutmap
+

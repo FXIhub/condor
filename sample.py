@@ -1,7 +1,7 @@
 import sys
 sys.path.append("utils")
 import constants as phy
-import imgutils
+import imgutils,tools
 #reload(imgutils)
 from constants import *
 import pylab,time,multiprocessing
@@ -25,24 +25,24 @@ class Material:
                 materialtype = 'protein'
             else:
                 materialtype = args['materialtype']
-            self.massdensity = phy.DICT_massdensity[materialtype]
-            self.cH = phy.DICT_atomic_composition[materialtype][0]
-            self.cC = phy.DICT_atomic_composition[materialtype][1]
-            self.cN = phy.DICT_atomic_composition[materialtype][2]
-            self.cO = phy.DICT_atomic_composition[materialtype][3]
-            self.cP = phy.DICT_atomic_composition[materialtype][4]
-            self.cS = phy.DICT_atomic_composition[materialtype][5]
+            self.massdensity = DICT_massdensity[materialtype]
+            self.cH = DICT_atomic_composition[materialtype][0]
+            self.cC = DICT_atomic_composition[materialtype][1]
+            self.cN = DICT_atomic_composition[materialtype][2]
+            self.cO = DICT_atomic_composition[materialtype][3]
+            self.cP = DICT_atomic_composition[materialtype][4]
+            self.cS = DICT_atomic_composition[materialtype][5]
     
     def get_fX(self,element,photon_energy_eV=None):
         """
-        get the scattering factor for an element through linear interpolation.
+        Get the scattering factor for an element through linear interpolation.
         """
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
-        SF_X = phy.DICT_scattering_factors[element]
-        e = phy.DICT_physical_constants['e']
-        c = phy.DICT_physical_constants['c']
-        h = phy.DICT_physical_constants['h']
+        SF_X = DICT_scattering_factors[element]
+        e = DICT_physical_constants['e']
+        c = DICT_physical_constants['c']
+        h = DICT_physical_constants['h']
         f1 = pylab.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
         f2 = pylab.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
         return complex(f1,f2) 
@@ -57,10 +57,10 @@ class Material:
         f_q(0): atomic scattering factor (forward scattering) of atom species q
         """
 
-        re = phy.DICT_physical_constants['re']
-        h = phy.DICT_physical_constants['h']
-        c = phy.DICT_physical_constants['c']
-        qe = phy.DICT_physical_constants['e']
+        re = DICT_physical_constants['re']
+        h = DICT_physical_constants['h']
+        c = DICT_physical_constants['c']
+        qe = DICT_physical_constants['e']
 
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
@@ -75,9 +75,9 @@ class Material:
 
     def get_f(self,photon_energy_eV=None):
 
-        h = phy.DICT_physical_constants['h']
-        c = phy.DICT_physical_constants['c']
-        qe = phy.DICT_physical_constants['e']
+        h = DICT_physical_constants['h']
+        c = DICT_physical_constants['c']
+        qe = DICT_physical_constants['e']
         
         atom_density = self.get_atom_density()
 
@@ -98,14 +98,14 @@ class Material:
 
     def get_atom_density(self):
                 
-        u = phy.DICT_physical_constants['u']
+        u = DICT_physical_constants['u']
 
         atomic_composition = self.get_atomic_composition_dict()
 
         M = 0
         for element in atomic_composition.keys():
             # sum up average atom density
-            M += atomic_composition[element]*phy.DICT_atomic_mass[element]*u
+            M += atomic_composition[element]*DICT_atomic_mass[element]*u
 
         number_density = self.massdensity/M
         
@@ -150,6 +150,12 @@ class SampleMap:
         self.euler_angle_1 = 0.0
         self.euler_angle_2 = 0.0
         self.euler_angle_3 = 0.0
+
+    def set_random_orientation(self):
+        [e1,e2,e3] = tools.random_euler_angles()
+        self.euler_angle_1 = e1
+        self.euler_angle_2 = e2
+        self.euler_angle_3 = e3
 
     def new_configuration_test(self):
         if not self._parent:
@@ -244,16 +250,9 @@ class SampleMap:
                         X[zi,yi,xi] = new[2]
                         Y[zi,yi,xi] = new[1]
                         Z[zi,yi,xi] = new[0]
-        #print X.shape
-        #print self.map3d.shape
-
         spheroidmap = (X**2+Y**2)/a_N**2+Z**2/b_N**2
-        #print spheroidmap
-        #print spheroidmap.max()
-        #print spheroidmap.min()
         spheroidmap[spheroidmap<=1] = 1
         spheroidmap[spheroidmap>1] = 0
-        #spheroidmap[abs(R_N-R)<0.5] = 0.5+0.5*(R_N-R[abs(R_N-R)<0.5])
         spheroidmap *= dn
         if self.map3d.max() == 0 and not x and not y and not z:
             self.map3d = spheroidmap
@@ -266,12 +265,11 @@ class SampleMap:
             y_N = y/self.dX
             z_N = z/self.dX
             self.put_custom_map(spheroidmap,x_N,y_N,z_N)
- 
    
     def put_goldball(self,radius,x=None,y=None,z=None):
-        self.put_sphere(radius,x,y,z,cAu=1,massdensity=phy.DICT_massdensity['Au'])        
+        self.put_sphere(radius,x,y,z,cAu=1,massdensity=DICT_massdensity['Au'])        
 
-    def put_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,x=0.,y=0.,z=0.,speedup_factor=1):
+    def put_icosahedral_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,x=0.,y=0.,z=0.,speedup_factor=1):
         dn = self._makedm_icosahedron(radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor,materialtype="virus")
         if self.map3d.max() == 0.0 and x==0. and y==0. and z==0.:
             self.map3d = dn
@@ -373,7 +371,7 @@ class SampleMap:
         chunksize = int(pylab.ceil(len(positions)/(1.0*N_chunks)))
 
         for chunk in range(0,N_chunks):
-            print "Starting process %i / %i" % ((chunk+1),N_chunks)
+            OUT.write("Starting process %i / %i\n" % ((chunk+1),N_chunks))
             if chunk < (N_chunks-1): positions_pool.append(positions[chunksize*chunk:chunksize*(chunk+1),:])
             else: positions_pool.append(positions[chunksize*chunk:,:])
             results_pool.append(pool.apply_async(imgutils.cut_edges,(positions_pool[-1],n_list,radius,self.dX)))
@@ -381,7 +379,7 @@ class SampleMap:
         pool.join()
         cuts = pylab.ones(len(positions))
         for chunk in range(0,N_chunks):
-            print "Receiving results from process %i / %i" % ((chunk+1),N_chunks)
+            OUT.write("Receiving results from process %i / %i\n" % ((chunk+1),N_chunks))
             res = results_pool[chunk].get()
             for i in range(0,len(positions_pool[chunk])):
                 [iz,iy,ix] = positions_pool[chunk][i]
@@ -463,22 +461,25 @@ class SampleMap:
         return map2d
 
     def save_map3d(self,filename):
-        import spimage
-        M = spimage.sp_image_alloc(self.map3d.shape[2],self.map3d.shape[1],self.map3d.shape[0])
-        M.image[:,:,:] = self.map3d[:,:,:]
-        M.mask[:,:,:] = 1
-        M.detector.pixel_size[0] = self.dX
-        M.detector.pixel_size[1] = self.dX
-        M.detector.pixel_size[2] = self.dX
-        spimage.sp_image_write(M,filename,0)
-        spimage.sp_image_free(M)
+        if filename[-3:] == '.h5':
+            import h5py
+            f = h5py.File(filename,'w')
+            f.create_dataset('map3d', map3d.shape, map3d.dtype)
+            f['map3d'].value[:,:,:] = self.map3d[:,:,:]
+            f['voxel_dimensions_in_m'] = self.dX
+            f.close()
+        else:
+            print 'ERROR: Invalid filename extension, has to be \'.h5\'.'
 
     def load_map3d(self,filename):
-        import spimage
-        M = spimage.sp_image_read(filename,0)
-        self.map3d = M.image.copy()
-        self.dX = M.detector.pixel_size.copy()[0]
-        spimage.sp_image_free(M)
+        if filename[-3:] == '.h5':
+            import h5py
+            f = h5py.File(filename,'r')
+            self.map3d = f['map3d'].value.copy()
+            self.dX = f['voxel_dimension_in_m'].value
+            f.close()
+        else:
+            print 'ERROR: Invalid filename extension, has to be \'.h5\'.'
 
     def get_area(self,eul_ang1=None,eul_ang2=None,eul_ang3=None):
         if self.radius == None:

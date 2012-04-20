@@ -1,5 +1,6 @@
 import sys,pylab,multiprocessing
-sys.path.append("utils/nfft")
+import constants
+sys.path.append(constants.PROPAGATOR_DIR+"/utils/nfft")
 import nfft
 import psutil,time
 
@@ -153,10 +154,10 @@ def nfftXCore(object3d,N,eulerangles=[[0.0,0.0,0.0]],N_processes=None,interval=0
     while True:
         time.sleep(0.01)
         if psutil.avail_phymem() < 10000000:
-            print "Available memory: %i bytes" % psutil.avail_phymem()
-            print "ERROR: Running out of physical memory. Use less CPUs for propagation."
+            #print "Available memory: %i bytes" % psutil.avail_phymem()
+            #print "ERROR: Running out of physical memory. Use less CPUs for propagation."
             pool.terminate()
-            return pylab.zeros((N,N))
+            #return pylab.zeros((N,N))
         ready_states = []
         for process in results:
             ready_states.append(process.ready())
@@ -169,8 +170,8 @@ def nfftXCore(object3d,N,eulerangles=[[0.0,0.0,0.0]],N_processes=None,interval=0
     offset = 0
     for n in range(0,N_processes):
         r = (results[n].get()).flatten()
-        print r.shape
-        print A.shape
+        #print r.shape
+        #print A.shape
         A[offset:offset+len(r)] = r[:]
         offset+=len(r)
 

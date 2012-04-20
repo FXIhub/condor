@@ -10,9 +10,9 @@ from matplotlib import rc
 import matplotlib.pyplot as mpy
 rc('text', usetex=True)
 rc('font', family='serif')
-sys.path.append("utils")
-import imgutils,tools
 from constants import *
+sys.path.append(PROPAGATOR_DIR+"/utils")
+import imgutils,tools
 from source import *
 from sample import *
 from detector import *
@@ -111,19 +111,17 @@ class Input:
         self.sample = SampleMap(self)
         #self.sample.dX /= self.propagation.rs_oversampling
 
-    def set_sample_virus_map(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,speedup_factor=1):
+    def set_sample_icosahedral_virus_map(self,radius=None,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,speedup_factor=1):
         """
         Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles euler_angle1, euler_angle2 and euler_angle3 [rad].
         Map resolution is set to highest resolution that can be achieved by the given detector geometry.
         For rough simulations the resolution can be changed by setting the optional argument 'speedup_factor' to an integer bigger than 1.
         """
+        if not radius:
+            radius = self.sample.radius
         self.sample = SampleMap(self)
-        #self.sample.dX /= self.propagation.rs_oversampling
-        self.sample.put_virus(radius,eul_ang1,eul_ang2,eul_ang3,0.,0.,0.,speedup_factor)
+        self.sample.put_icosahedral_virus(radius,eul_ang1,eul_ang2,eul_ang3,0.,0.,0.,speedup_factor)
         self.sample.radius = radius
-        #if oversampling != 1.0:
-        #    self.sample.map3d = imgutils.downsample3d_fourier(self.sample.map3d,1/oversampling)
-        #    self.sample.dX *= oversampling
 
     def set_sample_sphere_map(self,radius=225E-09,**materialargs):
         """
@@ -131,10 +129,7 @@ class Input:
         """
         self.sample = SampleMap(self)
         self.sample.put_sphere(radius,**materialargs)
-        #if oversampling != 1.0:
-        #    self.sample.map3d = imgutils.downsample3d_fourier(self.sample.map3d,1.0/oversampling)
-        #    self.sample.dX *= oversampling
-
+ 
     def set_sample_homogeneous_sphere(self,radius=225E-09,**materialargs):
         """
         Sets sample object to homogeneous sphere having the given radius. Atomic composition values and massdensity are set according to the given material arguments.
