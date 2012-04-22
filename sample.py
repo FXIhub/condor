@@ -1,10 +1,6 @@
-import sys
-sys.path.append("utils")
-import constants as phy
-import imgutils,tools
-#reload(imgutils)
-from constants import *
-import pylab,time,multiprocessing
+import sys,pylab,time,multiprocessing
+#sys.path.append("utils")
+import config,imgutils,tools
 
 class Material:
     """
@@ -25,13 +21,13 @@ class Material:
                 materialtype = 'protein'
             else:
                 materialtype = args['materialtype']
-            self.massdensity = DICT_massdensity[materialtype]
-            self.cH = DICT_atomic_composition[materialtype][0]
-            self.cC = DICT_atomic_composition[materialtype][1]
-            self.cN = DICT_atomic_composition[materialtype][2]
-            self.cO = DICT_atomic_composition[materialtype][3]
-            self.cP = DICT_atomic_composition[materialtype][4]
-            self.cS = DICT_atomic_composition[materialtype][5]
+            self.massdensity = config.DICT_massdensity[materialtype]
+            self.cH = config.DICT_atomic_composition[materialtype][0]
+            self.cC = config.DICT_atomic_composition[materialtype][1]
+            self.cN = config.DICT_atomic_composition[materialtype][2]
+            self.cO = config.DICT_atomic_composition[materialtype][3]
+            self.cP = config.DICT_atomic_composition[materialtype][4]
+            self.cS = config.DICT_atomic_composition[materialtype][5]
     
     def get_fX(self,element,photon_energy_eV=None):
         """
@@ -39,10 +35,10 @@ class Material:
         """
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
-        SF_X = DICT_scattering_factors[element]
-        e = DICT_physical_constants['e']
-        c = DICT_physical_constants['c']
-        h = DICT_physical_constants['h']
+        SF_X = config.DICT_scattering_factors[element]
+        e = config.DICT_physical_constants['e']
+        c = config.DICT_physical_constants['c']
+        h = config.DICT_physical_constants['h']
         f1 = pylab.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
         f2 = pylab.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
         return complex(f1,f2) 
@@ -57,10 +53,10 @@ class Material:
         f_q(0): atomic scattering factor (forward scattering) of atom species q
         """
 
-        re = DICT_physical_constants['re']
-        h = DICT_physical_constants['h']
-        c = DICT_physical_constants['c']
-        qe = DICT_physical_constants['e']
+        re = config.DICT_physical_constants['re']
+        h = config.DICT_physical_constants['h']
+        c = config.DICT_physical_constants['c']
+        qe = config.DICT_physical_constants['e']
 
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
@@ -75,9 +71,9 @@ class Material:
 
     def get_f(self,photon_energy_eV=None):
 
-        h = DICT_physical_constants['h']
-        c = DICT_physical_constants['c']
-        qe = DICT_physical_constants['e']
+        h = config.DICT_physical_constants['h']
+        c = config.DICT_physical_constants['c']
+        qe = config.DICT_physical_constants['e']
         
         atom_density = self.get_atom_density()
 
@@ -98,14 +94,14 @@ class Material:
 
     def get_atom_density(self):
                 
-        u = DICT_physical_constants['u']
+        u = config.DICT_physical_constants['u']
 
         atomic_composition = self.get_atomic_composition_dict()
 
         M = 0
         for element in atomic_composition.keys():
             # sum up average atom density
-            M += atomic_composition[element]*DICT_atomic_mass[element]*u
+            M += atomic_composition[element]*config.DICT_atomic_mass[element]*u
 
         number_density = self.massdensity/M
         
@@ -267,7 +263,7 @@ class SampleMap:
             self.put_custom_map(spheroidmap,x_N,y_N,z_N)
    
     def put_goldball(self,radius,x=None,y=None,z=None):
-        self.put_sphere(radius,x,y,z,cAu=1,massdensity=DICT_massdensity['Au'])        
+        self.put_sphere(radius,x,y,z,cAu=1,massdensity=config.DICT_massdensity['Au'])        
 
     def put_icosahedral_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,x=0.,y=0.,z=0.,speedup_factor=1):
         dn = self._makedm_icosahedron(radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor,materialtype="virus")
@@ -299,12 +295,12 @@ class SampleMap:
         nRmax = Rmax/self.dX
         nRmin = Rmin/self.dX
         s = smooth
-        N = int(pylab.ceil(2*(nRmax+math.ceil(s))))
+        N = int(pylab.ceil(2*(nRmax+pylab.ceil(s))))
         r_pix = self.dX*(3/(4*pylab.pi))**(1/3.0)
         
         #print N
 
-        OUT.write("... build icosahedral geometry ...\n")
+        config.OUT.write("... build icosahedral geometry ...\n")
         
         # construct normal vectors of faces
         phi = (1+pylab.sqrt(5))/2.0
@@ -341,7 +337,7 @@ class SampleMap:
                     if angles_match(X[i],X[j],X[k]) and not cont_element(n,n_list):
                         n_list.append(n)
 
-        OUT.write("... rotate coordinate system in respect to given Euler angles ...\n")        
+        config.OUT.write("... rotate coordinate system in respect to given Euler angles ...\n")        
         def rotate_X(v,alpha):
             rotM = pylab.array([[1,0,0],[0,pylab.cos(alpha),-pylab.sin(alpha)],[0,pylab.sin(alpha),pylab.cos(alpha)]])
             return pylab.dot(rotM,v)
@@ -354,7 +350,7 @@ class SampleMap:
             n_list[i] = rotate_Z(n_list[i],eul_ang3)
 
         #t_1 = time.time()        
-        OUT.write("... %i x %i x %i grid (%i voxels) ...\n" % (N,N,N,N**3))
+        config.OUT.write("... %i x %i x %i grid (%i voxels) ...\n" % (N,N,N,N**3))
         icomap = pylab.ones((N,N,N))
         positions = []
         for iz in range(0,N):
@@ -371,7 +367,7 @@ class SampleMap:
         chunksize = int(pylab.ceil(len(positions)/(1.0*N_chunks)))
 
         for chunk in range(0,N_chunks):
-            OUT.write("Starting process %i / %i\n" % ((chunk+1),N_chunks))
+            config.OUT.write("Starting process %i / %i\n" % ((chunk+1),N_chunks))
             if chunk < (N_chunks-1): positions_pool.append(positions[chunksize*chunk:chunksize*(chunk+1),:])
             else: positions_pool.append(positions[chunksize*chunk:,:])
             results_pool.append(pool.apply_async(imgutils.cut_edges,(positions_pool[-1],n_list,radius,self.dX)))
@@ -379,7 +375,7 @@ class SampleMap:
         pool.join()
         cuts = pylab.ones(len(positions))
         for chunk in range(0,N_chunks):
-            OUT.write("Receiving results from process %i / %i\n" % ((chunk+1),N_chunks))
+            config.OUT.write("Receiving results from process %i / %i\n" % ((chunk+1),N_chunks))
             res = results_pool[chunk].get()
             for i in range(0,len(positions_pool[chunk])):
                 [iz,iy,ix] = positions_pool[chunk][i]

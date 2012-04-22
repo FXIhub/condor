@@ -1,6 +1,6 @@
 import sys,pylab,multiprocessing
-import constants
-sys.path.append(constants.PROPAGATOR_DIR+"/utils/nfft")
+import config
+sys.path.append(config.PROPAGATOR_DIR+"/utils/nfft")
 import nfft
 import time
 
@@ -64,27 +64,11 @@ def arrange_values(values,arrayshape):
     return values.reshape(arrayshape)
 
 def nfftSingleCore(sample,params):
-    #sample = array(sample_raw,shape=(params["Nz_object"],params["Ny_object"],params["Nx_object"]))
-    #print "7 %i" % (psutil.avail_phymem())
     coordinates = generate_fourier_coordinates(params["y_min"],params["y_steps"],params["x_min"],params["x_steps"],params["stepsize"])
-    #print "8 %i" % (psutil.avail_phymem())
-    #A= coordinates.shape[0]
     coordinates = rotate_coordinates(coordinates,params["phi"],params["theta"],params["psi"])
-    #print "9 %i" % (psutil.avail_phymem())
-    #B= coordinates.shape[0]
     phase_ramp = generate_phase_ramp(coordinates,params["phi"],params["theta"],params["psi"])
-    #print "10 %i" % (psutil.avail_phymem())
     fourierpattern = nfft.nfft3d(coordinates,sample)
-    #print "11 %i" % (psutil.avail_phymem())
-    #C= values.shape[0]#values.shape[1]
-    #D= (params["y_steps"]*params["x_steps"])
-    #print "Yeeah"
-    #print A/3.0
-    #print B/3.0
-    #print C
-    #print D
     fourierpattern = arrange_values(fourierpattern,(params["y_steps"],params["x_steps"]))
-    #print "12 %i" % (psutil.avail_phymem())
     phase_ramp = arrange_values(phase_ramp,(params["y_steps"],params["x_steps"]))
     phases = pylab.log(fourierpattern/abs(fourierpattern)).imag
     phases -= phase_ramp
@@ -108,15 +92,9 @@ def tester():
     pylab.imsave("testpattern.png",result)
 
 def nfftXCore(object3d,N,eulerangles=[[0.0,0.0,0.0]],N_processes=None,interval=0.5):
-    #object3d = generate_sample("sphere",100)
     object3d = pylab.complex128(object3d)
-
     if N_processes == None:
-        #phymem = psutil.avail_phymem()
-        #objectsize = object3d.size*object3d.itemsize
-        #print "Mem/Obj %f" % (phymem / (1.0*objectsize))
         N_processes = 2#multiprocessing.cpu_count()
-
     patterns = []
     stepsize = interval/(1.0*(N-1))
     s_min = -interval/2.0
@@ -125,7 +103,6 @@ def nfftXCore(object3d,N,eulerangles=[[0.0,0.0,0.0]],N_processes=None,interval=0
     [phi,theta,psi] = eulerangles
     processparameters = []
     stepsum = 0
-
     for n in pylab.arange(0,N_processes,1):
         x_min = s_min
         x_steps = N
@@ -140,41 +117,18 @@ def nfftXCore(object3d,N,eulerangles=[[0.0,0.0,0.0]],N_processes=None,interval=0
                                   "phi" : phi,
                                   "theta" : theta,
                                   "psi" : psi})
-
-
-    #object3d = object3d.flatten()
-    #Object3d = multiprocessing.Array('f',object3d)
     pool = multiprocessing.Pool()
     results = []
     for n in range(0,N_processes):
-        #print "4/%i %i" % (n,psutil.avail_phymem())
         results.append(pool.apply_async(nfftSingleCore, (object3d,processparameters[n])))
-    #pool.close()
-    #print "Available memory: %i bytes" % psutil.avail_phymem()
-    while True:
-        time.sleep(0.01)
-        if psutil.avail_phymem() < 10000000:
-            #print "Available memory: %i bytes" % psutil.avail_phymem()
-            #print "ERROR: Running out of physical memory. Use less CPUs for propagation."
-            pool.terminate()
-            #return pylab.zeros((N,N))
-        ready_states = []
-        for process in results:
-            ready_states.append(process.ready())
-        #print ready_states
-        if pylab.all(ready_states):
-            break
     pool.close()
     pool.join()
     A = pylab.zeros(N*N,dtype="complex128")
     offset = 0
     for n in range(0,N_processes):
         r = (results[n].get()).flatten()
-        #print r.shape
-        #print A.shape
         A[offset:offset+len(r)] = r[:]
         offset+=len(r)
-
     return A.reshape((N,N))
 
 

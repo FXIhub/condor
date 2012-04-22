@@ -10,22 +10,24 @@ from matplotlib import rc
 import matplotlib.pyplot as mpy
 rc('text', usetex=True)
 rc('font', family='serif')
-from constants import *
-sys.path.append(PROPAGATOR_DIR+"/utils")
-import imgutils,tools
+
+import config
+config.init_configuration()
+sys.path.append(config.PROPAGATOR_DIR+"/utils")
+import xcorepropagation,imgutils,tools
+
 from source import *
 from sample import *
 from detector import *
 
-import constants,source,sample,detector,tools
-import xcorepropagation
-reload(constants)
-reload(source)
-reload(sample)
-reload(detector)
-reload(tools)
-reload(imgutils)
-reload(xcorepropagation)
+#reload(config)
+#reload(source)
+#reload(sample)
+#reload(detector)
+#reload(tools)
+#reload(imgutils)
+#reload(xcorepropagation)
+
 
 def propagator(input_obj=False):
     """ MAIN FUNCTION of 'propagator.py': 'spow' calculates diffraction under defined conditions specified in the input object.
@@ -44,40 +46,29 @@ def propagator(input_obj=False):
     Omega_p = input_obj.detector.get_effective_pixelsize()**2 / input_obj.detector.distance**2
 
     if isinstance(input_obj.sample,SampleSphere):    
-        # SO FAR I AM NEGLECTING EFFECTS OF A POLARIZATION FACTOR != 1!!! VALID ONLY FOR SMALL ANGLES
         # scattering amplitude from homogeneous sphere: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ 4/3 pi R^3  3 { sin(qR) - qR cos(qR) } / (qR)^3 ] dn_real
+        # SO FAR I AM NEGLECTING EFFECTS OF A POLARIZATION FACTOR != 1!!! VALID ONLY FOR SMALL ANGLES, ADDITIONALLY WE ASSUME THE OPJECT TO BE OPTICALLY THIN
         dn_real = (1-input_obj.sample.material.get_n()).real
         R = input_obj.sample.radius
         q = input_obj.detector.write_qmap()
         F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q*R)-q*R*pylab.cos(q*R))/(q*R)**3*dn_real
         F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
 
-    #if isinstance(input_obj.sample,SampleMap):    
-        # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
-    #    dn_perp = input_obj.sample.project()
-    #    dQ = 2*pylab.pi/wavelength*pylab.sqrt(Omega_p)
-    #    dX = 2*pylab.pi/(dQ*max([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
-    #    if max([dn_perp.shape[0],dn_perp.shape[1]]) > input_obj.detector.mask.shape[0]:
-    #        print "ERROR: Field of view in object domain too big for chosen detector pixel size."
-    #        return
-    #    if abs((input_obj.sample.dX-dX)/dX) > 1.0E-3:
-    #        dn_perp = imgutils.resize2d(dn_perp,input_obj.sample.dX,dX)
-    #    F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*pylab.fftshift(pylab.fftn(dn_perp,(input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1])))*dX**2
-
-
     if isinstance(input_obj.sample,SampleMap):    
         # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
+        # SO FAR I AM NEGLECTING EFFECTS OF A POLARIZATION FACTOR != 1!!! VALID ONLY FOR SMALL ANGLES, ADDITIONALLY WE ASSUME THE OPJECT TO BE OPTICALLY THIN
         dQ = 2*pylab.pi/wavelength*pylab.sqrt(Omega_p)
-        N = int(round(2*pylab.pi/dQ/input_obj.sample.dX/(1.0*input_obj.propagation.rs_oversampling)))
+        N = int(round(2*pylab.pi/dQ/input_obj.sample.dX))
+        config.OUT.write("Propagate pattern of %i x %i pixels. (dQ = %e 1/m)\n" % (N,N,dQ))
         F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
             * xcorepropagation.nfftXCore(input_obj.sample.map3d,
                                          N,
                                          [input_obj.sample.euler_angle_1,input_obj.sample.euler_angle_2,input_obj.sample.euler_angle_3]) \
             * input_obj.sample.dX**3
-        
+        config.OUT.write("Got pattern of %i x %i pixels.\n" % (F.shape[1],F.shape[0]))
         F = imgutils.crop(F,pylab.array([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
 
-    OUT.write("Propagation finished.\n")
+    config.OUT.write("Propagation finished.\n")
 
     return Output(F,input_obj)
 
@@ -99,9 +90,9 @@ class Input:
         self.propagation = Propagation(self)
         if configfile != None:
             self.read_configfile(configfile)
-            OUT.write("... set configuration in accordance to given configuration-file: %s ...\n" % configfile)
+            config.OUT.write("... set configuration in accordance to given configuration-file: %s ...\n" % configfile)
         else:
-            OUT.write("... initial values set to default values ...\n")
+            config.OUT.write("... initial values set to default values ...\n")
     
     def set_sample_empty_map(self):
         """
@@ -109,27 +100,28 @@ class Input:
         Densitymap resolution is set according to the detector geometry.
         """
         self.sample = SampleMap(self)
-        #self.sample.dX /= self.propagation.rs_oversampling
 
-    def set_sample_icosahedral_virus_map(self,radius=None,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,speedup_factor=1):
+    def set_sample_icosahedral_virus_map(self,radius=None,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0):
         """
-        Creates virus of sphere-volume-equivalent given radius, rotates according to given Euler-angles euler_angle1, euler_angle2 and euler_angle3 [rad].
-        Map resolution is set to highest resolution that can be achieved by the given detector geometry.
-        For rough simulations the resolution can be changed by setting the optional argument 'speedup_factor' to an integer bigger than 1.
+        Creates refractive index map of homogeneously filled icosahedron.
+        - material: 'virus' (for details investigate generated material object)
+        - volume corresponds to sphere of given radius (without given radius set to radius specified in current sample object)
+        - 3 euler angles define orientation of the icosahedron in the mesh. (0,0,0) means that the axis of the beam coincides with one of the 2-fold axes
         """
         if not radius:
             radius = self.sample.radius
         self.sample = SampleMap(self)
-        self.sample.put_icosahedral_virus(radius,eul_ang1,eul_ang2,eul_ang3,0.,0.,0.,speedup_factor)
+        self.sample.put_icosahedral_virus(radius,eul_ang1,eul_ang2,eul_ang3)
         self.sample.radius = radius
 
     def set_sample_sphere_map(self,radius=225E-09,**materialargs):
         """
-        Creates sphere of given radius.
+        Creates refractive index map of sphere of given radius and material.
         """
         self.sample = SampleMap(self)
         self.sample.put_sphere(radius,**materialargs)
- 
+        self.sample.radius = radius 
+
     def set_sample_homogeneous_sphere(self,radius=225E-09,**materialargs):
         """
         Sets sample object to homogeneous sphere having the given radius. Atomic composition values and massdensity are set according to the given material arguments.
@@ -144,48 +136,48 @@ class Input:
 
     def read_configfile(self,configfile):
         """ Reads given configuration file and sets configuration to the input-object """
-        config = ConfigParser.ConfigParser()
+        C = ConfigParser.ConfigParser()
         try:
-            config.readfp(open(configfile))
+            C.readfp(open(configfile))
         except IOError:
             print "ERROR: Can't read configuration-file."
             return
-        self.source.photon.set_wavelength(config.getfloat('source','wavelength'))
-        self.source.spotsize = config.getfloat('source','spotsize')
-        self.source.energy = config.getfloat('source','energy')
-        mat = config.get('sample','material')
+        self.source.photon.set_wavelength(C.getfloat('source','wavelength'))
+        self.source.spotsize = C.getfloat('source','spotsize')
+        self.source.energy = C.getfloat('source','energy')
+        mat = C.get('sample','material')
         args = []
         if mat == 'custom':
-            cX_list = config.items('sample')
+            cX_list = C.items('sample')
             for cX_pair in cX_list:
                 if cX_pair[0][0] == 'c':
                     el = cX_pair[0]
                     el = el[1:].capitalize()
                     val = float(cX_pair[1])
                     args.append(("'c%s'" % el,val))
-            args.append(('massdensity',config.getfloat('sample','massdensity')))
+            args.append(('massdensity',C.getfloat('sample','massdensity')))
         else:
             keys = ['cH','cN','cO','cP','cS']
             for i in range(0,len(keys)):
-                args.append((keys[i],DICT_atomic_composition[mat][i]))
-            args.append(('massdensity',DICT_massdensity[mat]))
+                args.append((keys[i],config.DICT_atomic_composition[mat][i]))
+            args.append(('massdensity',config.DICT_massdensity[mat]))
         args= dict(args)
-        self.set_sample_homogeneous_sphere(config.getfloat('sample','radius'),**args)
-        self.detector.distance = config.getfloat('detector','distance')
-        self.detector.pixelsize = config.getfloat('detector','pixelsize')
-        self.detector.binning = config.getint('detector','binning')
-        self.detector.Nx = config.getint('detector','Nx')
-        self.detector.Ny = config.getint('detector','Ny')
-        if config.get('detector','mask') == 'none':
-            self.detector.set_mask(config.getfloat('detector','gapsize'),config.get('detector','gaporientation'))
+        self.set_sample_homogeneous_sphere(C.getfloat('sample','radius'),**args)
+        self.detector.distance = C.getfloat('detector','distance')
+        self.detector.pixelsize = C.getfloat('detector','pixelsize')
+        self.detector.binning = C.getint('detector','binning')
+        self.detector.Nx = C.getint('detector','Nx')
+        self.detector.Ny = C.getint('detector','Ny')
+        if C.get('detector','mask') == 'none':
+            self.detector.set_mask(C.getfloat('detector','gapsize'),C.get('detector','gaporientation'))
         else:
-            M = pylab.imread(config.get('detector','mask'))
+            M = pylab.imread(C.get('detector','mask'))
             M = M[:,:,0]
             M[abs(M)>0] = 1
             M[M==0] = 0
             self.detector.mask = M.copy()
-        self.detector.saturationlevel = config.getfloat('detector','saturationlevel')
-        self.propagation.rs_oversampling = config.getfloat('propagation','rs_oversampling')
+        self.detector.saturationlevel = C.getfloat('detector','saturationlevel')
+        self.propagation.rs_oversampling = C.getfloat('propagation','rs_oversampling')
 
 class Output:
     """
@@ -445,8 +437,8 @@ class Output:
         else:
             str_Iscaling = r"$I \left[ \frac{\mbox{photons}}{\mbox{%s}} \right]$" % str_scaling
 
-        Wsizey = 9#10
-        Wsizex = 9#8 # 7.5
+        Wsizey = 9
+        Wsizex = 9
         fsize = 12
         pylab.clf()
         fig = mpy.figure(1,figsize=(Wsizex,Wsizey))
@@ -543,4 +535,4 @@ class Propagation:
     def __init__(self,parent=None):
         self._parent = parent
         self.rs_oversampling = 2.0
-        self.mode = PROPAGATION_MODE_PROJECTION
+        self.mode = config.PROPAGATION_MODE_PROJECTION

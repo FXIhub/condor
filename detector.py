@@ -1,6 +1,5 @@
 import sys
 sys.path.append("utils")
-import constants as phy
 import tools,pylab
 
 

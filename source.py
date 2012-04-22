@@ -1,5 +1,5 @@
-from constants import *
 import pylab
+import config
 
 class Source:
     """ FEL x-ray pulse.
@@ -25,7 +25,7 @@ class Photon:
         if unit == "J":
             return self._energy
         elif unit == "eV":
-            return self._energy/DICT_physical_constants["e"]
+            return self._energy/config.DICT_physical_constants["e"]
         else:
             print "ERROR: %s is not a valid energy unit." % unit
 
@@ -33,15 +33,15 @@ class Photon:
         if unit == "J":
             self._energy = energy
         elif unit == "eV":
-            self._energy = energy*DICT_physical_constants["e"]
+            self._energy = energy*config.DICT_physical_constants["e"]
         else:
             print "ERROR: %s is not a valid energy unit." % unit
 
     def get_wavelength(self):
-        return DICT_physical_constants["c"]*DICT_physical_constants["h"]/self._energy
+        return config.DICT_physical_constants["c"]*config.DICT_physical_constants["h"]/self._energy
 
     def set_wavelength(self,wavelength):
-        self._energy = DICT_physical_constants["c"]*DICT_physical_constants["h"]/wavelength
+        self._energy = config.DICT_physical_constants["c"]*config.DICT_physical_constants["h"]/wavelength
 
 
             
