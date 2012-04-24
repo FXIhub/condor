@@ -287,7 +287,7 @@ class SampleMap:
         """
         #self.new_configuration_test()
 
-        #t_start = time.time()
+        t_start = time.time()
 
         a = radius*(16*pylab.pi/5.0/(3+pylab.sqrt(5)))**(1/3.0)
         Rmax = pylab.sqrt(10.0+2*pylab.sqrt(5))*a/4.0 # radius at corners
@@ -298,8 +298,6 @@ class SampleMap:
         N = int(pylab.ceil(2*(nRmax+pylab.ceil(s))))
         r_pix = self.dX*(3/(4*pylab.pi))**(1/3.0)
         
-        #print N
-
         config.OUT.write("... build icosahedral geometry ...\n")
         
         # construct normal vectors of faces
@@ -380,8 +378,8 @@ class SampleMap:
             for i in range(0,len(positions_pool[chunk])):
                 [iz,iy,ix] = positions_pool[chunk][i]
                 icomap[iz,iy,ix] = res[i]
-        #t_stop = time.time()
-        #print "Times: \n start->1: %f \n 1->2: %f \n 2->stop: %f" % (t_1-t_start,t_2-t_1,t_stop-t_2)
+        t_stop = time.time()
+        config.OUT.write("Time: %f sec\n" % (t_stop-t_start))
 
         material_obj = Material(self,**materialargs)
         dn = 1.0 - material_obj.get_n()
@@ -460,8 +458,8 @@ class SampleMap:
         if filename[-3:] == '.h5':
             import h5py
             f = h5py.File(filename,'w')
-            f.create_dataset('map3d', map3d.shape, map3d.dtype)
-            f['map3d'].value[:,:,:] = self.map3d[:,:,:]
+            map3d = f.create_dataset('map3d', self.map3d.shape, self.map3d.dtype)
+            map3d[:,:,:] = self.map3d[:,:,:]
             f['voxel_dimensions_in_m'] = self.dX
             f.close()
         else:
@@ -472,7 +470,8 @@ class SampleMap:
             import h5py
             f = h5py.File(filename,'r')
             self.map3d = f['map3d'].value.copy()
-            self.dX = f['voxel_dimension_in_m'].value
+            if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
+            self.dX = f['voxel_dimensions_in_m'].value
             f.close()
         else:
             print 'ERROR: Invalid filename extension, has to be \'.h5\'.'

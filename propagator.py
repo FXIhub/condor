@@ -34,13 +34,15 @@ def propagator(input_obj=False):
     Usage: output_obj = spow(input_obj)
     input_obj: configuration object of class 'Input' that sets simulation and program parameters.
     """
-
+    
     if not isinstance(input_obj,Input):
         print "... ERROR: WRONG INPUT ...\n" 
         print "Usage: spow(input_obj)\n"
         print "   input_obj: configuration object that sets simulation parameters (instance: Input)"
         return
     
+    t_start = time.time()
+
     wavelength = input_obj.source.photon.get_wavelength()
     I_0 = input_obj.source.energy / input_obj.source.photon._energy / input_obj.source.get_area() 
     Omega_p = input_obj.detector.get_effective_pixelsize()**2 / input_obj.detector.distance**2
@@ -58,18 +60,20 @@ def propagator(input_obj=False):
         # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
         # SO FAR I AM NEGLECTING EFFECTS OF A POLARIZATION FACTOR != 1!!! VALID ONLY FOR SMALL ANGLES, ADDITIONALLY WE ASSUME THE OPJECT TO BE OPTICALLY THIN
         dQ = 2*pylab.pi/wavelength*pylab.sqrt(Omega_p)
-        N = int(round(2*pylab.pi/dQ/input_obj.sample.dX))
+        N = int(round(2*pylab.pi/dQ/input_obj.sample.dX/input_obj.propagation.rs_oversampling))
         config.OUT.write("Propagate pattern of %i x %i pixels. (dQ = %e 1/m)\n" % (N,N,dQ))
         F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
             * xcorepropagation.nfftXCore(input_obj.sample.map3d,
                                          N,
-                                         [input_obj.sample.euler_angle_1,input_obj.sample.euler_angle_2,input_obj.sample.euler_angle_3]) \
+                                         [input_obj.sample.euler_angle_1,input_obj.sample.euler_angle_2,input_obj.sample.euler_angle_3],
+                                         input_obj.propagation.rs_oversampling) \
             * input_obj.sample.dX**3
         config.OUT.write("Got pattern of %i x %i pixels.\n" % (F.shape[1],F.shape[0]))
         F = imgutils.crop(F,pylab.array([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
 
+    t_stop = time.time()
+    config.OUT.write("Time = %f sec\n" % (t_stop-t_start))
     config.OUT.write("Propagation finished.\n")
-
     return Output(F,input_obj)
 
 class Input:
@@ -100,6 +104,14 @@ class Input:
         Densitymap resolution is set according to the detector geometry.
         """
         self.sample = SampleMap(self)
+
+    def load_sample_map(self,filename):
+        """
+        Creates empty densitymap. Size in accordance to given detector geometry.
+        Densitymap resolution is set according to the detector geometry.
+        """
+        self.sample = SampleMap(self)
+        self.sample.load_map3d(filename)
 
     def set_sample_icosahedral_virus_map(self,radius=None,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0):
         """
@@ -197,17 +209,19 @@ class Output:
         """
         Returns 1-dimensional array with intensity average in photons per pixel (binned). x-coordinate sampling is pixel (binned). 
         """
-        I = self.get_intensities_pattern()
+        I = self.get_intensity_pattern()
         return imgutils.radial_pixel_average(I)
 
-    def get_intensity_radial_average(self,noise=None):
+
+    def get_intensity_radial_sum(self):
         """
-        Returns 1-dimensional array with intensity sum in photons. x-coordinate sampling is pixel (binned). 
+        Returns 1-dimensional array with intensity average in photons per pixel (binned). x-coordinate sampling is pixel (binned). 
         """
-        I = self.get_intensities_pattern()
+        I = self.get_intensity_pattern()
         return imgutils.radial_pixel_sum(I)
+
             
-    def plot_radial_distribution(self,scaling="binned pixel and nyquist pixel",mode="all",noise=None):
+    def _plot_radial_distribution(self,scaling="binned pixel and nyquist pixel",mode="all",noise=None):
         """
         Creates 1-dimensional plot(s) showing radial distribution of scattered photons.
         Usage: plot_radial_distribution([scaling],[mode],[noise])
@@ -219,6 +233,8 @@ class Output:
                    Can be set to 'radial average', 'radial sum' or 'all'.
         - noise:   Specifies noise and can be set to 'poisson'.
         """
+        Ir_avg = self.get_intensity_radial_average()
+        Ir_sum = self.get_intensity_radial_sum()
         if noise == 'poisson':
             def noise(data): return pylab.poisson(data)
         else:
@@ -227,23 +243,23 @@ class Output:
             if mode == "all":
                 legend_args = [('Radial sum', 'Radial average'),'upper right']
                 if sc == "binned pixel":
-                    r = numpy.arange(0,len(self.intensity_radial_sum),1)
+                    r = numpy.arange(0,len(Ir_sum),1)
                 elif sc == "nyquist pixel":
-                    r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))
-                plot_args = [r,noise(self.get_radial_distribution(sc,'radial sum')),'k',r,noise(self.get_radial_distribution(sc,'radial average')),'k:']
+                    r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(Ir_sum))
+                plot_args = [r,noise(Ir_sum),'k',r,noise(Ir_avg),'k:']
             else:
                 if sc == "binned pixel":
-                    r = numpy.arange(0,len(self.intensity_radial_sum),1)
+                    r = numpy.arange(0,len(Ir_sum),1)
                 elif sc == "nyquist pixel":
-                    r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))
+                    r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(Ir_sum))
                 elif sc == "meter":
-                    r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2*self.pixel_size,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2*self.pixel_size/len(self.intensity_radial_sum))
+                    r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2*self.pixel_size,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2*self.pixel_size/len(Ir_sum))
                 if mode == "radial sum":
                     legend_args = [('Radial sum'),'upper right']
-                    plot_args = [r,noise(self.get_radial_distribution(sc,mode)),'k']
+                    plot_args = [r,noise(Ir_sum),'k']
                 elif mode == "radial average":
                     legend_args = [('Radial average'),'upper right']
-                    plot_args = [r,noise(self.get_radial_distribution(sc,mode)),'k']
+                    plot_args = [r,noise(Ir_avg),'k']
             return [plot_args,legend_args]
 
         if scaling == "binned pixel and nyquist pixel":
@@ -263,13 +279,13 @@ class Output:
             return
         elif scaling == "binned pixel":
             str_scaling = "binned pixel"
-            r = numpy.arange(0,len(self.intensity_radial_sum),1)
+            r = numpy.arange(0,len(Ir_sum),1)
         elif scaling == "nyquist pixel":
             str_scaling == "nyquist pixel"
-            r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(self.intensity_radial_sum))
+            r = numpy.arange(0,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2,min([self.nyquistpixel_number_x,self.nyquistpixel_number_y])/2/len(Ir_sum))
         elif scaling == "meter":
             str_scaling = "meter"
-            r = numpy.arange(0,min([self.pixel_number_x,self.pixel_number_y])/2*self.pixel_size,min([self.pixel_number_x,self.pixel_number_y])/2*self.pixel_size/len(self.intensity_radial_sum))
+            r = numpy.arange(0,min([self.pixel_number_x,self.pixel_number_y])/2*self.pixel_size,min([self.pixel_number_x,self.pixel_number_y])/2*self.pixel_size/len(Ir_sum))
         else:
             print "ERROR: %s is no valid scaling" % scaling
             return
@@ -280,9 +296,6 @@ class Output:
         f1d_ax.semilogy(*plot_args)
         f1d_ax.legend(*legend_args)
         f1d.show()
-
-    def readout_pattern(self):
-        return 0
 
     def get_nyquist_pixelsize(self):
         return tools.get_nyquist_pixelsize(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),self.input_object.sample.get_area())

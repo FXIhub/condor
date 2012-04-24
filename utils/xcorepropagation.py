@@ -91,11 +91,12 @@ def tester():
     print result
     pylab.imsave("testpattern.png",result)
 
-def nfftXCore(object3d,N,eulerangles=[[0.0,0.0,0.0]],N_processes=None,interval=0.5):
+def nfftXCore(object3d,N,eulerangles=[[0.0,0.0,0.0]],rs_oversampling=1.0,N_processes=None):
     object3d = pylab.complex128(object3d)
     if N_processes == None:
         N_processes = 2#multiprocessing.cpu_count()
     patterns = []
+    interval = 1.0/rs_oversampling
     stepsize = interval/(1.0*(N-1))
     s_min = -interval/2.0
     s_max = interval/2.0
@@ -120,12 +121,14 @@ def nfftXCore(object3d,N,eulerangles=[[0.0,0.0,0.0]],N_processes=None,interval=0
     pool = multiprocessing.Pool()
     results = []
     for n in range(0,N_processes):
+        config.OUT.write("Start process %i\n" % n)
         results.append(pool.apply_async(nfftSingleCore, (object3d,processparameters[n])))
     pool.close()
     pool.join()
     A = pylab.zeros(N*N,dtype="complex128")
     offset = 0
     for n in range(0,N_processes):
+        config.OUT.write("Collect results from process %i\n" % n)
         r = (results[n].get()).flatten()
         A[offset:offset+len(r)] = r[:]
         offset+=len(r)
