@@ -221,7 +221,7 @@ class Output:
         return imgutils.radial_pixel_sum(I)
 
             
-    def _plot_radial_distribution(self,scaling="binned pixel and nyquist pixel",mode="all",noise=None):
+    def plot_radial_distribution(self,scaling="binned pixel and nyquist pixel",mode="all",noise=None):
         """
         Creates 1-dimensional plot(s) showing radial distribution of scattered photons.
         Usage: plot_radial_distribution([scaling],[mode],[noise])

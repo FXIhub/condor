@@ -1,10 +1,10 @@
 import os,re,sys,h5py,pylab,numpy,time
 
-def radial_pixel_average(image,cx=None,cy=None):
-    if not cx:
-        cx = (image.shape[1]-1)/2.0
-    if not cy:
-        cy = (image.shape[0]-1)/2.0
+def radial_pixel_average(image,**kargs):
+    if 'cx' in kargs: cx = kargs['cx']
+    else: cx = (image.shape[1]-1)/2.0
+    if 'cy' in kargs: cy = kargs['cy'] 
+    else: cy = (image.shape[0]-1)/2.0
     x = pylab.arange(0,image.shape[1],1.0)-cx
     y = pylab.arange(0,image.shape[1],1.0)-cy
     X,Y = pylab.meshgrid(x,y)
@@ -15,13 +15,14 @@ def radial_pixel_average(image,cx=None,cy=None):
     values = pylab.zeros_like(radii)
     for i in range(0,len(radii)):
         values[i] = image[R==radii[i]].mean()
-    return pylab.array([radii,values])
-
-def radial_pixel_sum(image,cx=None,cy=None):
-    if not cx:
-        cx = (image.shape[1]-1)/2.0
-    if not cy:
-        cy = (image.shape[0]-1)/2.0
+    if 'rout' in kargs: return pylab.array([radii,values])
+    else:return values
+        
+def radial_pixel_sum(image,**kargs):
+    if 'cx' in kargs: cx = kargs['cx']
+    else: cx = (image.shape[1]-1)/2.0
+    if 'cy' in kargs: cy = kargs['cy'] 
+    else: cy = (image.shape[0]-1)/2.0
     x = pylab.arange(0,image.shape[1],1.0)-cx
     y = pylab.arange(0,image.shape[1],1.0)-cy
     X,Y = pylab.meshgrid(x,y)
@@ -31,7 +32,8 @@ def radial_pixel_sum(image,cx=None,cy=None):
     values = pylab.zeros_like(radii)
     for i in range(0,len(radii)):
         values[i] = image[R==radii[i]].sum()
-    return pylab.array([radii,values])
+    if 'rout' in kargs: return pylab.array([radii,values])
+    else:return values
 
 def cartesian_to_polar(cartesian_pattern,N_theta,x_center=None,y_center=None):
     Nx = cartesian_pattern.shape[1]
