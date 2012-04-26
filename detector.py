@@ -7,39 +7,20 @@ class Detector:
     """ Area detector.
     """
     def __init__(self,parent=None):
+        self._parent = parent
+        # default values
         self.distance = 0.15
         self.pixelsize = 15E-06
         self.binning = 8
         self._Nx = 4096
         self._Ny = 4096
+        # no saturation level defined
         self.saturationlevel = -1
-        self._parent = parent
-        gappixel = 127
-        self.set_mask(gappixel*self.pixelsize,'x')
-
-    def set_center(cx=None,cy=None,scaling='pixel'):
-        if not cx: (self.mask.shape[1]-1)/2.0 
-        else: self._cx = cx
-        if not cy: (self.mask.shape[0]-1)/2.0 
-        else: self._cy = cy
+        # init detector map
+        self.detector_map = Detector_Map(x_gapsize_in_pixel=127,Nx=4096,Ny=4096)
 
     def get_effective_pixelsize(self):
         return self.pixelsize*self.binning         
-
-    def set_mask(self,gapsize,gaporientation,cx=None):
-        """ Masks out regions within the gap, creates mask of the size of the later generated image. "0" denotes masked out pixels, "1" active pixels.
-        """
-        Nx_eff = round(self.Nx/self.binning)
-        Ny_eff = round(self.Ny/self.binning)
-        gappixel = round(gapsize/self.get_effective_pixelsize())
-        if gaporientation == "x":
-            Ny_eff += gappixel
-            self.mask = pylab.ones(shape=(Ny_eff,Nx_eff))
-            self.mask[round(Ny_eff/2.0-0.5-gappixel/2.0):round(Ny_eff/2.0-0.5-gappixel/2.0)+gappixel,:] = 0
-        elif gaporientation == "y":
-            Nx_eff += gappixel
-            self.mask = pylab.ones(shape=(Ny_eff,Nx_eff))
-            self.mask[:,round(Nx_eff/2.0-0.5-gappixel/2.0):round(Nx_eff/2.0-0.5-gappixel/2.0)+gappixel] = 0
 
     # Functions that convert detector-coordinates:
     def _get_q_from_r(self,r):
@@ -78,29 +59,43 @@ class Detector:
         detector_distance = self.distance
         return tools.get_max_crystallographic_resolution(wavelength,min_detector_center_edge_distance,detector_distance)
 
-class Mask:
+class Detector_Map:
 
     def __init__(self,**kwargs):
-        # generate mask array
-        if 'mask' in kwargs: 
-            self.mask = kwargs['mask']
+        """
+        Possible kwargs:
+        
+         - mask_array: array that defines the mask (0: masked out, 1: not masked out)
+
+         - Nx: horizontal dimension of the mask (inside the mask, without counting any gaps)
+         - Ny: vertical dimension of the mask (inside the mask, without counting any gaps)
+
+         - x_gapwidth_in_pixel: horizontal gap is generated with given width (in unit unbinned pixel)
+         - y_gapwidth_in_pixel: vertical gap is generated with given width (in unit unbinned pixel)
+
+         - cx: x-coordinate of position (primary beam)
+         - cy: y-coordinate of position (primary beam)
+
+        """
+        # init mask array
+        if 'mask_array' in kwargs: 
+            self.mask = kwargs['mask_array']
         elif 'Nx' in kwargs and 'Ny' in kwargs:
             Nx = kwargs['Nx']; Ny = kwargs['Ny']
-            if 'gapwidth_in_pixel' in kwargs:
-                if kwargs['gap_orientation'] == 'x': Ny += kwargs['gapwidth_in_pixel']
-                elif kwargs['gap_orientation'] == 'y': Nx += kwargs['gapwidth_in_pixel']
-                else: print "Warning: No valid gap orientation given while initializing mask."
+            if 'x_gapwidth_in_pixel' in kwargs: Ny += kwargs['x_gapwidth_in_pixel']
+            if 'y_gapwidth_in_pixel' in kwargs: Nx += kwargs['y_gapwidth_in_pixel']
             self.mask = pylab.ones(shape=(Ny,Nx))
             
+        # set pixels in gap to zero
+        if 'x_gapwidth_in_pixel' in kwargs: self.mask[pylab.ceil(self.cy)-kwargs['x_gapwidth_in_pixel']/2:pylab.ceil(cy)-kwargs['x_gapwidth_in_pixel']/2+kwargs['x_gapwidth_in_pixel'],:]
+        if 'y_gapwidth_in_pixel' in kwargs: self.mask[:,pylab.ceil(self.cx)-kwargs['y_gapwidth_in_pixel']/2:pylab.ceil(cx)-kwargs['y_gapwidth_in_pixel']/2+kwargs['y_gapwidth_in_pixel']]
+
         # set center position
         if 'cx' in kwargs: self.cx = cx
-        else: self.cx = (Nx-1)/2.
+        else: self.cx = (self.mask.shape[1]-1)/2.
         if 'cy' in kwargs: self.cy = cy
-        else: self.cy = (Ny-1)/2.
-
-        if 'gapwidth_in_pixel' in kwargs:
-            # set pixels in gap to zero
-            if kwargs['gap_orientation'] == 'x':
-                self.mask[pylab.ceil(self.cy)-kwargs['gapwidth_in_pixel']/2:pylab.ceil(cy)-kwargs['gapwidth_in_pixel']/2+kwargs['gapwidth_in_pixel'],:]
-                self.mask[:,pylab.ceil(self.cx)-kwargs['gapwidth_in_pixel']/2:pylab.ceil(cx)-kwargs['gapwidth_in_pixel']/2+kwargs['gapwidth_in_pixel']]
+        else: self.cy = (self.mask.shape[0]-1)/2.
         
+    def get_cx(binning=1): return (self.cx-(.5)/(1.*binning)
+
+    def get_cy(binning=1): return self.cy/(1.*binning)
