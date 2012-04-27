@@ -1,10 +1,12 @@
 import sys,pylab,time,multiprocessing
-#sys.path.append("utils")
+if "utils" not in sys.path: sys.path.append("utils")
 import config,imgutils,tools
 
 class Material:
     """
+    A class of a sample object.
     Sample material.
+
     """
     def __init__(self,parent=None,**args):
         self._parent = parent
@@ -43,7 +45,6 @@ class Material:
         f2 = pylab.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
         return complex(f1,f2) 
  
-
     def get_n(self,photon_energy_eV=None):
         """
         Obtains complex refractive index.
@@ -128,37 +129,54 @@ class Material:
 class SampleMap:
     """
     A class of the input-object.
-    Initialization in SI-units.
-    Map values in map3d are n-1 = delta n. 
+    Class of the sample described by a refractive index map (map3d: dn = n-1) 
+
     """
 
-    def __init__(self,parent=None,size=None,dX=None):
+    def __init__(self,**kwargs):
+        """
+        Function initializes SampleMap object:
+        ======================================
 
-        self._parent = parent
-        self.radius = None
-        if not size:
-            self.dX = self._parent.source.photon.get_wavelength()*self._parent.detector.distance/self._parent.detector.get_effective_pixelsize()/max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.propagation.rs_oversampling
-            self.N = max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.detector.binning*self._parent.propagation.rs_oversampling
+        Arguments:
+
+        Keyword arguments (if not given variable \'X\' is set to default value \'[X_default]\'):
+        
+        EITHER (default):
+        - N: Edge length in number of voxels [1]
+        - dX Real space sampling distance. [Taken from input object configuration]
+
+        OR:
+        - map3d: Cubic 3d refractive index map.
+        
+        ADDITIONAL:
+        - euler_angle_0, euler_angle_1, euler_angle_2: Euler angles defining orientation of particle in the beam. [0.0,0.0,0.0]
+        - radius: Characteristic radius of the object. [None]
+        - parent: Input object to which this SampleMap object shall be linked. [None]
+
+        """
+        if 'map3d' in kwargs: 
+            if kwargs['map3d'].shape[0] != kwargs['map3d'].shape[1] \
+                    or kwargs['map3d'].shape[0] != kwargs['map3d'].shape[2] \
+                    or kwargs['map3d'].shape[1] != kwargs['map3d'].shape[2]:
+                print "ERROR: Only accept cubic maps."
+                return
+            self.map3d = kwargs['map3d']
         else:
-            self.dX = dX                
-            self.N = int(round(size/dX))
-        self.map3d = pylab.zeros(shape=(1,1,1))
-        self.euler_angle_1 = 0.0
-        self.euler_angle_2 = 0.0
-        self.euler_angle_3 = 0.0
+            N = kwargs.get('N',1)
+            self.map3d = pylab.zeros(shape=(N,N,N))
+        self._parent = kwargs.get('parent',None)
+        self.radius = kwargs.get('radius',None)
+        self.dX = kwargs.get('dX',self._parent.get_real_space_resolution_element()/(1.0*self._parent.propagation.rs_oversampling))
+        self.euler_angle_1 = kwargs.get('euler_angle_1',0.0)
+        self.euler_angle_2 = kwargs.get('euler_angle_2',0.0)
+        self.euler_angle_3 = kwargs.get('euler_angle_3',0.0)
 
     def set_random_orientation(self):
         [e1,e2,e3] = tools.random_euler_angles()
         self.euler_angle_1 = e1
         self.euler_angle_2 = e2
         self.euler_angle_3 = e3
-
-    def new_configuration_test(self):
-        if not self._parent:
-            dX_new = self._parent.source.photon.get_wavelength()*self._parent.detector.distance/self._parent.detector.get_effective_pixelsize()/max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.propagation.rs_oversampling
-            N_new = max([self._parent.detector.mask.shape[0],self._parent.detector.mask.shape[1]])/self._parent.detector.binning*self._parent.propagation.rs_oversampling
-            if not self.dX == dX_new or not self.N == N_new:
-                print "WARNING: Configuration changed. Please reinitialize your sample."
         
     def put_custom_map(self,map_add,x,y,z):
         origin = pylab.array([(self.map3d.shape[2]-1)/2.0,
@@ -171,21 +189,30 @@ class SampleMap:
                    ymin:ymin+map_add.shape[1],
                    xmin:xmin+map_add.shape[2]] += map_add[:,:,:]
 
+    # TESTING REQUIRED
     def smooth_map3d(self,factor):
-
         self.map3d = imgutils.smooth3d(self.map3d,factor)
 
     def put_sphere(self,radius,x=0,y=0,z=0,**materialargs):
         """
-        Add densitymap of homogeneous sphere to 3-dimensional densitymap.
+        Function adds densitymap of homogeneous sphere to 3-dimensional densitymap:
+        ===========================================================================
 
-        Radius r and center position x, y in SI-units.
+        Arguments:
+       
+        - radius: Radius of the sphere in m. [no default value]
+        - x,y,z: center position (measured from current origin (0,0,0)) in m. [0.,0.,0.]
 
-           Specify a materialtype (example: materialtype='protein',materialtype='virus',materialtype='cell',materialtype='latexball',materialtype='water')
-        OR relative atomic composition and massdensity (example: cH=2,cO=1,massdensity=1000).
+        Keyword arguments:
+
+        EITHER:
+        - materialtype: Predefined materialtype ('protein','virus','cell','latexball','water',... For a complete list look up \'config.py\'.)
+        
+        OR:
+        - c\'X\': fraction of element \'X\' of atomic number density in material (normalization is done internally).
+        - massdensity: Massdensity of material in kg/m^3
 
         """
-        #self.new_configuration_test()
         material_obj = Material(self,**materialargs)
         dn = 1.0-material_obj.get_n()
         R_N = radius/self.dX
@@ -207,12 +234,22 @@ class SampleMap:
  
     def put_spheroid(self,a,b,x=None,y=None,z=None,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,**materialargs):
         """
-        Add densitymap of homogeneous ellipsoid to 3-dimensional densitymap.
+        Function add densitymap of homogeneous ellipsoid to 3-dimensional densitymap:
+        =============================================================================
 
-        Radii a, b and center position x, y in SI-units.
+        Arguments:
+        
+        - a,b: Radii in meter.
+        - x,y,z: Center coordinats (from current origin) [middle]
 
-           Specify a materialtype (example: materialtype='protein',materialtype='virus',materialtype='cell',materialtype='latexball',materialtype='water')
-        OR relative atomic composition and massdensity (example: cH=2,cO=1,massdensity=1000).
+        Keyword arguments:
+
+        EITHER:
+        - materialtype: Predefined materialtype ('protein','virus','cell','latexball','water',... For a complete list look up \'config.py\'.)
+        
+        OR:
+        - c\'X\': fraction of element \'X\' of atomic number density in material (normalization is done internally).
+        - massdensity: Massdensity of material in kg/m^3
 
         """
 
@@ -265,8 +302,8 @@ class SampleMap:
     def put_goldball(self,radius,x=None,y=None,z=None):
         self.put_sphere(radius,x,y,z,cAu=1,massdensity=config.DICT_massdensity['Au'])        
 
-    def put_icosahedral_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,x=0.,y=0.,z=0.,speedup_factor=1):
-        dn = self._makedm_icosahedron(radius,eul_ang1,eul_ang2,eul_ang3,speedup_factor,materialtype="virus")
+    def put_icosahedral_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,x=0.,y=0.,z=0.):
+        dn = self._makedm_icosahedron(radius,eul_ang1,eul_ang2,eul_ang3,materialtype="virus")
         if self.map3d.max() == 0.0 and x==0. and y==0. and z==0.:
             self.map3d = dn
         else:
@@ -276,16 +313,26 @@ class SampleMap:
             self.put_custom_map(dn,x_N,y_N,z_N)
 
 
-    def _makedm_icosahedron(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,speedup_factor=1,verbose=True,smooth=1.0,**materialargs):  
+    def _makedm_icosahedron(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,**materialargs):  
         """
-        Returns a refractive index map of a homogeneous sphere
-        arguments:
-        - radius in m (volume equals volume of a sphere with given radius)
-        - material_object (Intance: Material)
-        [- orientation defined by Euler angles in rad ]
-        [- speedup_factor = 1,2,3,... ("binning of voxels")]
+        Function returns a refractive index map of a homogeneous icosahedron:
+        =====================================================================
+
+        Arguments:
+
+        - radius: Radius in meter (volume equals volume of a sphere with given radius). [no default value]
+        - eul_ang1,eul_ang2,eul_ang3: orientation defined by Euler angles in rad. [0.0,0.0,0.0]
+        
+        Keyword arguments:
+
+        EITHER:
+        - materialtype: Predefined materialtype ('protein','virus','cell','latexball','water',... For a complete list look up \'config.py\'.)
+        
+        OR:
+        - c\'X\': fraction of element \'X\' of atomic number density in material (normalization is done internally).
+        - massdensity: Massdensity of material in kg/m^3
+
         """
-        #self.new_configuration_test()
 
         t_start = time.time()
 
@@ -294,7 +341,8 @@ class SampleMap:
         Rmin = pylab.sqrt(3)/12*(3.0+pylab.sqrt(5))*a # radius at faces
         nRmax = Rmax/self.dX
         nRmin = Rmin/self.dX
-        s = smooth
+        # smooth
+        s = 1.0
         N = int(pylab.ceil(2*(nRmax+pylab.ceil(s))))
         r_pix = self.dX*(3/(4*pylab.pi))**(1/3.0)
         
@@ -455,6 +503,15 @@ class SampleMap:
         return map2d
 
     def save_map3d(self,filename):
+        """
+        Function saves the current refractive index map to an hdf5 file:
+        ================================================================
+        
+        Arguments:
+        
+        - filename: Filename.
+
+        """
         if filename[-3:] == '.h5':
             import h5py
             f = h5py.File(filename,'w')
@@ -466,6 +523,16 @@ class SampleMap:
             print 'ERROR: Invalid filename extension, has to be \'.h5\'.'
 
     def load_map3d(self,filename):
+        """
+        Function loads refractive index map from an hdf5 file:
+        ======================================================
+        
+        Arguments:
+        
+        - filename: Filename.
+
+        """
+
         if filename[-3:] == '.h5':
             import h5py
             f = h5py.File(filename,'r')
@@ -476,24 +543,36 @@ class SampleMap:
         else:
             print 'ERROR: Invalid filename extension, has to be \'.h5\'.'
 
-    def get_area(self,eul_ang1=None,eul_ang2=None,eul_ang3=None):
-        if self.radius == None:
-            projection = self.project(eul_ang1,eul_ang2,eul_ang3)
-            binary = pylab.ones_like(projection)
-            binary[abs(projection)<pylab.median(abs(projection))] = 0
-            area = binary.sum()*self.dX**2
-        else:
-            area = pylab.pi*self.radius**2
+    def get_area(self):
+        """
+        Function returns projected area of the sample along current beam axis:
+        ======================================================================
+
+        """
+        projection = self.project(self.euler_angle_0,self.euler_angle_1,self.euler_angle_2)
+        binary = pylab.ones_like(projection)
+        binary[abs(projection)<pylab.median(abs(projection))] = 0
+        area = binary.sum()*self.dX**2
         return area
         
 class SampleSphere:
     """
-    Sample class of input-object for simulation of a homogeneous sphere without sampled map.
+    A class of the input-object.
+    Sample is a homogeneous sphere defined by a radius and a material object.
+
     """
-    def __init__(self,parent=None,radius=225.0E-09,**materialargs):
-        self._parent = parent
-        self.radius = radius
-        self.material = Material(self,**materialargs)
+
+    def __init__(self,**kwargs):
+        self.radius = kwargs.get('radius',225E-09)
+        self._parent = kwargs.get('parent',None)
+
+        material_kwargs = kwargs.copy()
+        try: material_kwargs.pop('parent')
+        except: pass
+        try: material_kwargs.pop('radius')
+        except: pass
+        material_kwargs['parent'] = self
+        self.material = Material(**material_kwargs)
 
     def get_area(self):
         """ Calculates area of projected sphere """

@@ -2,16 +2,19 @@ import pylab
 import config
 
 class Source:
-    """ FEL x-ray pulse.
     """
-    def __init__(self,parent=None):
-        self._parent = parent
-        self.photon = Photon(wavelength=5.7E-09)
-        self.spotsize = 20E-06
-        self.energy = 100E-06
+    A subclass of the input object.
+    Defines properties of the FEL x-ray pulse.
+
+    """
+    def __init__(self,**kwargs):
+        self._parent = kwargs.get('parent',None)
+        self.photon = Photon(wavelength=kwargs.get('wavelength',5.7E-09))
+        self.focus_diameter = kwargs.get('focus_diameter',20E-06)
+        self.pulse_energy = kwargs.get('pulse_energy',100E-06)
 
     def get_area(self):
-        return pylab.pi*(self.spotsize/2.0)**2
+        return pylab.pi*(self.focus_diameter/2.0)**2
     
 class Photon:
     def __init__(self,**kwarg):
