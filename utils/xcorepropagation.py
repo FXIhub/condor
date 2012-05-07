@@ -98,9 +98,7 @@ def nfftXCore(object3d,q,N_processes=None):
     offset = 0
     for n in range(0,N_processes):
         config.OUT.write("Collect results from process %i\n" % n)
-        print results
         r = (results[n].get()).flatten()
-        #print r
         A[offset:offset+len(r)] = r[:]
         offset+=len(r)
     return A.reshape((q.shape[0],q.shape[1]))

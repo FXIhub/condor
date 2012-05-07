@@ -51,22 +51,28 @@ def propagator(input_obj=False):
         R = input_obj.sample.radius
         q = input_obj.generate_absqmap()
         F = pylab.zeros_like(q)
-        F[q!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q*R)-q*R*pylab.cos(q*R))/(q*R)**3*dn_real)[q!=0.0]
+        F[q!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q[q!=0.0]*R)-q[q!=0.0]*R*pylab.cos(q[q!=0.0]*R))/(q[q!=0.0]*R)**3*dn_real)
         try: F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
         except: pass
 
     if isinstance(input_obj.sample,SampleMap):    
         # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
         q = input_obj.generate_qmap()
-        # requested q interval
-        QI = 2*pylab.pi/(input_obj.sample.dX*input_obj.propagation.rs_oversampling)
+
+        # check agreement of sampling of real space map
+        dX_map = input_obj.sample.dX
+        dX_setup = input_obj.get_real_space_resolution_element()/(1.0*input_obj.propagation.rs_oversampling)
+        if dX_map != dX_setup:
+            print "ERROR: real space sampling does not match with experimental geometry."
+            return
+        interval_size_q = 2*pylab.pi/input_obj.sample.dX
         # q map scaled for nfft (standard interval -0.5 to 0.5)
-        q_scaled = q/QI
+        q_scaled = q / interval_size_q
         config.OUT.write("Propagate pattern of %i x %i pixels.\n" % (q.shape[1],q.shape[0]))
         F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
             * xcorepropagation.nfftXCore(input_obj.sample.map3d,
                                          q_scaled,
-                                         self.input_object.propagation.N_processes) \
+                                         input_obj.propagation.N_processes) \
             * input_obj.sample.dX**3
         config.OUT.write("Got pattern of %i x %i pixels.\n" % (F.shape[1],F.shape[0]))
         #F = imgutils.crop(F,pylab.array([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
@@ -115,7 +121,7 @@ class Input:
         self.sample = SampleMap(parent=self)
         self.sample.load_map3d(filename)
 
-    def set_sample_icosahedral_virus_map(self,radius=None,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0):
+    def set_sample_icosahedral_virus_map(self,radius=None,eul_ang0=0.0,eul_ang1=0.0,eul_ang2=0.0):
         """
         Creates refractive index map of homogeneously filled icosahedron.
         - material: 'virus' (for details investigate generated material object)
@@ -125,7 +131,7 @@ class Input:
         if not radius:
             radius = self.sample.radius
         self.sample = SampleMap(parent=self)
-        self.sample.put_icosahedral_virus(radius,eul_ang1,eul_ang2,eul_ang3)
+        self.sample.put_icosahedral_virus(radius,eul_ang0,eul_ang1,eul_ang2)
         self.sample.radius = radius
 
     def set_sample_sphere_map(self,radius=225E-09,**materialargs):
@@ -212,10 +218,10 @@ class Input:
         """
         Function returns real space sampling.
         =====================================
-        Formula: dX = 2 * pi / max([qxmax,qymax])
+        Formula: dX = pi / max([qxmax,qymax])
 
         """
-        dX = 2 * pylab.pi / max([self.get_absqx_max(),self.get_absqy_max()])
+        dX = pylab.pi / max([self.get_absqx_max(),self.get_absqy_max()])
         return dX
 
     def get_max_achievable_crystallographic_resolution(self):
@@ -277,17 +283,18 @@ class Input:
         
     def get_absqx_max(self):
         wavelength = self.source.photon.get_wavelength()
-        x_max = max([self.detector.cx,self.detector.Nx-self.detector.cx])
+        x_max = max([self.detector.cx,self.detector.Nx-self.detector.cx]) * self.detector.pixel_size
         R_Ewald = 2*pylab.pi/wavelength
         phi = pylab.arctan2(x_max,self.detector.distance)
-        return R_Ewald * pylab.sin(phi)
+        return 2 * R_Ewald * pylab.tan(phi/2.0)
 
     def get_absqy_max(self):
         wavelength = self.source.photon.get_wavelength()
-        y_max = max([self.detector.cy,self.detector.Ny-self.detector.cy])
+        y_max = max([self.detector.cy,self.detector.Ny-self.detector.cy]) * self.detector.pixel_size
         R_Ewald = 2*pylab.pi/wavelength
         phi = pylab.arctan2(y_max,self.detector.distance)
-        return R_Ewald * pylab.sin(phi)
+        return 2 * R_Ewald * pylab.tan(phi/2.0)
+
 
 class Output:
     """
@@ -449,14 +456,17 @@ class Output:
 
     def plot_pattern(self,**kwargs):
         """
-        Creates 2-dimensional plot(s) of the distribution of scattered photons.
-        Usage: plot_pattern([scaling],[poissonnoise],[logscale],[saturationlevel])
+        Function makes 2-dimensional plot(s) of the distribution of scattered photons.
+        ==============================================================================
+
         Keyword arguments:
+
         - scaling:          'nyquist', 'meter', 'binned pixel' or 'pixel' (default)
         - noise:            'poisson' or 'none' (default)
-        - logscale:         False or True (default)
-        - saturationlevel:  True or False (default)
-        - use_gapmask:      False or True (default)
+        - logscale:         False / True (default)
+        - saturation_level:  False (default) / True
+        - use_gapmask:      False / True (default)
+
         """
 
         scaling = 'pixel'
@@ -474,7 +484,7 @@ class Output:
 
         I = self.get_intensity_pattern()
 
-        optionkeys = ["scaling","noise","logscale","saturationlevel","use_gapmask","outfile"]
+        optionkeys = ["scaling","noise","logscale","saturation_level","use_gapmask","outfile"]
         options = [scaling,noise,logscale,saturationlevel,use_gapmask]
         optionargs = [scalingargs,noiseargs,logscaleargs,saturationlevelargs,use_gapmaskargs,outfileargs]
         keys = kwargs.keys()
@@ -593,44 +603,57 @@ class Output:
         else:
             fig.show()
    
-    def save_pattern_to_file(self,filename,scaling="binned pixel",*arguments):
+    def save_pattern_to_file(self,filename,**kwargs):
         """
-        Saves dataset to file of specified format.
-        Usage: fo_file(filename,[scaling],[colorscale])
+        Function saves dataset to file of specified format.
+        ===================================================
+        
         Arguments:
         - filename: The file-format is specified using one of the following file-endings:
-                    - '.h5'
-                    - '.png'
-        - scaling:  Specifies spatial scaling.
-                    Can be set to 'pixel' (default), 'nyquist pixel' or 'meter'.
-        - colorscale (only for png-files):
-                    - Jet
-                    - Gray (default)
-                    - Log (can be combined with the others)
+                    - \'.h5\'
+                    - \'.png\'
+
+        
+        Keyword arguments:
+        - log: True / False (default)
+        - colorscale: \'jet\' (default) / \'gray\'
+        - use_spimage: True / False (default)
+
         """
-        import spimage,h5py
-        pattern = self.get_pattern(scaling)
-        if filename[-3:]=='.h5':
-            color = 0
-        elif filename[-3:]=='.png':
-            color = 16
-            for flag in arguments:
-                if flag == 'Jet':
-                    color = 16
-                elif flag == 'Gray':
-                    color = 1
-                elif flag == 'Log':
-                    color += 128
-                else:
-                    print "unknown flag %s" % flag
-                    return
+        pattern = self.get_intensity_pattern()
+        if 'log' in kwargs: pattern = pylab.log10(pattern)
+        use_spimage = kwargs.get('use_spimage',False)
+        colorscale = kwargs.get('colorscale','jet')
+        if use_spimage:
+            import spimage
+            if filename[-3:]=='.h5':
+                color = 0
+            elif filename[-3:]=='.png':
+                if colorscale  == 'gray':
+                        color = 1
+                elif colorscale  == 'jet':
+                        color = 16
+            else:
+                print "ERROR: %s is not a valid fileformat for this function." % filename[-3:]
+                return
+            tmp_data = spimage.sp_image_alloc(len(pattern[0]),len(pattern),color)
+            tmp_data.image[:,:] = pattern[:,:]
+            spimage.sp_image_write(tmp_data,filename,0)
+            spimage.sp_image_free(tmp_data)
         else:
-            print "ERROR: %s is not a valid fileformat for this function." % filename[-3:]
-            return
-        tmp_data = spimage.sp_image_alloc(len(pattern[0]),len(pattern),color)
-        tmp_data.image[:,:] = pattern[:,:]
-        spimage.sp_image_write(tmp_data,filename,0)
-        spimage.sp_image_free(tmp_data)
+            if filename[-4:]=='.png':
+                pylab.imsave(filename,pattern,pylab.cm.get_cmap(colorscale))
+            elif filename[-3:]=='.h5':
+                import h5py
+                f = h5py.File(filename,'w')
+                pattern_ds = f.create_dataset('intensities', pattern.shape, pattern.dtype)
+                pattern_ds[:,:] = pattern[:,:]
+                amplitudes_ds = f.create_dataset('amplitudes', amplitudes.shape, amplitudes.dtype)
+                amplitudes_ds[:,:] = self.amplitudes[:,:]
+                f.close()
+
+                
+            
 
 class Propagation:
     """

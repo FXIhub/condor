@@ -168,15 +168,15 @@ class SampleMap:
         self._parent = kwargs.get('parent',None)
         self.radius = kwargs.get('radius',None)
         self.dX = kwargs.get('dX',self._parent.get_real_space_resolution_element()/(1.0*self._parent.propagation.rs_oversampling))
+        self.euler_angle_0 = kwargs.get('euler_angle_0',0.0)
         self.euler_angle_1 = kwargs.get('euler_angle_1',0.0)
         self.euler_angle_2 = kwargs.get('euler_angle_2',0.0)
-        self.euler_angle_3 = kwargs.get('euler_angle_3',0.0)
 
     def set_random_orientation(self):
-        [e1,e2,e3] = tools.random_euler_angles()
+        [e0,e1,e2] = tools.random_euler_angles()
+        self.euler_angle_0 = e0
         self.euler_angle_1 = e1
         self.euler_angle_2 = e2
-        self.euler_angle_3 = e3
         
     def put_custom_map(self,map_add,x,y,z):
         origin = pylab.array([(self.map3d.shape[2]-1)/2.0,
@@ -232,7 +232,7 @@ class SampleMap:
             z_N = z/self.dX
             self.put_custom_map(spheremap,x_N,y_N,z_N)
  
-    def put_spheroid(self,a,b,x=None,y=None,z=None,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,**materialargs):
+    def put_spheroid(self,a,b,x=None,y=None,z=None,eul_ang0=0.0,eul_ang1=0.0,eul_ang2=0.0,**materialargs):
         """
         Function add densitymap of homogeneous ellipsoid to 3-dimensional densitymap:
         =============================================================================
@@ -262,7 +262,7 @@ class SampleMap:
         X,Y,Z = 1.0*pylab.mgrid[0:size,0:size,0:size]
         for J in [X,Y,Z]: J -= size/2.0-0.5
         
-        if eul_ang1 != 0.0 or eul_ang2 != 0.0 or eul_ang3 != 0.0:
+        if eul_ang0 != 0.0 or eul_ang1 != 0.0 or eul_ang2 != 0.0:
             def rotate_X(v,alpha):
                 rotM = pylab.array([[1,0,0],[0,pylab.cos(alpha),-pylab.sin(alpha)],[0,pylab.sin(alpha),pylab.cos(alpha)]])
                 return pylab.dot(rotM,v)
@@ -279,7 +279,7 @@ class SampleMap:
                 for yi in pylab.arange(0,size,1.0):
                     for zi in pylab.arange(0,size,1.0):
                         new = pylab.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]])
-                        new = do_basic_rotation(new,eul_ang1,eul_ang2,eul_ang3)
+                        new = do_basic_rotation(new,eul_ang0,eul_ang1,eul_ang2)
                         X[zi,yi,xi] = new[2]
                         Y[zi,yi,xi] = new[1]
                         Z[zi,yi,xi] = new[0]
@@ -302,8 +302,8 @@ class SampleMap:
     def put_goldball(self,radius,x=None,y=None,z=None):
         self.put_sphere(radius,x,y,z,cAu=1,massdensity=config.DICT_massdensity['Au'])        
 
-    def put_icosahedral_virus(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,x=0.,y=0.,z=0.):
-        dn = self._makedm_icosahedron(radius,eul_ang1,eul_ang2,eul_ang3,materialtype="virus")
+    def put_icosahedral_virus(self,radius,eul_ang0=0.0,eul_ang1=0.0,eul_ang2=0.0,x=0.,y=0.,z=0.):
+        dn = self._makedm_icosahedron(radius,eul_ang0,eul_ang1,eul_ang2,materialtype="virus")
         if self.map3d.max() == 0.0 and x==0. and y==0. and z==0.:
             self.map3d = dn
         else:
@@ -313,7 +313,7 @@ class SampleMap:
             self.put_custom_map(dn,x_N,y_N,z_N)
 
 
-    def _makedm_icosahedron(self,radius,eul_ang1=0.0,eul_ang2=0.0,eul_ang3=0.0,**materialargs):  
+    def _makedm_icosahedron(self,radius,eul_ang0=0.0,eul_ang1=0.0,eul_ang2=0.0,**materialargs):  
         """
         Function returns a refractive index map of a homogeneous icosahedron:
         =====================================================================
@@ -321,7 +321,7 @@ class SampleMap:
         Arguments:
 
         - radius: Radius in meter (volume equals volume of a sphere with given radius). [no default value]
-        - eul_ang1,eul_ang2,eul_ang3: orientation defined by Euler angles in rad. [0.0,0.0,0.0]
+        - eul_ang0,eul_ang1,eul_ang2: orientation defined by Euler angles in rad. [0.0,0.0,0.0]
         
         Keyword arguments:
 
@@ -391,9 +391,9 @@ class SampleMap:
             rotM = pylab.array([[pylab.cos(alpha),-pylab.sin(alpha),0],[pylab.sin(alpha),pylab.cos(alpha),0],[0,0,1]])
             return pylab.dot(rotM,v)
         for i in range(0,len(n_list)):
-            n_list[i] = rotate_Z(n_list[i],eul_ang1)
-            n_list[i] = rotate_X(n_list[i],eul_ang2)
-            n_list[i] = rotate_Z(n_list[i],eul_ang3)
+            n_list[i] = rotate_Z(n_list[i],eul_ang0)
+            n_list[i] = rotate_X(n_list[i],eul_ang1)
+            n_list[i] = rotate_Z(n_list[i],eul_ang2)
 
         #t_1 = time.time()        
         config.OUT.write("... %i x %i x %i grid (%i voxels) ...\n" % (N,N,N,N**3))
@@ -435,13 +435,13 @@ class SampleMap:
         return dn*icomap
     
 
-    def project(self,eul_ang1=None,eul_ang2=None,eul_ang3=None,**kwargs):
+    def project(self,eul_ang0=None,eul_ang1=None,eul_ang2=None,**kwargs):
         """ Projection of 3-dimensional map."""
+        if not eul_ang0: eul_ang0 = self.euler_angle_0
         if not eul_ang1: eul_ang1 = self.euler_angle_1
         if not eul_ang2: eul_ang2 = self.euler_angle_2
-        if not eul_ang3: eul_ang3 = self.euler_angle_3
 
-        if eul_ang1*eul_ang2*eul_ang3 == 0.0:
+        if eul_ang0*eul_ang1*eul_ang2 == 0.0:
             map2d = pylab.zeros((self.map3d.shape[1],self.map3d.shape[2]))
             for iy in pylab.arange(0,map2d.shape[0]):
                 for ix in pylab.arange(0,map2d.shape[1]):
@@ -454,17 +454,17 @@ class SampleMap:
                 rotM = pylab.array([[pylab.cos(alpha),-pylab.sin(alpha),0],[pylab.sin(alpha),pylab.cos(alpha),0],[0,0,1]])
                 return pylab.dot(rotM,v)
             x_0 = pylab.array([0.0,0.0,1.0])
-            x_0 = rotate_Z(x_0,eul_ang1)
-            x_0 = rotate_X(x_0,eul_ang2)
-            x_0 = rotate_Z(x_0,eul_ang3)
+            x_0 = rotate_Z(x_0,eul_ang0)
+            x_0 = rotate_X(x_0,eul_ang1)
+            x_0 = rotate_Z(x_0,eul_ang2)
             y_0 = pylab.array([0.0,1.0,0.0])
-            y_0 = rotate_Z(y_0,eul_ang1)
-            y_0 = rotate_X(y_0,eul_ang2)
-            y_0 = rotate_Z(y_0,eul_ang3)
+            y_0 = rotate_Z(y_0,eul_ang0)
+            y_0 = rotate_X(y_0,eul_ang1)
+            y_0 = rotate_Z(y_0,eul_ang2)
             z_0 = pylab.array([1.0,0.0,0.0])
-            z_0 = rotate_Z(z_0,eul_ang1)
-            z_0 = rotate_X(z_0,eul_ang2)
-            z_0 = rotate_Z(z_0,eul_ang3)
+            z_0 = rotate_Z(z_0,eul_ang0)
+            z_0 = rotate_X(z_0,eul_ang1)
+            z_0 = rotate_Z(z_0,eul_ang2)
             N = self.map3d.shape[0]
             extra_space = 10
             map2d = pylab.zeros(shape=(N,N),dtype="complex64")
