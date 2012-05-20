@@ -543,14 +543,16 @@ class SampleMap:
         else:
             print 'ERROR: Invalid filename extension, has to be \'.h5\'.'
 
-    def get_area(self):
+    def get_area(self,mode='auto'):
         """
         Function returns projected area of the sample along current beam axis:
         ======================================================================
 
         """
+        if mode == 'auto':
+            if self.radius != None: return pylab.pi*self.radius**2
         projection = self.project(self.euler_angle_0,self.euler_angle_1,self.euler_angle_2)
-        binary = pylab.ones_like(projection)
+        binary = pylab.ones(shape=projection.shape)
         binary[abs(projection)<pylab.median(abs(projection))] = 0
         area = binary.sum()*self.dX**2
         return area

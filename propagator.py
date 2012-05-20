@@ -62,8 +62,8 @@ def propagator(input_obj=False):
         # check agreement of sampling of real space map
         dX_map = input_obj.sample.dX
         dX_setup = input_obj.get_real_space_resolution_element()/(1.0*input_obj.propagation.rs_oversampling)
-        if dX_map != dX_setup:
-            print "ERROR: real space sampling does not match with experimental geometry."
+        if dX_map > dX_setup:
+            print "ERROR: Finer real space sampling required for chosen geometry."
             return
         interval_size_q = 2*pylab.pi/input_obj.sample.dX
         # q map scaled for nfft (standard interval -0.5 to 0.5)
@@ -204,6 +204,7 @@ class Input:
         if C.get('detector','mask') == 'none':
             args['x_gap_size_in_pixel'] = C.getint('detector','x_gap_size_in_pixel')
             args['y_gap_size_in_pixel'] = C.getint('detector','y_gap_size_in_pixel')
+            args['hole_diameter_in_pixel'] = C.getint('detector','hole_diameter_in_pixel')
         else:
             M = pylab.imread(C.get('detector','mask'))
             M = M[:,:,0]
@@ -277,7 +278,7 @@ class Input:
                                pylab.sin(E0)*pylab.cos(E1),
                                pylab.cos(E0)*pylab.cos(E1)]])
             for iy in pylab.arange(0,qmap.shape[0]):
-                for ix in pylab.arange(0,qmap.shape[0]):
+                for ix in pylab.arange(0,qmap.shape[1]):
                     qmap[iy,ix,:] = pylab.dot(M,qmap[iy,ix,:])
         return qmap
         
@@ -456,8 +457,8 @@ class Output:
 
     def plot_pattern(self,**kwargs):
         """
-        Function makes 2-dimensional plot(s) of the distribution of scattered photons.
-        ==============================================================================
+        Function plots the 2d intensity pattern of scattered photons.
+        =============================================================
 
         Keyword arguments:
 

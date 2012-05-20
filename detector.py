@@ -39,6 +39,7 @@ class Detector:
         self.pixel_size = kwargs.get('pixel_size',75.E-6)
         gx = kwargs.get('x_gap_size_in_pixel',0)
         gy = kwargs.get('y_gap_size_in_pixel',0)
+        hd = kwargs.get('hole_diameter_in_pixel',0)
         if 'mask' in kwargs:
             self.init_mask(mask=kwargs['mask'])
             self.cx = kwargs.get('cx',(self.mask.shape[1]-1)/2.)
@@ -46,9 +47,9 @@ class Detector:
         else:
             self.Nx = kwargs.get('Nx',1024)
             self.Ny = kwargs.get('Ny',1024)
-            self.cx = kwargs.get('cx',(self.Nx+gx-1)/2.)
-            self.cy = kwargs.get('cy',(self.Ny+gy-1)/2.)   
-            self.init_mask(Nx=self.Nx,Ny=self.Ny,x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy)
+            self.cx = kwargs.get('cx',(self.Nx+gy-1)/2.)
+            self.cy = kwargs.get('cy',(self.Ny+gx-1)/2.)   
+            self.init_mask(Nx=self.Nx,Ny=self.Ny,x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy,hole_diameter_in_pixel=hd)
         self.binning = kwargs.get('binning',1)
         self.saturation_level = kwargs.get('saturation_level',None)
 
@@ -69,6 +70,7 @@ class Detector:
         - Ny: vertical dimension of the mask (inside the mask, without counting any gaps)
         - x_gap_size_in_pixel: horizontal gap is generated with given width (in unit unbinned pixel)
         - y_gap_size_in_pixel: vertical gap is generated with given width (in unit unbinned pixel)
+        - hole_diameter_in_pixel: holeis generated with given diameter (in unit unbinned pixel)
 
         """
 
@@ -86,10 +88,21 @@ class Detector:
             
         # set pixels in gap to zero
         if 'x_gap_size_in_pixel' in kwargs:
-            self.mask[pylab.ceil(self.cy)-kwargs['x_gap_size_in_pixel']/2:pylab.ceil(self.cy)-kwargs['x_gap_size_in_pixel']/2+kwargs['x_gap_size_in_pixel'],:]
+            cy = pylab.ceil((self.mask.shape[0]-1)/2.)
+            self.mask[cy-kwargs['x_gap_size_in_pixel']/2:cy-kwargs['x_gap_size_in_pixel']/2+kwargs['x_gap_size_in_pixel'],:] = 0
         if 'y_gap_size_in_pixel' in kwargs:
-            self.mask[:,pylab.ceil(self.cx)-kwargs['y_gap_size_in_pixel']/2:pylab.ceil(self.cx)-kwargs['y_gap_size_in_pixel']/2+kwargs['y_gap_size_in_pixel']]
-        
+            cx = pylab.ceil((self.mask.shape[1]-1)/2.)
+            self.mask[:,cx-kwargs['y_gap_size_in_pixel']/2:cx-kwargs['y_gap_size_in_pixel']/2+kwargs['y_gap_size_in_pixel']] = 0
+        if 'hole_diameter_in_pixel' in kwargs:
+            cy = pylab.ceil((self.mask.shape[0]-1)/2.)
+            cx = pylab.ceil((self.mask.shape[1]-1)/2.)
+            X,Y = pylab.meshgrid(pylab.arange(0,self.mask.shape[1],1.0),
+                                 pylab.arange(0,self.mask.shape[0],1.0))
+            X -= cx
+            Y -= cy
+            R = pylab.sqrt(X**2 + Y**2)
+            self.mask[R<=kwargs['hole_diameter_in_pixel']/2.0] = 0
+              
     def set_cy(self,cy=None):
         """
         Function sets vertical center position:
