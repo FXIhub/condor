@@ -4,28 +4,6 @@ sys.path.append(config.PROPAGATOR_DIR+"/utils/nfft")
 import nfft
 import time
 
-#def generate_fourier_coordinates(y_min,y_steps,x_min,x_steps,stepsize):
-#    X,Y = pylab.meshgrid((pylab.arange(0,x_steps,1)*stepsize+x_min),(pylab.arange(0,y_steps,1)*stepsize+y_min))
-#    coords = pylab.zeros(shape=(X.shape[0]*X.shape[1],3))
-#    coords[:,1] = Y.flatten()[:]
-#    coords[:,2] = X.flatten()[:]
-#    return coords.flatten()
-
-#def rotate_coordinates(coordinates,phi,theta,psi):
-    # Turn grid and compute phase ramp (correction for translation)
-#    M = pylab.array([[pylab.cos(theta)*pylab.cos(psi),
-#                      -pylab.cos(phi)*pylab.sin(psi)+pylab.sin(phi)*pylab.sin(theta)*pylab.cos(psi),
-#                      pylab.sin(phi)*pylab.sin(psi)+pylab.cos(phi)*pylab.sin(theta)*pylab.cos(psi)],
-#                     [pylab.cos(theta)*pylab.sin(psi),
-#                      pylab.cos(phi)*pylab.cos(psi)+pylab.sin(phi)*pylab.sin(theta)*pylab.sin(psi),
-#                      -pylab.sin(phi)*pylab.cos(psi)+pylab.cos(phi)*pylab.sin(theta)*pylab.sin(psi)],
-#                     [-pylab.sin(theta),
-#                       pylab.sin(phi)*pylab.cos(theta),
-#                       pylab.cos(phi)*pylab.cos(theta)]])
-#    for i in pylab.arange(0,len(coordinates),3):
-#        [coordinates[i],coordinates[i+1],coordinates[i+2]] = pylab.dot(M,coordinates[i:i+3])
-#    return coordinates
-
 def generate_phase_ramp(coordinates,phi,theta,psi):
     M = pylab.array([[pylab.cos(theta)*pylab.cos(psi),
                       -pylab.cos(phi)*pylab.sin(psi)+pylab.sin(phi)*pylab.sin(theta)*pylab.cos(psi),
@@ -45,18 +23,9 @@ def arrange_values(values,arrayshape):
     return values.reshape(arrayshape)
 
 def nfftSingleCore(sample,q):
-    #phase_ramp = generate_phase_ramp(coordinates,params["phi"],params["theta"],params["psi"])
     qflat = q.flatten()
     fourierpattern = nfft.nfft3d(qflat,sample)
     fourierpattern = arrange_values(fourierpattern,(q.shape[0],q.shape[1]))
-    #fourierpattern = arrange_values(fourierpattern,(params["y_steps"],params["x_steps"]))
-    #phase_ramp = arrange_values(phase_ramp,(params["y_steps"],params["x_steps"]))
-    #phases = pylab.log(fourierpattern/abs(fourierpattern)).imag
-    #phases -= phase_ramp
-    #while len(phases[abs(phases)>pylab.pi]) != 0:
-    #    phases[phases<=-pylab.pi] += 2*pylab.pi
-    #    phases[phases>pylab.pi] -= 2*pylab.pi
-    #return abs(fourierpattern)*pylab.exp(phases*1.0j)
     return fourierpattern
 
 def tester():
@@ -75,7 +44,6 @@ def tester():
 
 def nfftXCore(object3d,q,N_processes=None):
     object3d = pylab.complex128(object3d)
-    #if len(q.shape) == 3: q = q.reshape((q.shape[0]*q.shape[1],3))
     if abs(q).max() > 0.5:
         print "ERROR: nfft accepts only a frequency range from -0.5 to 0.5."
         return

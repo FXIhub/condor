@@ -19,7 +19,10 @@ import config
 config.init_configuration()
 
 import xcorepropagation,imgutils,tools
+reload(imgutils)
 
+import sample
+reload(sample)
 from source import *
 from sample import *
 from detector import *
@@ -55,7 +58,28 @@ def propagator(input_obj=False):
         try: F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
         except: pass
 
-    if isinstance(input_obj.sample,SampleMap):    
+    elif isinstance(input_obj.sample,SampleSpheres):
+        radii = input_obj.sample.get_radii()
+        dn_real = (1-input_obj.sample.material.get_n()).real
+        absq = input_obj.generate_absqmap()
+        q = input_obj.generate_qmap()
+        F = pylab.zeros(shape=absq.shape,dtype='complex')
+        for R in radii:
+            Fr = pylab.zeros_like(F)
+            Fr[absq!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(absq[absq!=0.0]*R)-absq[absq!=0.0]*R*pylab.cos(absq[absq!=0.0]*R))/(absq[absq!=0.0]*R)**3*dn_real)
+            try: Fr[absq==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
+            except: pass
+
+            indices = input_obj.sample.r==R
+
+            for i in range(sum(indices)):
+                print i
+                d = [pylab.array(input_obj.sample.z)[indices][i],
+                     pylab.array(input_obj.sample.y)[indices][i],
+                     pylab.array(input_obj.sample.x)[indices][i]]
+                F[:,:] += (Fr*input_obj.get_phase_ramp(q,d))[:,:]
+
+    elif isinstance(input_obj.sample,SampleMap):    
         # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
         q = input_obj.generate_qmap()
 
@@ -121,17 +145,14 @@ class Input:
         self.sample = SampleMap(parent=self)
         self.sample.load_map3d(filename)
 
-    def set_sample_icosahedral_virus_map(self,radius=None,eul_ang0=0.0,eul_ang1=0.0,eul_ang2=0.0):
+    def set_sample_icosahedral_virus_map(self,radius=None,**kwargs):
         """
-        Creates refractive index map of homogeneously filled icosahedron.
-        - material: 'virus' (for details investigate generated material object)
-        - volume corresponds to sphere of given radius (without given radius set to radius specified in current sample object)
-        - 3 euler angles define orientation of the icosahedron in the mesh. (0,0,0) means that the axis of the beam coincides with one of the 2-fold axes
+        Creates refractive index map of icosahedron. More information can be found in _makedm_icosahedron(...).
         """
         if not radius:
             radius = self.sample.radius
         self.sample = SampleMap(parent=self)
-        self.sample.put_icosahedral_virus(radius,eul_ang0,eul_ang1,eul_ang2)
+        self.sample.put_icosahedral_virus(radius,0.,0.,0.,**kwargs)
         self.sample.radius = radius
 
     def set_sample_sphere_map(self,radius=225E-09,**materialargs):
@@ -282,6 +303,11 @@ class Input:
                     qmap[iy,ix,:] = pylab.dot(M,qmap[iy,ix,:])
         return qmap
         
+    def get_phase_ramp(self,qmap,dvector):
+        return pylab.exp(-1.j*(dvector[0]*qmap[:,:,0]+
+                               dvector[1]*qmap[:,:,1]+
+                               dvector[2]*qmap[:,:,2]))
+
     def get_absqx_max(self):
         wavelength = self.source.photon.get_wavelength()
         x_max = max([self.detector.cx,self.detector.Nx-self.detector.cx]) * self.detector.pixel_size
@@ -643,7 +669,7 @@ class Output:
             spimage.sp_image_free(tmp_data)
         else:
             if filename[-4:]=='.png':
-                pylab.imsave(filename,pattern,pylab.cm.get_cmap(colorscale))
+                pylab.imsave(filename,pattern,cmap=pylab.cm.get_cmap(colorscale))
             elif filename[-3:]=='.h5':
                 import h5py
                 f = h5py.File(filename,'w')
