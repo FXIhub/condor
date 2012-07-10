@@ -523,9 +523,9 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
             rotM = pylab.array([[pylab.cos(alpha),-pylab.sin(alpha),0],[pylab.sin(alpha),pylab.cos(alpha),0],[0,0,1]])
             return pylab.dot(rotM,v)
         for i in range(0,len(n_list)):
-            n_list[i] = rotate_Z(n_list[i],eul_ang0)
-            n_list[i] = rotate_X(n_list[i],eul_ang1)
-            n_list[i] = rotate_Z(n_list[i],eul_ang2)
+            n_list[i] = rotate_Z(n_list[i],euler_1)
+            n_list[i] = rotate_X(n_list[i],euler_2)
+            n_list[i] = rotate_Z(n_list[i],euler_3)
 
     return n_list
 

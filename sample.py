@@ -200,18 +200,26 @@ class SampleMap:
         if xmin < 0:
             Nx += -xmin
             xoff = -xmin
+        change_map_size = False
         if self.map3d.shape[0] < zmin+map_add.shape[0]:
             Nz += (zmin+map_add.shape[0])-self.map3d.shape[0]
+            change_map_size = True
+            print Nz
         if self.map3d.shape[1] < ymin+map_add.shape[1]:
             Ny += (ymin+map_add.shape[1])-self.map3d.shape[1]
+            change_map_size = True
+            print Ny
         if self.map3d.shape[2] < xmin+map_add.shape[2]:
             Nx += (xmin+map_add.shape[2])-self.map3d.shape[2]
-        temp = self.map3d.copy()
-        self.map3d = pylab.zeros(shape=(Nz,Ny,Nx),dtype="complex64")
-        self.map3d[zoff:zoff+temp.shape[0],yoff:yoff+temp.shape[1],xoff:xoff+temp.shape[2]] = temp[:,:,:]
+            change_map_size = True
+            print Nx
+        if change_map_size:
+            temp = self.map3d.copy()
+            self.map3d = pylab.zeros(shape=(Nz,Ny,Nx),dtype="complex64")
+            self.map3d[zoff:zoff+temp.shape[0],yoff:yoff+temp.shape[1],xoff:xoff+temp.shape[2]] = temp[:,:,:]
         self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
                    yoff+ymin:yoff+ymin+map_add.shape[1],
-                   xoff+xmin:xoff+xmin+map_add.shape[2]] = map_add[:,:,:]
+                   xoff+xmin:xoff+xmin+map_add.shape[2]] += map_add[:,:,:]
 
     # TESTING REQUIRED
     def smooth_map3d(self,factor):
@@ -232,6 +240,24 @@ class SampleMap:
             self.map3d = map3d
         else:
             self.put_custom_map(map3d)        
+
+    def put_periodic_filament(self,diameter,layer_thickness,length,**materialargs):
+        Nx = length/self.dX
+        Ny = diameter/self.dX
+        Nz = diameter/self.dX
+        T = layer_thickness/self.dX
+        Z,Y,X = 1.0*pylab.mgrid[0:Nz,0:Ny,0:Nx]
+        Z -= Nz/2.
+        X -= Nx/2.
+        Y -= Ny/2.
+        R = pylab.sqrt(Y**2+Z**2)
+        map3d = R.copy()
+        map3d[R<Ny/2.] = 1-R[R<Ny/2.]/(Ny/2.)
+        map3d[R>=Ny/2.] = 0
+        map3d *= pylab.sin(2*pylab.pi*X/T)
+        material_obj = Material(self,**materialargs)
+        dn = 1.0-material_obj.get_n()
+        self.map3d = dn*map3d
 
     def put_sphere(self,radius,x=0,y=0,z=0,**materialargs):
         """
@@ -359,7 +385,7 @@ class SampleMap:
     def plot_fmap3d(self):
         from enthought.mayavi import mlab
         import spimage
-        M = spimage.sp_image_alloc(self.map3d.shape[2],self.map3d.shape[1],self.map3d.shape[0])
+        M = spimage.sp_image_alloc(self.map3d.shape[0],self.map3d.shape[1],self.map3d.shape[2])
         M.image[:,:,:] = self.map3d[:,:,:]
         M.mask[:,:,:] = 1
         fM = spimage.sp_image_fftw3(M)
@@ -681,7 +707,7 @@ class SampleSpheres:
         ns = imgutils.get_icosahedron_normal_vectors()
       
         def pick_random_point():
-            [u,v] = list(pylab.rand(2))
+            [u,v] = liSst(pylab.rand(2))
             theta = 2*pylab.pi*u
             phi = pylab.arccos(2*v-1)
             
@@ -752,7 +778,97 @@ class SampleSpheres:
                         self.add_sphere(d/2.,r*X[i,2],r*X[i,1],r*X[i,0])
                         i += 1
                         print i
-                
+              
+    def fill_icosahedron_parallel_chains(self,r,N,d,t,axis=2):
+        ns = imgutils.get_icosahedron_normal_vectors()
+      
+        def get_distance(pos):
+            distances = pylab.zeros(len(ns))
+            for i in range(len(ns)):
+                distances[i] = pylab.dot(ns[i],pos)-pylab.sqrt(pylab.dot(ns[i],ns[i]))
+            return distances.min()
+
+        X = pylab.zeros(shape=(N,3))
+
+        D = d/(2.*r)
+        Dsq = D**2
+
+        i = 0
+        intersect = False
+        while i < N:
+            X[i,:] = pylab.rand(3)[:]
+            X[i] = (X[i]-0.5)*2.
+
+            for j in range(i):
+                intersect = False
+                if pylab.dot(X[i]-X[j],X[i]-X[j]) <= Dsq:
+                    intersect = True
+                    print 'Missed insert'
+                    break
+
+            Xtemp = (X[i]-0.5)*2.
+            istart = i
+
+            outside_top = False
+            while outside_top == False and i < N:
+                if abs(Xtemp[0])>1. and abs(Xtemp[1])>1. and abs(Xtemp[2])>1.:
+                    break
+                else:
+                    for n in ns:
+                        if pylab.dot(Xtemp[:],n) > 0.7:
+                            outside_top = True
+                            break
+                    if not outside_top:
+                        self.add_sphere(d/2.,r*Xtemp[2],r*Xtemp[1],r*Xtemp[0])
+                        i += 1
+                        Xtemp[axis] += t/(2.*r)
+                        print i
+
+            if i < N:
+                Xtemp = (X[istart]-0.5)*2.
+                Xtemp[0] -= t/(2.*r)
+            else: break
+
+            outside_bot = False
+            while outside_bot == False and i < N:
+                if abs(Xtemp[0])>1. and abs(Xtemp[1])>1. and abs(Xtemp[2])>1.:
+                    break
+                for n in ns:
+                    if pylab.dot(Xtemp[:],n) > 0.7:
+                        outside_bot = True
+                        break
+                if not outside_bot:
+                    self.add_sphere(d/2.,r*Xtemp[2],r*Xtemp[1],r*Xtemp[0])
+                    i += 1
+                    Xtemp[axis] -= t/(2.*r)
+                    print i
+
+    def make_filaments(self,diameter_element,N,length_filament,diameter_filament):
+        X = pylab.zeros(shape=(N,2))
+
+        i = 0
+        intersect = False
+        dsq = (diameter_element/diameter_filament)**2
+
+        while i < N:
+            X[i,:] = pylab.rand(2)[:]
+            X[i,:] = (X[i,:]-0.5)*2.
+            intersect = False
+            for j in range(i):
+                if pylab.dot(X[i,:]-X[j,:],X[i,:]-X[j,:]) <= dsq:
+                    print 'Missed insert'
+                    intersect = True
+                    break
+            if intersect == False:
+                print int(round(length_filament/diameter_element))
+                for j in range(int(round(length_filament/diameter_element))):
+                    print 'adding sphere'
+                    self.add_sphere(diameter_element/2.,
+                                    diameter_element*j,
+                                    X[i,0]*diameter_filament,
+                                    X[i,1]*diameter_filament)
+                i += 1
+  
     def clear(self):
         self.x = []
         self.y = []
