@@ -7,11 +7,11 @@ print 'Done.'
 
 print 'Setting up directory...'
 PROPAGATOR_DIR = raw_input("Please enter the base path of PROPAGATOR: ")
-for line in fileinput.input("constants.py", inplace=1):
-    if "PROPAGATOR_DIR =" in line:
-        print "PROPAGATOR_DIR = \"%s\"\n" % PROPAGATOR_DIR
-    else:
-        print line[:-1]
+if PROPAGATOR_DIR[-1] == '/': PROPAGATOR_DIR = PROPAGATOR_DIR[:-1]
+f = open('_config.py','w')
+f.writelines(["# Personal configuration file for propagator\n",
+              "PROPAGATOR_DIR = \"%s\"\n" % PROPAGATOR_DIR])
+f.close()
 print 'Done.'
 
 print 'Setup ended successfully.'

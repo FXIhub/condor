@@ -1,17 +1,17 @@
 import pylab, sys, numpy, types, pickle, time, math
-
-PROPAGATOR_DIR = "/Users/hantke/Work/programs/git/propagator"
-
-
+import _config
 
 PROPAGATION_MODE_PROJECTION = 0
 PROPAGATION_MODE_3DSAMPLING = 1
+PROPAGATOR_DIR = _config.PROPAGATOR_DIR
 
 def init_configuration():
     # Load global dictionaries
     init_global_dictionaries()
     # Direct output to writable object
     commandline_out_deactivate()
+    # Add path of propagator to sys.path
+    sys.path.append(PROPAGATOR_DIR+"/utils")
     
 def init_global_dictionaries():
     # Load scattering factors and atomic masses from Henke tables

@@ -1,10 +1,11 @@
 import os,re,sys,h5py,pylab,numpy,time
+import config
 
-def radial_pixel_average(image,cx=None,cy=None):
-    if not cx:
-        cx = (image.shape[1]-1)/2.0
-    if not cy:
-        cy = (image.shape[0]-1)/2.0
+def radial_pixel_average(image,**kargs):
+    if 'cx' in kargs: cx = kargs['cx']
+    else: cx = (image.shape[1]-1)/2.0
+    if 'cy' in kargs: cy = kargs['cy'] 
+    else: cy = (image.shape[0]-1)/2.0
     x = pylab.arange(0,image.shape[1],1.0)-cx
     y = pylab.arange(0,image.shape[1],1.0)-cy
     X,Y = pylab.meshgrid(x,y)
@@ -15,13 +16,14 @@ def radial_pixel_average(image,cx=None,cy=None):
     values = pylab.zeros_like(radii)
     for i in range(0,len(radii)):
         values[i] = image[R==radii[i]].mean()
-    return pylab.array([radii,values])
-
-def radial_pixel_sum(image,cx=None,cy=None):
-    if not cx:
-        cx = (image.shape[1]-1)/2.0
-    if not cy:
-        cy = (image.shape[0]-1)/2.0
+    if 'rout' in kargs: return pylab.array([radii,values])
+    else:return values
+        
+def radial_pixel_sum(image,**kargs):
+    if 'cx' in kargs: cx = kargs['cx']
+    else: cx = (image.shape[1]-1)/2.0
+    if 'cy' in kargs: cy = kargs['cy'] 
+    else: cy = (image.shape[0]-1)/2.0
     x = pylab.arange(0,image.shape[1],1.0)-cx
     y = pylab.arange(0,image.shape[1],1.0)-cy
     X,Y = pylab.meshgrid(x,y)
@@ -31,7 +33,8 @@ def radial_pixel_sum(image,cx=None,cy=None):
     values = pylab.zeros_like(radii)
     for i in range(0,len(radii)):
         values[i] = image[R==radii[i]].sum()
-    return pylab.array([radii,values])
+    if 'rout' in kargs: return pylab.array([radii,values])
+    else:return values
 
 def cartesian_to_polar(cartesian_pattern,N_theta,x_center=None,y_center=None):
     Nx = cartesian_pattern.shape[1]
@@ -311,10 +314,9 @@ def smooth3d(arr3d,factor):
     farr3d = pylab.fftn(arr3d_new)
     farr3d = pylab.fftshift(farr3d)
     X,Y,Z = pylab.mgrid[-N/2:-N/2+N,-N/2:-N/2+N,-N/2:-N/2+N]
-    farr3d[abs(X)>N/2] = 0
-    farr3d[abs(Y)>N/2] = 0
-    farr3d[abs(Y)>N/2] = 0
-    farr3d = pylab.fftshift(farr3d)
+    Rsq = (X**2+Y**2+Z**2)
+    kernel = pylab.exp(-Rsq/(N/2./(1.*factor))**2)
+    farr3d = pylab.fftshift(farr3d*kernel)
     arr3d_new = pylab.ifftn(farr3d)
     return arr3d_new
 
@@ -345,7 +347,7 @@ def interpolate2d(arr2d,factor):
     arr2d_new = pylab.ifftn(farr2d)
     return arr2d_new
 
-def cut_edges(potential_cut_positions,normal_vectors,radius,dX):
+def cut_edges(potential_cut_positions,normal_vectors,radius,dX,s=2.0):
     a = radius*(16*pylab.pi/5.0/(3+pylab.sqrt(5)))**(1/3.0)
     Rmax = pylab.sqrt(10.0+2*pylab.sqrt(5))*a/4.0 # radius at corners
     Rmin = pylab.sqrt(3)/12*(3.0+pylab.sqrt(5))*a # radius at faces
@@ -353,7 +355,7 @@ def cut_edges(potential_cut_positions,normal_vectors,radius,dX):
     nRmin = Rmin/dX
     N = int(pylab.ceil(2*(nRmax+1.0)))
     r_pix = dX*(3/(4*pylab.pi))**(1/3.0)
-    s = 2.0
+    #s = 2.0
     cutmap = pylab.ones(len(potential_cut_positions))
     for m in range(0,len(normal_vectors)):
         normal_vector = normal_vectors[m]
@@ -373,3 +375,160 @@ def cut_edges(potential_cut_positions,normal_vectors,radius,dX):
                     cutmap[i] = cutmap[i]*(0.5-delta/s)
     return cutmap
 
+def get_random_circle_positions(N,d,dimension=2):
+    # position circles randomly in a cube [-0.5..0.5,0.5..0.5,-0.5..0.5] without allowing overlap with border and neighboring circles (if d > 0)
+    X = pylab.zeros(shape=(N,dimension))
+    i = 0
+    n_fails = 0
+    dsq = d**2
+    while i < N:
+        X[i][:] = pylab.rand(dimension)[:]
+        intersect = False
+        for j in range(i):
+            if pylab.dot(X[i]-X[j],X[i]-X[j]) <= dsq:
+                intersect = True
+                break
+        if intersect == False:
+            i += 1
+        else:
+            n_fails += 1
+        if n_fails > 1E4:
+            print "ERROR: Find no place to put more circles onto plane."
+            return None
+    return X
+
+def generate_random_colloid_planes(edge_pix,diameter_pix,thickness_pix,Np,Nppp):
+    # edge_pix: edge length of planes in pixel
+    # diameter_pix: diameter of particles in pixel
+    # thickness_pix: thickness of layer in pixel
+    # Np: number of planes
+    # Nppp: number of particles per plane
+    box_hight = pylab.ceil(Np*thickness_pix+diameter_pix)
+    box_width = pylab.ceil(edge_pix+diameter_pix)
+    diameter = diameter_pix/(1.*box_width)
+    config.OUT.write("Generate box of %i x %i x %i voxels.\n" % (box_width,box_width,box_hight))
+    P = pylab.zeros((box_width,box_width,box_hight))
+    X, Y, Z = numpy.mgrid[0:box_width,0:box_width,0:box_hight]
+    positions = get_random_circle_positions(Nppp,diameter)
+    y = positions[:,0]
+    x = positions[:,1]
+    x = x*(box_width-diameter_pix)+diameter_pix/2.
+    y = y*(box_width-diameter_pix)+diameter_pix/2.
+    for p in range(Np):
+        config.OUT.write("Plane %i/%i" % (p+1,Np))
+        for i in range(Nppp):
+            R = pylab.sqrt((Y-y[i])**2+(X-x[i])**2+(Z-thickness_pix*(p+0.5))**2)
+            P[R<diameter_pix/2.-1.0] = 1
+            P[abs(R-diameter_pix/2.)<=1.0] = ((R[abs(R-diameter_pix/2.)<=1.0]-diameter_pix/2.0)+1.0)/2.0
+    return P
+
+#def position_spheres_in_icosahedron(d,N):
+#    n_list = get_icosahedron_normal_vectors()
+#    r = 0.5*
+
+    # position circles randomly on a plane [0..1,0..1] without allowing overlap with border and neighboring circles (if d > 0)
+#    positions = zeros((N,3))
+#    i = 0
+#    n_fails = 0
+#    dsq = d**2
+#    while i < N:
+#        v = pylab.rand(3)
+#        inicosahedron = True
+#        for n in n_list:
+#            if pylab.dot(v,n) > 1.0:
+#                inicosahedron = False
+#                break
+#        if inicosahedron == True:
+#            intersect = False
+#            for j in range(i):
+#                if (v[:]-positions[i,:])**2 <= dsq:
+#                    intersect = True
+#                    break
+#            if intersect == False:
+#                positions[i,:] = v.copy()[:]
+#                i += 1
+#        else:
+#            n_fails += 1
+#        if n_fails > 1E4:
+#            print "ERROR: Find no place to put more circles onto plane."
+#            return positions
+#    
+#    return positions
+    
+    
+def rotate_3d_grid(X,Y,Z,eul_ang0,eul_ang1,eul_ang2):
+    if eul_ang0 != 0.0 or eul_ang1 != 0.0 or eul_ang2 != 0.0:
+        rotMXe1 = pylab.array([[1,0,0],[0,pylab.cos(eul_ang1),-pylab.sin(eul_ang1)],[0,pylab.sin(eul_ang1),pylab.cos(eul_ang1)]])
+        rotMZe0 = pylab.array([[pylab.cos(eul_ang0),-pylab.sin(eul_ang0),0],[pylab.sin(eul_ang0),pylab.cos(eul_ang0),0],[0,0,1]])
+        rotMZe2 = pylab.array([[pylab.cos(eul_ang2),-pylab.sin(eul_ang2),0],[pylab.sin(eul_ang2),pylab.cos(eul_ang2),0],[0,0,1]])
+        sizeX = X.shape[2]
+        sizeY = X.shape[1]
+        sizeZ = X.shape[0]   
+        for xi in pylab.arange(0,sizeX,1.0):
+            config.OUT.write("%i/%i\n" % (xi+1,sizeX))
+            for yi in pylab.arange(0,sizeY,1.0):
+                for zi in pylab.arange(0,sizeZ,1.0):
+                    new_vector = pylab.dot(rotMZe2,pylab.dot(rotMXe1,pylab.dot(rotMZe0,pylab.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]]))))
+                    X[zi,yi,xi] = new_vector[2]
+                    Y[zi,yi,xi] = new_vector[1]
+                    Z[zi,yi,xi] = new_vector[0]
+    return [X,Y,Z]
+
+def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
+    # construct normal vectors of faces
+    phi = (1+pylab.sqrt(5))/2.0
+    ri = phi**2/2./pylab.sqrt(3.)
+    # normal vectors for every vertice
+    x1 = pylab.array([0.0,1.0,phi])
+    x2 = pylab.array([0.0,1.0,-phi])
+    x3 = pylab.array([0.0,-1.0,phi])
+    x4 = pylab.array([0.0,-1.0,-phi]) 
+    x5 = pylab.array([1.0,phi,0.0])
+    x6 = pylab.array([1.0,-phi,0.0])
+    x7 = pylab.array([-1.0,phi,0.0])
+    x8 = pylab.array([-1.0,-phi,0.0])
+    x9 = pylab.array([phi,0.0,1.0])
+    x10 = pylab.array([-phi,0.0,1.0])
+    x11 = pylab.array([phi,0.0,-1.0])
+    x12 = pylab.array([-phi,0.0,-1.0])
+    X = [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12]
+    # angle between normals
+    an = round(pylab.dot(x5,x1))
+
+    def cont_element(el,l):
+        for i in range(0,len(l)):
+            if (el == l[i]).all():
+                return True
+        return False
+
+    def angles_match(y1,y2,y3):
+        if round(pylab.dot(y1,y2)) == an and round(pylab.dot(y2,y3)) == an and round(pylab.dot(y3,y1)) == an:
+            return True
+        else:
+            return False
+
+    n_list = []
+    for i in range(0,len(X)):
+        for j in range(0,len(X)):
+            for k in range(0,len(X)):
+                n = (X[i]+X[j]+X[k])/6./ri
+                if angles_match(X[i],X[j],X[k]) and not cont_element(n,n_list):
+                    n_list.append(n)
+
+    if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
+        def rotate_X(v,alpha):
+            rotM = pylab.array([[1,0,0],[0,pylab.cos(alpha),-pylab.sin(alpha)],[0,pylab.sin(alpha),pylab.cos(alpha)]])
+            return pylab.dot(rotM,v)
+        def rotate_Z(v,alpha):
+            rotM = pylab.array([[pylab.cos(alpha),-pylab.sin(alpha),0],[pylab.sin(alpha),pylab.cos(alpha),0],[0,0,1]])
+            return pylab.dot(rotM,v)
+        for i in range(0,len(n_list)):
+            n_list[i] = rotate_Z(n_list[i],euler_1)
+            n_list[i] = rotate_X(n_list[i],euler_2)
+            n_list[i] = rotate_Z(n_list[i],euler_3)
+
+    return n_list
+
+
+
+    

@@ -22,7 +22,7 @@ def get_max_crystallographic_resolution(wavelength,min_detector_center_edge_dist
     """
     return wavelength/pylab.sin(pylab.arctan(min_detector_center_edge_distance/detector_distance))
     
-def get_nyquist_pixelsize(detector_distance,wavelength,particle_area):
+def get_nyquist_pixel_size(detector_distance,wavelength,particle_area):
     """
     Returns size of one Nyquist pixel on the detector in meter.
     """
