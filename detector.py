@@ -1,6 +1,6 @@
 import sys
 sys.path.append("utils")
-import tools,pylab
+import pylab
 
 
 class Detector:

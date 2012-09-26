@@ -1,6 +1,6 @@
 import sys,pylab,time,multiprocessing
 if "utils" not in sys.path: sys.path.append("utils")
-import config,imgutils,tools
+import config,imgutils,proptools
 
 class Material:
     """
@@ -173,7 +173,7 @@ class SampleMap:
         self.euler_angle_2 = kwargs.get('euler_angle_2',0.0)
 
     def set_random_orientation(self):
-        [e0,e1,e2] = tools.random_euler_angles()
+        [e0,e1,e2] = proptools.random_euler_angles()
         self.euler_angle_0 = e0
         self.euler_angle_1 = e1
         self.euler_angle_2 = e2

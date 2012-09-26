@@ -18,7 +18,7 @@ rc('font', family='serif')
 import config
 config.init_configuration()
 
-import xcorepropagation,imgutils,tools
+import xcorepropagation,imgutils,proptools
 reload(imgutils)
 
 import sample
@@ -440,7 +440,7 @@ class Output:
         f1d.show()
 
     def get_nyquist_pixel_size(self):
-        return tools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),self.input_object.sample.get_area())
+        return proptools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),self.input_object.sample.get_area())
 
     def _get_gapsize(self,X_min,X_max,Y_min,Y_max):
         """
@@ -539,7 +539,7 @@ class Output:
         
         eff_pixel_size_detector = self.input_object.detector.pixel_size * self.input_object.detector.binning
         pixel_size_detector = self.input_object.detector.pixel_size
-        pixel_size_nyquist = tools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),self.input_object.sample.get_area())
+        pixel_size_nyquist = proptools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),self.input_object.sample.get_area())
         if scaling == "nyquist":
             I *= eff_pixel_size_nyquist**2/pixel_size_detector**2
             u = eff_pixel_size_detector/pixel_size_nyquist
