@@ -155,6 +155,16 @@ class Input:
         self.sample.put_icosahedral_virus(radius,0.,0.,0.,**kwargs)
         self.sample.radius = radius
 
+    def set_sample_icosahedral_map(self,radius=None,**kwargs):
+        """
+        Creates refractive index map of icosahedron. More information can be found in _makedm_icosahedron(...).
+        """
+        if not radius:
+            radius = self.sample.radius
+        self.sample = SampleMap(parent=self)
+        self.sample.put_icosahedral_sample(radius,0.,0.,0.,**kwargs)
+        self.sample.radius = radius
+
     def set_sample_sphere_map(self,radius=225E-09,**materialargs):
         """
         Creates refractive index map of sphere of given radius and material.

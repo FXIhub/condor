@@ -366,6 +366,18 @@ class SampleMap:
             z_N = z/self.dX
             self.put_custom_map(dn,x_N,y_N,z_N)
 
+    def put_icosahedral_sample(self,radius,x=0.,y=0.,z=0.,**kwargs):
+        kwargs_cp = kwargs.copy()
+        kwargs_cp['materialtype'] = kwargs['materialtype']
+        dn = self._makedm_icosahedron(radius,**kwargs_cp)
+        if self.map3d.max() == 0.0 and x==0. and y==0. and z==0.:
+            self.map3d = dn
+        else:
+            x_N = x/self.dX
+            y_N = y/self.dX
+            z_N = z/self.dX
+            self.put_custom_map(dn,x_N,y_N,z_N)
+
     def make_grid(self,Nx,Ny,Nz,spacing=2,thickness=1):
         G = pylab.ones(shape=(Nz,Ny,Nx))
         for iz in pylab.arange(0,Nz,spacing):
