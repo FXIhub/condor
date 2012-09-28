@@ -658,6 +658,7 @@ class Output:
 
         """
         pattern = self.get_intensity_pattern()
+        mask = self.input_object.detector.mask
         if 'log' in kwargs: pattern = pylab.log10(pattern)
         use_spimage = kwargs.get('use_spimage',False)
         colorscale = kwargs.get('colorscale','jet')
@@ -673,8 +674,9 @@ class Output:
             else:
                 print "ERROR: %s is not a valid fileformat for this function." % filename[-3:]
                 return
-            tmp_data = spimage.sp_image_alloc(len(pattern[0]),len(pattern),color)
+            tmp_data = spimage.sp_image_alloc(pattern.shape[1],pattern.shape[0],1)
             tmp_data.image[:,:] = pattern[:,:]
+            tmp_data.mask[:,:] = mask[:,:]
             spimage.sp_image_write(tmp_data,filename,0)
             spimage.sp_image_free(tmp_data)
         else:
