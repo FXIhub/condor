@@ -62,3 +62,12 @@ def print_material_xray_properties(wavelength,thickness=1.0E-06,**margs):
     #print "Attenuation length (drop off to 1/e): s = %f um" % (s/1.0E-6)
     print "Transmission after %.2f um sample: T = %.1f percent " % (thickness/1.0E-06,T*100)
     #atomic photoabsorption cross section
+
+def rotation(vector,phi,theta,psi):
+    cos = pylab.cos
+    sin = pylab.sin
+    M = pylab.array([[cos(theta)*cos(psi),-cos(phi)*sin(psi)+sin(phi)*sin(theta)*cos(psi),sin(phi)*sin(psi)+cos(phi)*sin(theta)*cos(psi)],
+                     [cos(theta)*sin(psi),cos(phi)*cos(psi)+sin(phi)*sin(theta)*sin(psi),-sin(phi)*cos(psi)+cos(phi)*sin(theta)*sin(psi)],
+                     [-sin(theta),sin(psi)*cos(theta),cos(phi)*cos(theta)]])
+    rotated_vector = pylab.dot(M,vector)
+    return rotated_vector

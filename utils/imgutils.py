@@ -458,9 +458,6 @@ def generate_random_colloid_planes(edge_pix,diameter_pix,thickness_pix,Np,Nppp):
     
 def rotate_3d_grid(X,Y,Z,eul_ang0,eul_ang1,eul_ang2):
     if eul_ang0 != 0.0 or eul_ang1 != 0.0 or eul_ang2 != 0.0:
-        rotMXe1 = pylab.array([[1,0,0],[0,pylab.cos(eul_ang1),-pylab.sin(eul_ang1)],[0,pylab.sin(eul_ang1),pylab.cos(eul_ang1)]])
-        rotMZe0 = pylab.array([[pylab.cos(eul_ang0),-pylab.sin(eul_ang0),0],[pylab.sin(eul_ang0),pylab.cos(eul_ang0),0],[0,0,1]])
-        rotMZe2 = pylab.array([[pylab.cos(eul_ang2),-pylab.sin(eul_ang2),0],[pylab.sin(eul_ang2),pylab.cos(eul_ang2),0],[0,0,1]])
         sizeX = X.shape[2]
         sizeY = X.shape[1]
         sizeZ = X.shape[0]   
@@ -468,7 +465,7 @@ def rotate_3d_grid(X,Y,Z,eul_ang0,eul_ang1,eul_ang2):
             config.OUT.write("%i/%i\n" % (xi+1,sizeX))
             for yi in pylab.arange(0,sizeY,1.0):
                 for zi in pylab.arange(0,sizeZ,1.0):
-                    new_vector = pylab.dot(rotMZe2,pylab.dot(rotMXe1,pylab.dot(rotMZe0,pylab.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]]))))
+                    new_vector = proptools.rotate(pylab.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]]),eul_ang0,eul_ang1,eul_ang2)
                     X[zi,yi,xi] = new_vector[2]
                     Y[zi,yi,xi] = new_vector[1]
                     Z[zi,yi,xi] = new_vector[0]
@@ -516,16 +513,8 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
                     n_list.append(n)
 
     if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
-        def rotate_X(v,alpha):
-            rotM = pylab.array([[1,0,0],[0,pylab.cos(alpha),-pylab.sin(alpha)],[0,pylab.sin(alpha),pylab.cos(alpha)]])
-            return pylab.dot(rotM,v)
-        def rotate_Z(v,alpha):
-            rotM = pylab.array([[pylab.cos(alpha),-pylab.sin(alpha),0],[pylab.sin(alpha),pylab.cos(alpha),0],[0,0,1]])
-            return pylab.dot(rotM,v)
         for i in range(0,len(n_list)):
-            n_list[i] = rotate_Z(n_list[i],euler_1)
-            n_list[i] = rotate_X(n_list[i],euler_2)
-            n_list[i] = rotate_Z(n_list[i],euler_3)
+            n_list[i] = proptools.rotate(n_list[i],euler_1,euler_2,euler_3)
 
     return n_list
 

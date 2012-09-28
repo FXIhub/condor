@@ -522,24 +522,9 @@ class SampleMap:
                 for ix in pylab.arange(0,map2d.shape[1]):
                     map2d[iy,ix] = self.map3d[:,iy,ix].real.sum()*self.dX*pylab.exp(-self.map3d[:,iy,ix].imag.sum()*self.dX)
         else:
-            def rotate_X(v,alpha):
-                rotM = pylab.array([[1,0,0],[0,pylab.cos(alpha),-pylab.sin(alpha)],[0,pylab.sin(alpha),pylab.cos(alpha)]])
-                return pylab.dot(rotM,v)
-            def rotate_Z(v,alpha):
-                rotM = pylab.array([[pylab.cos(alpha),-pylab.sin(alpha),0],[pylab.sin(alpha),pylab.cos(alpha),0],[0,0,1]])
-                return pylab.dot(rotM,v)
-            x_0 = pylab.array([0.0,0.0,1.0])
-            x_0 = rotate_Z(x_0,eul_ang0)
-            x_0 = rotate_X(x_0,eul_ang1)
-            x_0 = rotate_Z(x_0,eul_ang2)
-            y_0 = pylab.array([0.0,1.0,0.0])
-            y_0 = rotate_Z(y_0,eul_ang0)
-            y_0 = rotate_X(y_0,eul_ang1)
-            y_0 = rotate_Z(y_0,eul_ang2)
-            z_0 = pylab.array([1.0,0.0,0.0])
-            z_0 = rotate_Z(z_0,eul_ang0)
-            z_0 = rotate_X(z_0,eul_ang1)
-            z_0 = rotate_Z(z_0,eul_ang2)
+            x_0 = proptools.rotate(pylab.array([0.0,0.0,1.0]),eul_ang0,eul_ang1,eul_ang2)
+            y_0 = proptools.rotate(pylab.array([0.0,1.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
+            z_0 = proptools.rotate(pylab.array([1.0,0.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
             N = self.map3d.shape[0]
             extra_space = 10
             map2d = pylab.zeros(shape=(N,N),dtype="complex64")
