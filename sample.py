@@ -217,9 +217,14 @@ class SampleMap:
             temp = self.map3d.copy()
             self.map3d = pylab.zeros(shape=(Nz,Ny,Nx),dtype="complex64")
             self.map3d[zoff:zoff+temp.shape[0],yoff:yoff+temp.shape[1],xoff:xoff+temp.shape[2]] = temp[:,:,:]
-        self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
-                   yoff+ymin:yoff+ymin+map_add.shape[1],
-                   xoff+xmin:xoff+xmin+map_add.shape[2]] += map_add[:,:,:]
+        #self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
+        #           yoff+ymin:yoff+ymin+map_add.shape[1],
+        #           xoff+xmin:xoff+xmin+map_add.shape[2]] += map_add[:,:,:]
+        M = self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
+                       yoff+ymin:yoff+ymin+map_add.shape[1],
+                       xoff+xmin:xoff+xmin+map_add.shape[2]]
+        M[M==0.] = map_add[M==0.]
+        M[(M<M.max())*(M!=0.)] = (map_add[(M<M.max())*(M!=0.)]+M[(M<M.max())*(M!=0.)])/2. 
 
     # TESTING REQUIRED
     def smooth_map3d(self,factor):
