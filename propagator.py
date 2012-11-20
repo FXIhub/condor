@@ -4,6 +4,8 @@
 # -----------------------------------------------------------------------------------------------------
 # Author:  Max Hantke - maxhantke@gmail.com
 # -----------------------------------------------------------------------------------------------------
+# If not explicitely stated: All variables in SI units.
+
 
 # TO DO:
 # - Warn user if Fraunhofer approximation or Born approximation is not holding.
@@ -43,68 +45,106 @@ def propagator(input_obj=False):
     
     t_start = time.time()
 
-    # Auxiliary variables
-    wavelength = input_obj.source.photon.get_wavelength()
-    I_0 = input_obj.source.pulse_energy / input_obj.source.photon._energy / input_obj.source.get_area() 
-    Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
-
     if isinstance(input_obj.sample,SampleSphere):    
-        # scattering amplitude from homogeneous sphere: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ 4/3 pi R^3  3 { sin(qR) - qR cos(qR) } / (qR)^3 ] dn_real
-        dn_real = (1-input_obj.sample.material.get_n()).real
-        R = input_obj.sample.radius
-        q = input_obj.generate_absqmap()
-        F = pylab.zeros_like(q)
-        F[q!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q[q!=0.0]*R)-q[q!=0.0]*R*pylab.cos(q[q!=0.0]*R))/(q[q!=0.0]*R)**3*dn_real)
-        try: F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
-        except: pass
+        F = calculatePattern_SampleSphere(input_obj)
 
     elif isinstance(input_obj.sample,SampleSpheres):
-        radii = input_obj.sample.get_radii()
-        dn_real = (1-input_obj.sample.material.get_n()).real
-        absq = input_obj.generate_absqmap()
-        q = input_obj.generate_qmap()
-        F = pylab.zeros(shape=absq.shape,dtype='complex')
-        for R in radii:
-            Fr = pylab.zeros_like(F)
-            Fr[absq!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(absq[absq!=0.0]*R)-absq[absq!=0.0]*R*pylab.cos(absq[absq!=0.0]*R))/(absq[absq!=0.0]*R)**3*dn_real)
-            try: Fr[absq==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
-            except: pass
-
-            indices = input_obj.sample.r==R
-
-            for i in range(sum(indices)):
-                print i
-                d = [pylab.array(input_obj.sample.z)[indices][i],
-                     pylab.array(input_obj.sample.y)[indices][i],
-                     pylab.array(input_obj.sample.x)[indices][i]]
-                F[:,:] += (Fr*input_obj.get_phase_ramp(q,d))[:,:]
+        F = calculatePattern_SampleSpheres(input_obj)
 
     elif isinstance(input_obj.sample,SampleMap):    
-        # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
-        q = input_obj.generate_qmap()
-
-        # check agreement of sampling of real space map
-        dX_map = input_obj.sample.dX
-        dX_setup = input_obj.get_real_space_resolution_element()/(1.0*input_obj.propagation.rs_oversampling)
-        if dX_map > dX_setup:
-            print "ERROR: Finer real space sampling required for chosen geometry."
-            return
-        interval_size_q = 2*pylab.pi/input_obj.sample.dX
-        # q map scaled for nfft (standard interval -0.5 to 0.5)
-        q_scaled = q / interval_size_q
-        config.OUT.write("Propagate pattern of %i x %i pixels.\n" % (q.shape[1],q.shape[0]))
-        F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
-            * xcorepropagation.nfftXCore(input_obj.sample.map3d,
-                                         q_scaled,
-                                         input_obj.propagation.N_processes) \
-            * input_obj.sample.dX**3
-        config.OUT.write("Got pattern of %i x %i pixels.\n" % (F.shape[1],F.shape[0]))
-        #F = imgutils.crop(F,pylab.array([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
+        F = calculatePattern_SampleMap(input_obj)
 
     t_stop = time.time()
     config.OUT.write("Time = %f sec\n" % (t_stop-t_start))
     config.OUT.write("Propagation finished.\n")
     return Output(F,input_obj)
+
+
+def calculatePattern_SampleSphere(input_obj):
+    # scattering amplitude from homogeneous sphere: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ 4/3 pi R^3  3 { sin(qR) - qR cos(qR) } / (qR)^3 ] dn_real
+    wavelength = input_obj.source.photon.get_wavelength()
+    I_0 = input_obj.source.pulse_energy / input_obj.source.photon._energy / input_obj.source.get_area() # [I_0] = photons/m**2
+    Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
+    dn_real = (1-input_obj.sample.material.get_n()).real
+    R = input_obj.sample.radius
+    q = input_obj.generate_absqmap()
+    F = pylab.zeros_like(q)
+    F[q!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q[q!=0.0]*R)-q[q!=0.0]*R*pylab.cos(q[q!=0.0]*R))/(q[q!=0.0]*R)**3*dn_real)
+    if len((q!=0))!=(q.shape[0]*q.shape[1]): 
+        F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
+    return F
+
+def calculatePattern_SampleSpheres(input_obj):
+    wavelength = input_obj.source.photon.get_wavelength()
+    I_0 = input_obj.source.pulse_energy / input_obj.source.photon._energy / input_obj.source.get_area() # [I_0] = photons/m**2
+    Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
+    radii = input_obj.sample.get_radii()
+    dn_real = (1-input_obj.sample.material.get_n()).real
+    absq = input_obj.generate_absqmap()
+    q = input_obj.generate_qmap()
+    F = pylab.zeros(shape=absq.shape,dtype='complex')
+    for R in radii:
+        Fr = pylab.zeros_like(F)
+        Fr[absq!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(absq[absq!=0.0]*R)-absq[absq!=0.0]*R*pylab.cos(absq[absq!=0.0]*R))/(absq[absq!=0.0]*R)**3*dn_real)
+        try: Fr[absq==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
+        except: pass
+
+        indices = input_obj.sample.r==R
+
+        for i in range(sum(indices)):
+            print i
+            d = [pylab.array(input_obj.sample.z)[indices][i],
+                 pylab.array(input_obj.sample.y)[indices][i],
+                 pylab.array(input_obj.sample.x)[indices][i]]
+            F[:,:] += (Fr*input_obj.get_phase_ramp(q,d))[:,:]
+    return F
+
+
+def calculatePattern_SampleMap(input_obj):
+    wavelength = input_obj.source.photon.get_wavelength()
+    I_0 = input_obj.source.pulse_energy / input_obj.source.photon._energy / input_obj.source.get_area() # [I_0] = photons/m**2
+    Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
+    # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
+    #print input_obj.sample.dX/input_obj.get_real_space_resolution_element()
+    if abs(input_obj.sample.dX/input_obj.get_real_space_resolution_element()-1) < 0.05:
+        pass
+    elif input_obj.sample.dX <= input_obj.get_real_space_resolution_element():
+        input_obj.sample.map3d_fine = input_obj.sample.map3d.copy()
+        d = input_obj.get_real_space_resolution_element()/input_obj.sample.dX
+        N_mapfine = input_obj.sample.map3d_fine.shape[0]
+        N_map = int(round(N_mapfine/d))
+        input_obj.sample.map3d = imgutils.sinc_interp(input_obj.sample.map3d_fine,N_map)
+        input_obj.sample.dX_fine = pylab.copy(input_obj.sample.dX)
+        input_obj.sample.dX = N_mapfine/(1.*N_map)*input_obj.sample.dX
+    else:
+        if 'input_obj.sample.dX_fine' in locals():
+            if input_obj.sample.dX_fine <= input_obj.get_real_space_resolution_element():
+                d = input_obj.get_real_space_resolution_element()/input_obj.sample.dX
+                N_mapfine = input_obj.sample.map3d_fine.shape[0]
+                N_map = int(round(N_mapfine/d))
+                input_obj.sample.map3d = imgutils.sinc_interp(input_obj.sample.map3d_fine,N_map)
+                input_obj.sample.dX = N_mapfine/(1.*N_map)*input_obj.sample.dX
+            else:
+                print "ERROR: Finer real space sampling required for chosen geometry."
+                return
+        else:
+            print "ERROR: Finer real space sampling required for chosen geometry."
+            return
+
+    q_scaled = input_obj.generate_qmap(True)
+    config.OUT.write("Propagate pattern of %i x %i pixels.\n" % (q_scaled.shape[1],q_scaled.shape[0]))
+    F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
+        * xcorepropagation.nfftSingleCore(input_obj.sample.map3d,q_scaled) \
+                                     * input_obj.sample.dX**3
+    #F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
+    #    * xcorepropagation.nfftXCore(input_obj.sample.map3d-pylab.median(input_obj.sample.map3d),
+    #                                 q_scaled,
+    #                                 input_obj.propagation.N_processes) \
+    #                                 * input_obj.sample.dX**3
+    config.OUT.write("Got pattern of %i x %i pixels.\n" % (F.shape[1],F.shape[0]))
+    F = imgutils.crop(F,pylab.array([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
+    return F
+
 
 class Input:
     """
@@ -149,7 +189,7 @@ class Input:
         """
         Creates refractive index map of icosahedron. More information can be found in _makedm_icosahedron(...).
         """
-        if not radius:
+        if radius == None:
             radius = self.sample.radius
         self.sample = SampleMap(parent=self)
         self.sample.put_icosahedral_virus(radius,0.,0.,0.,**kwargs)
@@ -159,7 +199,7 @@ class Input:
         """
         Creates refractive index map of icosahedron. More information can be found in _makedm_icosahedron(...).
         """
-        if not radius:
+        if radius == None:
             radius = self.sample.radius
         self.sample = SampleMap(parent=self)
         self.sample.put_icosahedral_sample(radius,0.,0.,0.,**kwargs)
@@ -250,21 +290,21 @@ class Input:
         """
         Function returns real space sampling.
         =====================================
-        Formula: dX = pi / max([qxmax,qymax])
+        Formula: dX = pi / qmax
 
         """
-        dX = pylab.pi / max([self.get_absqx_max(),self.get_absqy_max()])
+        dX = pylab.pi / self.get_absq_max()
         return dX
 
     def get_max_achievable_crystallographic_resolution(self):
         """
         Function returns maximal horizontal and vertical crystallographoc resolution achievable in the current setup.
         =============================================================================================================
-        Formula: Rx_c = dx * 2 = 4 * pi / qxmax ; Ry_c = dy * 2 = 4 * pi / qymax
+        Formula: Rx_c = dx * 2 = 2 * pi / qxmax ; Ry_c = dy * 2 = 2 * pi / qymax
 
         """
-        dx = 4 * pylab.pi / self.get_absqx_max()
-        dy = 4 * pylab.pi / self.get_absqy_max()
+        dx = 2 * pylab.pi / self.get_absqx_max()
+        dy = 2 * pylab.pi / self.get_absqy_max()
         return [dx,dy]
 
     def generate_absqmap(self):
@@ -278,26 +318,30 @@ class Input:
         qmap = R_Ewald * pylab.sqrt((pylab.cos(phi)-1.0)**2 + (pylab.sin(phi) * pylab.sin(theta))**2 + (pylab.sin(phi) * pylab.cos(theta))**2)
         return qmap
 
-    def generate_qmap(self):
-        wavelength = self.source.photon.get_wavelength()
-        qmap = pylab.zeros(shape=(self.detector.mask.shape[0],
-                                  self.detector.mask.shape[1],
-                                  3))
-        X,Y = pylab.meshgrid(pylab.arange(0,self.detector.mask.shape[1]),pylab.arange(0,self.detector.mask.shape[0]))
-        X -= self.detector.cx
-        Y -= self.detector.cy
-        theta = pylab.arctan2(Y,X)
-        phi = pylab.arctan2(pylab.sqrt(X**2+Y**2)*self.detector.pixel_size,self.detector.distance)
-        R_Ewald = 2*pylab.pi/wavelength
-        qmap[:,:,0] = R_Ewald * (pylab.cos(phi)-1.0)
-        qmap[:,:,1] = R_Ewald * pylab.sin(phi) * pylab.sin(theta)
-        qmap[:,:,2] = R_Ewald * pylab.sin(phi) * pylab.cos(theta)
+    def generate_qmap(self,scaled=False):
+        qmax = self.get_absq_max()
+        X,Y = pylab.meshgrid(pylab.arange(self.detector.mask.shape[1]),
+                             pylab.arange(self.detector.mask.shape[0]))
+        X -= self.detector.cx/(1.0*self.detector.binning)
+        Y -= self.detector.cy/(1.0*self.detector.binning)
+        phi = pylab.arctan2(self.detector.pixel_size*self.detector.binning*pylab.sqrt(X**2+Y**2),self.detector.distance)
+        qx = 4*pylab.pi/self.source.photon.get_wavelength()*pylab.sin(pylab.arctan2(self.detector.pixel_size*self.detector.binning*X,self.detector.distance)/2.)
+        qy = 4*pylab.pi/self.source.photon.get_wavelength()*pylab.sin(pylab.arctan2(self.detector.pixel_size*self.detector.binning*Y,self.detector.distance)/2.)
+        qz = qmax*(1-pylab.cos(phi))
+        q_map = pylab.zeros(shape=(self.detector.mask.shape[0],
+                                      self.detector.mask.shape[1],
+                                      3))
+        q_map[:,:,0] = qz[:,:]
+        q_map[:,:,1] = qy[:,:]
+        q_map[:,:,2] = qx[:,:]
+
         try: E0 = self.sample.euler_angle_0
         except: E0 = 0.0
         try: E1 = self.sample.euler_angle_1
         except: E1 = 0.0
         try: E2 = self.sample.euler_angle_2
         except: E2 = 0.0
+
         if E0 != 0.0 or E1 != 0.0 or E2 != 0.0:
             M = pylab.array([[pylab.cos(E1)*pylab.cos(E2),
                               -pylab.cos(E0)*pylab.sin(E2)+pylab.sin(E0)*pylab.sin(E1)*pylab.cos(E2),
@@ -308,10 +352,17 @@ class Input:
                              [-pylab.sin(E1),
                                pylab.sin(E0)*pylab.cos(E1),
                                pylab.cos(E0)*pylab.cos(E1)]])
-            for iy in pylab.arange(0,qmap.shape[0]):
-                for ix in pylab.arange(0,qmap.shape[1]):
-                    qmap[iy,ix,:] = pylab.dot(M,qmap[iy,ix,:])
-        return qmap
+            for iy in pylab.arange(0,q_map.shape[0]):
+                for ix in pylab.arange(0,q_map.shape[1]):
+                    q_map[iy,ix,:] = pylab.dot(M,q_map[iy,ix,:])
+
+        if scaled == True:
+            q_map_scaled = q_map/qmax*0.5
+            if (abs(q_map_scaled)>0.5).sum() != 0:
+                print "ERROR: Absolute value of sampling coordinates exceeds 0.5."
+            return q_map_scaled
+        else:
+            return q_map
         
     def get_phase_ramp(self,qmap,dvector):
         return pylab.exp(-1.j*(dvector[0]*qmap[:,:,0]+
@@ -323,14 +374,25 @@ class Input:
         x_max = max([self.detector.cx,self.detector.Nx-self.detector.cx]) * self.detector.pixel_size
         R_Ewald = 2*pylab.pi/wavelength
         phi = pylab.arctan2(x_max,self.detector.distance)
-        return 2 * R_Ewald * pylab.tan(phi/2.0)
+        return 2 * R_Ewald * pylab.sin(phi/2.0)
 
     def get_absqy_max(self):
         wavelength = self.source.photon.get_wavelength()
         y_max = max([self.detector.cy,self.detector.Ny-self.detector.cy]) * self.detector.pixel_size
         R_Ewald = 2*pylab.pi/wavelength
         phi = pylab.arctan2(y_max,self.detector.distance)
-        return 2 * R_Ewald * pylab.tan(phi/2.0)
+        return 2 * R_Ewald * pylab.sin(phi/2.0)
+
+    def get_absqz_max(self):
+        absqx_max = self.get_absqx_max()
+        absqy_max = self.get_absqy_max()
+        wavelength = self.source.photon.get_wavelength()
+        R_Ewald = 2*pylab.pi/wavelength
+        phi = pylab.arcsin(pylab.sqrt(absqx_max**2+absqy_max**2)/R_Ewald)
+        return R_Ewald * (1-pylab.cos(phi))
+
+    def get_absq_max(self):
+        return pylab.sqrt(self.get_absqx_max()**2+self.get_absqy_max()**2+self.get_absqz_max()**2)
 
 
 class Output:
@@ -589,7 +651,7 @@ class Output:
 
         if logscale:
             I = pylab.log10(I)
-            I[I==-pylab.Inf] = I[I!=-pylab.Inf].min()-1.0
+            #if (I==-pylab.Inf).sum()>0: I[I==-pylab.Inf] = I[I!=-pylab.Inf].min()-1.0
             I *= M
             str_Iscaling = r"$\log\left( I \left[ \frac{\mbox{photons}}{\mbox{%s}} \right] \right)$" % str_scaling
         else:
@@ -653,13 +715,20 @@ class Output:
         
         Keyword arguments:
         - log: True / False (default)
+        - poisson: True / False (default)
         - colorscale: \'jet\' (default) / \'gray\'
         - use_spimage: True / False (default)
 
         """
         pattern = self.get_intensity_pattern()
         mask = self.input_object.detector.mask
-        if 'log' in kwargs: pattern = pylab.log10(pattern)
+        if 'poisson' in kwargs:
+            if kwargs['poisson']:
+                pattern = pylab.poisson(pattern)
+        if 'log' in kwargs:
+            if kwargs['log']:
+                pattern = pylab.log10(pattern)
+                pattern[pylab.isfinite(pattern)==False] = pattern[pylab.isfinite(pattern)].min()
         use_spimage = kwargs.get('use_spimage',False)
         colorscale = kwargs.get('colorscale','jet')
         if use_spimage:
@@ -681,18 +750,15 @@ class Output:
             spimage.sp_image_free(tmp_data)
         else:
             if filename[-4:]=='.png':
-                pylab.imsave(filename,pattern,cmap=pylab.cm.get_cmap(colorscale))
+                pylab.imsave(filename,pattern*pylab.log10(mask*10),cmap=pylab.cm.get_cmap(colorscale))
             elif filename[-3:]=='.h5':
                 import h5py
                 f = h5py.File(filename,'w')
                 pattern_ds = f.create_dataset('intensities', pattern.shape, pattern.dtype)
                 pattern_ds[:,:] = pattern[:,:]
-                amplitudes_ds = f.create_dataset('amplitudes', amplitudes.shape, amplitudes.dtype)
+                amplitudes_ds = f.create_dataset('amplitudes', pattern.shape, amplitudes.dtype)
                 amplitudes_ds[:,:] = self.amplitudes[:,:]
                 f.close()
-
-                
-            
 
 class Propagation:
     """

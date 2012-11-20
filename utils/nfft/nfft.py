@@ -44,32 +44,24 @@ def nfft3d(coordinates, vin):
     """
 
     good_values_1d = (coordinates.flatten() <= 0.5) & (coordinates.flatten() >= -0.5)
-
     if sum(good_values_1d)!=len(good_values_1d):
         print "ERROR: nfft coordinates have to lie between -0.5 and 0.5."
         print 'number of good values = %d (%d)' % (sum(good_values_1d), len(good_values_1d))
         return []
-    #mem0 = psutil.avail_phymem()
-    #print "1 %f" % (psutil.avail_phymem()/(1.0*mem0))
     if vin.dtype != "complex128":
         vin = pylab.complex128(vin)
         print "Convert to complex128"
-    #print "2 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    vout_real = pylab.zeros(len(coordinates)/3, dtype='float64')
+    vout_imag = pylab.zeros(len(coordinates)/3, dtype='float64')
+    vin_real = pylab.array(vin.real, dtype='float64')
+    vin_imag = pylab.array(vin.imag, dtype='float64')
+    _nfft_c.nfft3(coordinates, vin_real, vin_imag, vout_real, vout_imag)
     vout = pylab.zeros(len(coordinates)/3, dtype='complex128')
-    #print "3 %f" % (psutil.avail_phymem()/(1.0*mem0))
-    vin.dtype = 'float64'
-    vout.dtype = 'float64'
-    #print "4 %f" % (psutil.avail_phymem()/(1.0*mem0))
-    _nfft_c.nfft3(coordinates, vin, vout)
-    #print "5 %f" % (psutil.avail_phymem()/(1.0*mem0))
-    vin.dtype = 'complex128'
-    vout.dtype = 'complex128'
-    #print "6 %f" % (psutil.avail_phymem()/(1.0*mem0))
+    vout.real[:] = vout_real[:]
+    vout.imag[:] = vout_imag[:]
     return vout
 
 def test_nfft3d(N_sample=1000,N_coordinates=1000):
-    #mem0 = psutil.avail_phymem()
-    #print "1 %f" % (psutil.avail_phymem()/(1.0*mem0))
     cube = pylab.ones(shape=(N_sample,N_sample,N_sample))
     #print "2 %f" % (psutil.avail_phymem()/(1.0*mem0))
     x = pylab.arange(0,N_coordinates,1)/(1.0*(N_coordinates-1))-0.5

@@ -27,7 +27,8 @@ def init_global_dictionaries():
                                'genophore':[205,134,38,48,3,6],
                                'virus':[72.43,49.85,16.32,24.49,2.57,1.39],
                                'mimivirus':[23,3,1,10,0,1],
-                               'carboxysome':[0.51,0.30,0.07,0.10,0.,0.02]}
+                               'carboxysome':[0.51,0.30,0.07,0.10,0.,0.02],
+                               'sucrose':[22,12,0,11,0,0]}
     # Estimated mass densities of certain material types
     global DICT_massdensity
     DICT_massdensity = {'protein':1350,
@@ -40,7 +41,8 @@ def init_global_dictionaries():
                         'genophore':1560,
                         'virus':1381,
                         'mimivirus':1100,
-                        'carboxysome':1250}
+                        'carboxysome':1250,
+                        'sucrose':1587}
     # More documentation needed!
     # The following material types should be defined more properly:
     # - 'virus': density = 1455 (Filipe's webpage)

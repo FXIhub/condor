@@ -120,13 +120,13 @@ class Detector:
         Function sets horicontal center position:
         =========================================
         Arguments:
-        cx : horicontal center position in pixel. If argument is None or not given center is set to the middle.
+        cx : horizontal center position in pixel. If argument is None or not given center is set to the middle.
         """
         if not cx:
-            self._cx = (self._mask.shape[1]-1)/2.
+            self.cx = (self._mask.shape[1]-1)/2.
         else:
-            self._cx = cx
-        
+            self.cx = cx
+            
     # Functions that convert detector-coordinates:
     #def _get_q_from_r(self,r):
     #    return 4*pylab.pi/self._parent.source.photon.get_wavelength()*pylab.sin(pylab.arctan(r/self.distance)/2.0)

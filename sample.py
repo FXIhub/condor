@@ -178,7 +178,7 @@ class SampleMap:
         self.euler_angle_1 = e1
         self.euler_angle_2 = e2
         
-    def put_custom_map(self,map_add,x=0.,y=0.,z=0.):
+    def put_custom_map(self,map_add,x=0.,y=0.,z=0.,mode='refill'):
         Nx = self.map3d.shape[2]
         Ny = self.map3d.shape[1]
         Nz = self.map3d.shape[0]
@@ -220,11 +220,21 @@ class SampleMap:
         #self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
         #           yoff+ymin:yoff+ymin+map_add.shape[1],
         #           xoff+xmin:xoff+xmin+map_add.shape[2]] += map_add[:,:,:]
-        M = self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
+        if mode=='fill':
+            M = self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
+                           yoff+ymin:yoff+ymin+map_add.shape[1],
+                           xoff+xmin:xoff+xmin+map_add.shape[2]]
+            M[M==0.] = map_add[M==0.]
+            M[(M<M.max())*(M!=0.)] = (map_add[(M<M.max())*(M!=0.)]+M[(M<M.max())*(M!=0.)])/2.
+        elif mode=='refill':
+            self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
                        yoff+ymin:yoff+ymin+map_add.shape[1],
-                       xoff+xmin:xoff+xmin+map_add.shape[2]]
-        M[M==0.] = map_add[M==0.]
-        M[(M<M.max())*(M!=0.)] = (map_add[(M<M.max())*(M!=0.)]+M[(M<M.max())*(M!=0.)])/2. 
+                       xoff+xmin:xoff+xmin+map_add.shape[2]] = map_add[:,:,:]
+        elif mode=='add':
+            self.map3d[zoff+zmin:zoff+zmin+map_add.shape[0],
+                       yoff+ymin:yoff+ymin+map_add.shape[1],
+                       xoff+xmin:xoff+xmin+map_add.shape[2]] += map_add[:,:,:]
+
 
     # TESTING REQUIRED
     def smooth_map3d(self,factor):
@@ -264,7 +274,7 @@ class SampleMap:
         dn = 1.0-material_obj.get_n()
         self.map3d = dn*map3d
 
-    def put_sphere(self,radius,x=0,y=0,z=0,**materialargs):
+    def put_sphere(self,radius,x=0,y=0,z=0,fillmode='refill',**materialargs):
         """
         Function adds densitymap of homogeneous sphere to 3-dimensional densitymap:
         ===========================================================================
@@ -301,7 +311,7 @@ class SampleMap:
             x_N = x/self.dX
             y_N = y/self.dX
             z_N = z/self.dX
-            self.put_custom_map(spheremap,x_N,y_N,z_N)
+            self.put_custom_map(spheremap,x_N,y_N,z_N,fillmode)
  
     def put_spheroid(self,a,b,x=None,y=None,z=None,eul_ang0=0.0,eul_ang1=0.0,eul_ang2=0.0,**materialargs):
         """
@@ -357,7 +367,7 @@ class SampleMap:
             self.put_custom_map(spheroidmap,x_N,y_N,z_N)
    
     def put_goldball(self,radius,x=None,y=None,z=None):
-        self.put_sphere(radius,x,y,z,cAu=1,massdensity=config.DICT_massdensity['Au'])        
+        self.put_sphere(radius,x,y,z,'fill',cAu=1,massdensity=config.DICT_massdensity['Au'])        
 
     def put_icosahedral_virus(self,radius,x=0.,y=0.,z=0.,**kwargs):
         kwargs_cp = kwargs.copy()
@@ -418,7 +428,8 @@ class SampleMap:
         plane_2 = mlab.pipeline.image_plane_widget(s,plane_orientation='y_axes',
                                                    slice_index=self.fmap3d.shape[1]/2)
         mlab.show()
-        
+
+
     def _makedm_icosahedron(self,radius,**kwargs):  
         """
         Function returns a refractive index map of a homogeneous icosahedron:
@@ -453,8 +464,8 @@ class SampleMap:
         dn = 1.0 - material_obj.get_n()
 
         euler1 = kwargs.get('euler1',0.0)
-        euler2 = kwargs.get('euler1',0.0)
-        euler3 = kwargs.get('euler1',0.0)
+        euler2 = kwargs.get('euler2',0.0)
+        euler3 = kwargs.get('euler3',0.0)
         Nlayers = kwargs.get('Nlayers',0)
 
         t_start = time.time()
@@ -466,10 +477,9 @@ class SampleMap:
         nRmin = Rmin/self.dX
 
         # smooth
-        s = 10.0
+        s = 1.0
 
-        N = int(pylab.ceil(2*(nRmax+pylab.ceil(s/2.))))
-        #r_pix = self.dX*(3/(4*pylab.pi))**(1/3.0)
+        N = int(pylab.ceil(2.2*(nRmax)))
         
         config.OUT.write("... build icosahedral geometry ...\n")
         
@@ -488,8 +498,8 @@ class SampleMap:
                 icomap[i,:,:,:] = -(X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0]-nRmin)
 
             M = icomap.copy()
-            icomap[abs(M)<=0.5*s] = abs(0.5+icomap[abs(M)<=0.5*s]/s)
-            icomap[M<0.5*s] = 0
+            #icomap[abs(M)<=0.5*s] = abs(0.5+icomap[abs(M)<=0.5*s]/s)
+            icomap[M<=0.5*s] = 0
             icomap[M>0.5*s] = 1
             icomap = icomap.min(0)
 

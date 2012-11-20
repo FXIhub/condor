@@ -4,20 +4,20 @@ sys.path.append(config.PROPAGATOR_DIR+"/utils/nfft")
 import nfft
 import time
 
-def generate_phase_ramp(coordinates,phi,theta,psi):
-    M = pylab.array([[pylab.cos(theta)*pylab.cos(psi),
-                      -pylab.cos(phi)*pylab.sin(psi)+pylab.sin(phi)*pylab.sin(theta)*pylab.cos(psi),
-                      pylab.sin(phi)*pylab.sin(psi)+pylab.cos(phi)*pylab.sin(theta)*pylab.cos(psi)],
-                     [pylab.cos(theta)*pylab.sin(psi),
-                      pylab.cos(phi)*pylab.cos(psi)+pylab.sin(phi)*pylab.sin(theta)*pylab.sin(psi),
-                      -pylab.sin(phi)*pylab.cos(psi)+pylab.cos(phi)*pylab.sin(theta)*pylab.sin(psi)],
-                     [-pylab.sin(theta),
-                       pylab.sin(phi)*pylab.cos(theta),
-                       pylab.cos(phi)*pylab.cos(theta)]])
-    phase_ramp = pylab.zeros(len(coordinates)/3)
-    for i in pylab.arange(0,len(coordinates),3):
-        phase_ramp[i/3] = (coordinates[i]+coordinates[i+1]+coordinates[i+2])*pylab.pi
-    return phase_ramp
+#def generate_phase_ramp(coordinates,phi,theta,psi):
+#    M = pylab.array([[pylab.cos(theta)*pylab.cos(psi),
+#                      -pylab.cos(phi)*pylab.sin(psi)+pylab.sin(phi)*pylab.sin(theta)*pylab.cos(psi),
+#                      pylab.sin(phi)*pylab.sin(psi)+pylab.cos(phi)*pylab.sin(theta)*pylab.cos(psi)],
+#                     [pylab.cos(theta)*pylab.sin(psi),
+#                      pylab.cos(phi)*pylab.cos(psi)+pylab.sin(phi)*pylab.sin(theta)*pylab.sin(psi),
+#                      -pylab.sin(phi)*pylab.cos(psi)+pylab.cos(phi)*pylab.sin(theta)*pylab.sin(psi)],
+#                     [-pylab.sin(theta),
+#                       pylab.sin(phi)*pylab.cos(theta),
+#                       pylab.cos(phi)*pylab.cos(theta)]])
+#    phase_ramp = pylab.zeros(len(coordinates)/3)
+#    for i in pylab.arange(0,len(coordinates),3):
+#        phase_ramp[i/3] = (coordinates[i]+coordinates[i+1]+coordinates[i+2])*pylab.pi
+#    return phase_ramp
     
 def arrange_values(values,arrayshape):
     return values.reshape(arrayshape)
@@ -43,7 +43,7 @@ def tester():
     pylab.imsave("testpattern.png",result)
 
 def nfftXCore(object3d,q,N_processes=None):
-    object3d = pylab.complex128(object3d)
+    #object3d = pylab.complex128(object3d)
     if abs(q).max() > 0.5:
         print "ERROR: nfft accepts only a frequency range from -0.5 to 0.5."
         return
