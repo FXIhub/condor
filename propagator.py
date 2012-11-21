@@ -103,7 +103,7 @@ def calculatePattern_SampleSpheres(input_obj):
 def calculatePattern_SampleMap(input_obj):
     wavelength = input_obj.source.photon.get_wavelength()
     I_0 = input_obj.source.pulse_energy / input_obj.source.photon._energy / input_obj.source.get_area() # [I_0] = photons/m**2
-    Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
+    Omega_p = (input_obj.detector.get_pixel_size('binned'))**2 / input_obj.detector.distance**2
     # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
     #print input_obj.sample.dX/input_obj.get_real_space_resolution_element()
     if abs(input_obj.sample.dX/input_obj.get_real_space_resolution_element()-1) < 0.05:
@@ -113,7 +113,7 @@ def calculatePattern_SampleMap(input_obj):
         d = input_obj.get_real_space_resolution_element()/input_obj.sample.dX
         N_mapfine = input_obj.sample.map3d_fine.shape[0]
         N_map = int(round(N_mapfine/d))
-        input_obj.sample.map3d = imgutils.sinc_interp(input_obj.sample.map3d_fine,N_map)
+        input_obj.sample.map3d = imgutils.lanczos_interp(input_obj.sample.map3d_fine,N_map)
         input_obj.sample.dX_fine = pylab.copy(input_obj.sample.dX)
         input_obj.sample.dX = N_mapfine/(1.*N_map)*input_obj.sample.dX
     else:
@@ -122,7 +122,7 @@ def calculatePattern_SampleMap(input_obj):
                 d = input_obj.get_real_space_resolution_element()/input_obj.sample.dX
                 N_mapfine = input_obj.sample.map3d_fine.shape[0]
                 N_map = int(round(N_mapfine/d))
-                input_obj.sample.map3d = imgutils.sinc_interp(input_obj.sample.map3d_fine,N_map)
+                input_obj.sample.map3d = imgutils.lanczos_interp(input_obj.sample.map3d_fine,N_map)
                 input_obj.sample.dX = N_mapfine/(1.*N_map)*input_obj.sample.dX
             else:
                 print "ERROR: Finer real space sampling required for chosen geometry."
@@ -132,10 +132,22 @@ def calculatePattern_SampleMap(input_obj):
             return
 
     q_scaled = input_obj.generate_qmap(True)
+    valid_mask = (abs(q_scaled[:,:,0])<0.5)*(abs(q_scaled[:,:,1])<0.5)*(abs(q_scaled[:,:,2])<0.5)
+    qx = q_scaled[:,:,2]
+    qy = q_scaled[:,:,1]
+    qz = q_scaled[:,:,0]
+    qx[valid_mask==False] = 0.
+    qy[valid_mask==False] = 0.
+    qz[valid_mask==False] = 0.
+
     config.OUT.write("Propagate pattern of %i x %i pixels.\n" % (q_scaled.shape[1],q_scaled.shape[0]))
     F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
         * xcorepropagation.nfftSingleCore(input_obj.sample.map3d,q_scaled) \
-                                     * input_obj.sample.dX**3
+        * input_obj.sample.dX**3
+
+    F *= valid_mask
+    
+
     #F = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2 \
     #    * xcorepropagation.nfftXCore(input_obj.sample.map3d-pylab.median(input_obj.sample.map3d),
     #                                 q_scaled,
@@ -189,11 +201,8 @@ class Input:
         """
         Creates refractive index map of icosahedron. More information can be found in _makedm_icosahedron(...).
         """
-        if radius == None:
-            radius = self.sample.radius
-        self.sample = SampleMap(parent=self)
-        self.sample.put_icosahedral_virus(radius,0.,0.,0.,**kwargs)
-        self.sample.radius = radius
+        kwargs['materialtype'] = 'virus'
+        self.set_sample_icosahedral_map(radius,**kwargs)
 
     def set_sample_icosahedral_map(self,radius=None,**kwargs):
         """
@@ -310,10 +319,10 @@ class Input:
     def generate_absqmap(self):
         wavelength = self.source.photon.get_wavelength()
         X,Y = pylab.meshgrid(pylab.arange(0,self.detector.mask.shape[1]),pylab.arange(0,self.detector.mask.shape[0]))
-        X -= self.detector.cx
-        Y -= self.detector.cy
+        X -= self.detector.get_cx('binned')
+        Y -= self.detector.get_cy('binned')
         theta = pylab.arctan2(1.0*Y,1.0*X)
-        phi = pylab.arctan2(pylab.sqrt(X**2+Y**2)*self.detector.pixel_size,self.detector.distance)
+        phi = pylab.arctan2(pylab.sqrt(X**2+Y**2)*self.detector.get_pixel_size('binned'),self.detector.distance)
         R_Ewald = 2*pylab.pi/wavelength
         qmap = R_Ewald * pylab.sqrt((pylab.cos(phi)-1.0)**2 + (pylab.sin(phi) * pylab.sin(theta))**2 + (pylab.sin(phi) * pylab.cos(theta))**2)
         return qmap
@@ -322,15 +331,17 @@ class Input:
         qmax = self.get_absq_max()
         X,Y = pylab.meshgrid(pylab.arange(self.detector.mask.shape[1]),
                              pylab.arange(self.detector.mask.shape[0]))
-        X -= self.detector.cx/(1.0*self.detector.binning)
-        Y -= self.detector.cy/(1.0*self.detector.binning)
-        phi = pylab.arctan2(self.detector.pixel_size*self.detector.binning*pylab.sqrt(X**2+Y**2),self.detector.distance)
-        qx = 4*pylab.pi/self.source.photon.get_wavelength()*pylab.sin(pylab.arctan2(self.detector.pixel_size*self.detector.binning*X,self.detector.distance)/2.)
-        qy = 4*pylab.pi/self.source.photon.get_wavelength()*pylab.sin(pylab.arctan2(self.detector.pixel_size*self.detector.binning*Y,self.detector.distance)/2.)
+        X -= self.detector.get_cx('binned')
+        Y -= self.detector.get_cy('binned')
+        phi = pylab.arctan2(self.detector.get_pixel_size('binned')*pylab.sqrt(X**2+Y**2),self.detector.distance)
+        qx = 4*pylab.pi/self.source.photon.get_wavelength()*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*X,
+                                                                                    self.detector.distance)/2.)
+        qy = 4*pylab.pi/self.source.photon.get_wavelength()*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*Y,
+                                                                                    self.detector.distance)/2.)
         qz = qmax*(1-pylab.cos(phi))
         q_map = pylab.zeros(shape=(self.detector.mask.shape[0],
-                                      self.detector.mask.shape[1],
-                                      3))
+                                   self.detector.mask.shape[1],
+                                   3))
         q_map[:,:,0] = qz[:,:]
         q_map[:,:,1] = qy[:,:]
         q_map[:,:,2] = qx[:,:]
@@ -341,7 +352,7 @@ class Input:
         except: E1 = 0.0
         try: E2 = self.sample.euler_angle_2
         except: E2 = 0.0
-
+        
         if E0 != 0.0 or E1 != 0.0 or E2 != 0.0:
             M = pylab.array([[pylab.cos(E1)*pylab.cos(E2),
                               -pylab.cos(E0)*pylab.sin(E2)+pylab.sin(E0)*pylab.sin(E1)*pylab.cos(E2),
@@ -361,6 +372,7 @@ class Input:
             if (abs(q_map_scaled)>0.5).sum() != 0:
                 print "ERROR: Absolute value of sampling coordinates exceeds 0.5."
             return q_map_scaled
+
         else:
             return q_map
         
@@ -371,14 +383,14 @@ class Input:
 
     def get_absqx_max(self):
         wavelength = self.source.photon.get_wavelength()
-        x_max = max([self.detector.cx,self.detector.Nx-self.detector.cx]) * self.detector.pixel_size
+        x_max = max([self.detector.get_cx('binned'),self.detector.mask.shape[1]-1-self.detector.get_cx('binned')]) * self.detector.get_pixel_size('binned')
         R_Ewald = 2*pylab.pi/wavelength
         phi = pylab.arctan2(x_max,self.detector.distance)
         return 2 * R_Ewald * pylab.sin(phi/2.0)
 
     def get_absqy_max(self):
         wavelength = self.source.photon.get_wavelength()
-        y_max = max([self.detector.cy,self.detector.Ny-self.detector.cy]) * self.detector.pixel_size
+        y_max = max([self.detector.get_cy('binned'),self.detector.mask.shape[1]-1-self.detector.get_cy('binned')]) * self.detector.get_pixel_size('binned')
         R_Ewald = 2*pylab.pi/wavelength
         phi = pylab.arctan2(y_max,self.detector.distance)
         return 2 * R_Ewald * pylab.sin(phi/2.0)
@@ -392,7 +404,8 @@ class Input:
         return R_Ewald * (1-pylab.cos(phi))
 
     def get_absq_max(self):
-        return pylab.sqrt(self.get_absqx_max()**2+self.get_absqy_max()**2+self.get_absqz_max()**2)
+        #return pylab.sqrt(self.get_absqx_max()**2+self.get_absqy_max()**2+self.get_absqz_max()**2)
+        return max([self.get_absqx_max(),self.get_absqy_max()])
 
 
 class Output:

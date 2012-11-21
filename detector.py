@@ -40,17 +40,17 @@ class Detector:
         gx = kwargs.get('x_gap_size_in_pixel',0)
         gy = kwargs.get('y_gap_size_in_pixel',0)
         hd = kwargs.get('hole_diameter_in_pixel',0)
+        self.binning = kwargs.get('binning',1)
         if 'mask' in kwargs:
             self.init_mask(mask=kwargs['mask'])
-            self.cx = kwargs.get('cx',(self.mask.shape[1]-1)/2.)
-            self.cy = kwargs.get('cy',(self.mask.shape[0]-1)/2.)   
+            self.cx = kwargs.get('cx',(self.mask.shape[1])/(2.*self.binning))
+            self.cy = kwargs.get('cy',(self.mask.shape[0])/(2.*self.binning))   
         else:
             self.Nx = kwargs.get('Nx',1024)
             self.Ny = kwargs.get('Ny',1024)
             self.cx = kwargs.get('cx',(self.Nx+gy-1)/2.)
             self.cy = kwargs.get('cy',(self.Ny+gx-1)/2.)   
-            self.init_mask(Nx=self.Nx,Ny=self.Ny,x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy,hole_diameter_in_pixel=hd)
-        self.binning = kwargs.get('binning',1)
+            self.init_mask(Nx=self.Nx,Ny=self.Ny,x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy,hole_diameter_in_pixel=hd,binning=self.binning)
         self.saturation_level = kwargs.get('saturation_level',None)
 
     def init_mask(self,**kwargs):
@@ -75,12 +75,20 @@ class Detector:
         """
 
         # init mask array
+        if 'binning' in kwargs:
+            self.binning = kwargs['binning']
+        else:
+            self.binning = 1
         if 'mask' in kwargs: 
             self.mask = kwargs['mask']
         elif 'Nx' in kwargs and 'Ny' in kwargs:
-            Nx = kwargs['Nx']; Ny = kwargs['Ny']
-            if 'x_gap_size_in_pixel' in kwargs: Ny += kwargs['x_gap_size_in_pixel']
-            if 'y_gap_size_in_pixel' in kwargs: Nx += kwargs['y_gap_size_in_pixel']
+            Nx = kwargs['Nx']/self.binning; Ny = kwargs['Ny']/self.binning
+            if 'x_gap_size_in_pixel' in kwargs:
+                x_gap = kwargs['x_gap_size_in_pixel']/self.binning
+                Ny += x_gap
+            if 'y_gap_size_in_pixel' in kwargs: 
+                y_gap = kwargs['y_gap_size_in_pixel']/self.binning
+                Nx += y_gap
             self.mask = pylab.ones(shape=(Ny,Nx))
         else:
             print "ERROR: Either \'mask_array\' or \'Nx\' and \'Ny\' have to be specified."
@@ -89,10 +97,10 @@ class Detector:
         # set pixels in gap to zero
         if 'x_gap_size_in_pixel' in kwargs:
             cy = pylab.ceil((self.mask.shape[0]-1)/2.)
-            self.mask[cy-kwargs['x_gap_size_in_pixel']/2:cy-kwargs['x_gap_size_in_pixel']/2+kwargs['x_gap_size_in_pixel'],:] = 0
+            self.mask[cy-kwargs['x_gap_size_in_pixel']/2/self.binning:cy-kwargs['x_gap_size_in_pixel']/2/self.binning+kwargs['x_gap_size_in_pixel']/self.binning,:] = 0
         if 'y_gap_size_in_pixel' in kwargs:
             cx = pylab.ceil((self.mask.shape[1]-1)/2.)
-            self.mask[:,cx-kwargs['y_gap_size_in_pixel']/2:cx-kwargs['y_gap_size_in_pixel']/2+kwargs['y_gap_size_in_pixel']] = 0
+            self.mask[:,cx-kwargs['y_gap_size_in_pixel']/2/self.binning:cx-kwargs['y_gap_size_in_pixel']/2/self.binning+kwargs['y_gap_size_in_pixel']/self.binning] = 0
         if 'hole_diameter_in_pixel' in kwargs:
             cy = pylab.ceil((self.mask.shape[0]-1)/2.)
             cx = pylab.ceil((self.mask.shape[1]-1)/2.)
@@ -101,7 +109,7 @@ class Detector:
             X -= cx
             Y -= cy
             R = pylab.sqrt(X**2 + Y**2)
-            self.mask[R<=kwargs['hole_diameter_in_pixel']/2.0] = 0
+            self.mask[R<=kwargs['hole_diameter_in_pixel']/(2.0*self.binning)] = 0
               
     def set_cy(self,cy=None):
         """
@@ -123,9 +131,42 @@ class Detector:
         cx : horizontal center position in pixel. If argument is None or not given center is set to the middle.
         """
         if not cx:
-            self.cx = (self._mask.shape[1]-1)/2.
+            self.cx = (self.mask.shape[1]-1)/2.
         else:
             self.cx = cx
+
+    def get_cx(self,option='unbinned'):
+        if option == 'unbinned':
+            return self.cx
+        elif option == 'binned':
+            if self.cx%1 == 0.5:
+                return (self.cx-(self.binning-1)/2.)/(1.0*self.binning)
+            else:
+                return self.cx/(1.0*self.binning)
+        else:
+            print "ERROR: No valid option chosen."
+
+
+    def get_cy(self,option='unbinned'):
+        if option == 'unbinned':
+            return self.cy
+        elif option == 'binned':
+            if self.cy%1 == 0.5:
+                return (self.cy-(self.binning-1)/2.)/(1.0*self.binning)
+            else:
+                return self.cy/(1.0*self.binning)
+        else:
+            print "ERROR: No valid option chosen."
+    
+    def get_pixel_size(self,option='unbinned'):
+        if option == 'unbinned':
+            return self.pixel_size
+        elif option == 'binned':
+            return self.pixel_size*self.binning
+        else:
+            print "ERROR: No valid option chosen."
+
+            
             
     # Functions that convert detector-coordinates:
     #def _get_q_from_r(self,r):

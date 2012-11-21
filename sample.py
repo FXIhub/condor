@@ -531,15 +531,15 @@ class SampleMap:
         if not eul_ang1: eul_ang1 = self.euler_angle_1
         if not eul_ang2: eul_ang2 = self.euler_angle_2
 
-        if eul_ang0*eul_ang1*eul_ang2 == 0.0:
+        if eul_ang0 == 0.0 and eul_ang1 == 0.0 and eul_ang2 == 0.0:
             map2d = pylab.zeros((self.map3d.shape[1],self.map3d.shape[2]))
             for iy in pylab.arange(0,map2d.shape[0]):
                 for ix in pylab.arange(0,map2d.shape[1]):
                     map2d[iy,ix] = self.map3d[:,iy,ix].real.sum()*self.dX*pylab.exp(-self.map3d[:,iy,ix].imag.sum()*self.dX)
         else:
-            x_0 = proptools.rotate(pylab.array([0.0,0.0,1.0]),eul_ang0,eul_ang1,eul_ang2)
-            y_0 = proptools.rotate(pylab.array([0.0,1.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
-            z_0 = proptools.rotate(pylab.array([1.0,0.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
+            x_0 = proptools.rotation(pylab.array([0.0,0.0,1.0]),eul_ang0,eul_ang1,eul_ang2)
+            y_0 = proptools.rotation(pylab.array([0.0,1.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
+            z_0 = proptools.rotation(pylab.array([1.0,0.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
             N = self.map3d.shape[0]
             extra_space = 10
             map2d = pylab.zeros(shape=(N,N),dtype="complex64")

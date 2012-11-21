@@ -518,33 +518,57 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
 
     return n_list
         
-def sinc_interp(data,N_new):
+def lanczos_interp(data,N_new,a=2.):
+
+    dim = len(data.shape)
+    N = data.shape[0]
+
     fdata = pylab.fftn(data)
     sfdata = pylab.fftshift(fdata)
-    N = sfdata.shape[0]
+
+
     if N_new%2 == 1:
         c = N/2-1
     else:
         c = N/2
-    if len(data.shape) == 3:
+
+    if dim == 1:
+        sfdata_cropped = sfdata[c-N_new/2:c-N_new/2+N_new]
+        X = (1.*pylab.arange(N_new)-N_new/2)/((N_new-1)/2.)
+        lanczos_kernel = (pylab.sinc(X*a)*pylab.sinc(X))
+
+    elif dim == 2:
+        if data.shape[0] != data.shape[1]:
+            print "ERROR: Only accept data with equal dimensions."
+            return
+
+        sfdata_cropped = sfdata[c-N_new/2:c-N_new/2+N_new,
+                                c-N_new/2:c-N_new/2+N_new]
+        X,Y = pylab.meshgrid((pylab.arange(N_new)-N_new/2)/((N_new-1)*2.),
+                             (pylab.arange(N_new)-N_new/2)/((N_new-1)*2.))
+        lanczos_kernel = pylab.sinc(X*a)*pylab.sinc(X)*pylab.sinc(Y*a)*pylab.sinc(Y)
+
+    elif dim == 3:
+        if data.shape[0] != data.shape[1] or data.shape[1] != data.shape[2]:
+            print "ERROR: Only accept data with equal dimensions."
+            return
+
         sfdata_cropped = sfdata[c-N_new/2:c-N_new/2+N_new,
                                 c-N_new/2:c-N_new/2+N_new,
                                 c-N_new/2:c-N_new/2+N_new]
-        X,Y,Z = (pylab.mgrid[:sfdata_cropped.shape[0],:sfdata_cropped.shape[0],:sfdata_cropped.shape[0]]-c)/(sfdata_cropped.shape[0]/1.)
-        q = pylab.sqrt(X**2+Y**2+Z**2)
-    if len(data.shape) == 2:
-        sfdata_cropped = sfdata[c-N_new/2:c-N_new/2+N_new,
-                                c-N_new/2:c-N_new/2+N_new]
-        X,Y = pylab.meshgrid((pylab.arange(sfdata_cropped.shape[0])-c)/(sfdata_cropped.shape[0]/1.),
-                             (pylab.arange(sfdata_cropped.shape[0])-c)/(sfdata_cropped.shape[0]/1.))
-        q = pylab.sqrt(X**2+Y**2)
-    elif len(data.shape) == 1:
-        sfdata_cropped = sfdata[c-N_new/2:c-N_new/2+N_new]
-        q = (pylab.arange(sfdata_cropped.shape[0])-c)/(sfdata_cropped.shape[0]/1.)
-    s = pylab.sinc(q)
-    sfdata_cropped *= s
-    #sfdata *= (N_new/(1.*N))**len(data.shape)
-    norm_factor = abs(data).sum()/(1.*data.shape[0]**len(data.shape))/(abs(sfdata_cropped).sum()/(1.*sfdata_cropped.shape[0]**len(sfdata_cropped.shape)))
-    fdata_cropped = norm_factor*pylab.fftshift(sfdata_cropped)
+        X,Y,Z = pylab.mgrid[:N_new,:N_new,:N_new]
+        X = (X-N_new/2)/(2.*(N_new-1))
+        Y = (Y-N_new/2)/(2.*(N_new-1))
+        Z = (Z-N_new/2)/(2.*(N_new-1))
+        lanczos_kernel = \
+            pylab.sinc(X*a)*pylab.sinc(X)* \
+            pylab.sinc(Y*a)*pylab.sinc(Y)* \
+            pylab.sinc(Z*a)*pylab.sinc(Z)
+
+    sfdata_cropped *= lanczos_kernel
+    fdata_cropped = pylab.fftshift(sfdata_cropped)
     ffdata = pylab.ifftn(fdata_cropped)
+    norm_factor = N_new/(1.*N)
+    ffdata *= (N_new**dim/(1.*N)**dim)
     return ffdata
+
