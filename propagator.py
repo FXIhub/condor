@@ -353,6 +353,8 @@ class Input:
         try: E2 = self.sample.euler_angle_2
         except: E2 = 0.0
         
+        q_before = q_map.copy()
+        
         if E0 != 0.0 or E1 != 0.0 or E2 != 0.0:
             M = pylab.array([[pylab.cos(E1)*pylab.cos(E2),
                               -pylab.cos(E0)*pylab.sin(E2)+pylab.sin(E0)*pylab.sin(E1)*pylab.cos(E2),
@@ -367,10 +369,15 @@ class Input:
                 for ix in pylab.arange(0,q_map.shape[1]):
                     q_map[iy,ix,:] = pylab.dot(M,q_map[iy,ix,:])
 
+        l1 = pylab.sqrt(q_before[:,:,0]**2+q_before[:,:,1]**2+q_before[:,:,2]**2)
+
+        l2 = pylab.sqrt(q_map[:,:,0]**2+q_map[:,:,1]**2+q_map[:,:,2]**2)
+        print (l1/l2!=1.0*(l1!=0.)*(l2!=0.)).sum()
+
         if scaled == True:
             q_map_scaled = q_map/qmax*0.5
-            if (abs(q_map_scaled)>0.5).sum() != 0:
-                print "ERROR: Absolute value of sampling coordinates exceeds 0.5."
+            #if (abs(q_map_scaled)>0.5).sum() != 0:
+            #    print "ERROR: Absolute value of sampling coordinates exceeds 0.5."
             return q_map_scaled
 
         else:
