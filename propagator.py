@@ -369,11 +369,6 @@ class Input:
                 for ix in pylab.arange(0,q_map.shape[1]):
                     q_map[iy,ix,:] = pylab.dot(M,q_map[iy,ix,:])
 
-        #l1 = pylab.sqrt(q_before[:,:,0]**2+q_before[:,:,1]**2+q_before[:,:,2]**2)
-
-        #l2 = pylab.sqrt(q_map[:,:,0]**2+q_map[:,:,1]**2+q_map[:,:,2]**2)
-        #print (l1/l2!=1.0*(l1!=0.)*(l2!=0.)).sum()
-
         if scaled == True:
             q_map_scaled = q_map/qmax*0.5
             #if (abs(q_map_scaled)>0.5).sum() != 0:

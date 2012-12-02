@@ -1,5 +1,6 @@
 import os,re,sys,h5py,pylab,numpy,time
 import config
+import proptools
 
 def radial_pixel_average(image,**kargs):
     if 'cx' in kargs: cx = kargs['cx']
@@ -465,11 +466,59 @@ def rotate_3d_grid(X,Y,Z,eul_ang0,eul_ang1,eul_ang2):
             config.OUT.write("%i/%i\n" % (xi+1,sizeX))
             for yi in pylab.arange(0,sizeY,1.0):
                 for zi in pylab.arange(0,sizeZ,1.0):
-                    new_vector = proptools.rotate(pylab.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]]),eul_ang0,eul_ang1,eul_ang2)
+                    new_vector = proptools.rotation(pylab.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]]),eul_ang0,eul_ang1,eul_ang2)
                     X[zi,yi,xi] = new_vector[2]
                     Y[zi,yi,xi] = new_vector[1]
                     Z[zi,yi,xi] = new_vector[0]
     return [X,Y,Z]
+
+def get_icosahedrally_symmetrical_vectors(v,ico_n5=[1]):
+    # construct normal vectors of faces
+    phi = (1+sqrt(5))/2.0
+    ri = phi**2/2./sqrt(3.)
+    normalization_factor = 1/sqrt(phi**2+1.)
+    # normal vectors for every vertice
+    x1 = array([0.0,1.0,phi])*normalization_factor
+    x2 = array([0.0,1.0,-phi])*normalization_factor
+    x3 = array([0.0,-1.0,phi])*normalization_factor
+    x4 = array([0.0,-1.0,-phi])*normalization_factor
+    x5 = array([1.0,phi,0.0])*normalization_factor
+    x6 = array([1.0,-phi,0.0])*normalization_factor
+    x7 = array([-1.0,phi,0.0])*normalization_factor
+    x8 = array([-1.0,-phi,0.0])*normalization_factor
+    x9 = array([phi,0.0,1.0])*normalization_factor
+    x10 = array([-phi,0.0,1.0])*normalization_factor
+    x11 = array([phi,0.0,-1.0])*normalization_factor
+    x12 = array([-phi,0.0,-1.0])*normalization_factor
+    list5folds = [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12]
+    # angle between normals
+    an = dot(x5,x1)
+
+    def cont_element(el,l):
+        for i in range(0,len(l)):
+            if (sqrt(((el-l[i])**2)).sum()<0.01).any():
+                return True
+        return False
+
+    def angles_match(y1,y2,y3):
+        if abs(dot(y1,y2) - an) < 0.01 and abs(dot(y2,y3) - an) < 0.01 and abs(dot(y3,y1) - an) < 0.01:
+            return True
+        else:
+            return False
+
+    list3folds = []
+    for i in range(0,len(list5folds)):
+        for j in range(0,len(list5folds)):
+            for k in range(0,len(list5folds)):
+                n = (list5folds[i]+list5folds[j]+list5folds[k])/3.
+                if angles_match(list5folds[i],list5folds[j],list5folds[k]) and not cont_element(n,list3folds):
+                    list3folds.append(n)
+
+    if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
+        for i in range(0,len(list3folds)):
+            list3folds[i] = proptools.rotation(list3folds[i],euler_1,euler_2,euler_3)
+
+    return list3folds
 
 def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
     # construct normal vectors of faces
@@ -514,7 +563,7 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
 
     if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
         for i in range(0,len(n_list)):
-            n_list[i] = proptools.rotate(n_list[i],euler_1,euler_2,euler_3)
+            n_list[i] = proptools.rotation(n_list[i],euler_1,euler_2,euler_3)
 
     return n_list
         
