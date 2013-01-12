@@ -254,7 +254,14 @@ class SampleMap:
         if self.map3d.max() == 0:
             self.map3d = map3d
         else:
-            self.put_custom_map(map3d)        
+            self.put_custom_map(map3d)
+    
+    def put_into_water(self):
+        M = Material(self,materialtype='water')
+        dn = 1.-M.get_n()
+        self.map3d.real += dn.real*(1-self.map3d.real/self.map3d.real.max())
+        self.map3d.imag += dn.imag*(1-self.map3d.imag/self.map3d.imag.max())
+        self.map3d -= dn
 
     def put_periodic_filament(self,diameter,layer_thickness,length,**materialargs):
         Nx = length/self.dX

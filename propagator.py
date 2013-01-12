@@ -429,7 +429,9 @@ class Output:
         Returns 1-dimensional array with intensity average in photons per pixel (binned). x-coordinate sampling is pixel (binned). 
         """
         I = self.get_intensity_pattern()
-        return imgutils.radial_pixel_average(I)
+        return imgutils.radial_pixel_average(I,
+                                             cx=self.input_object.detector.get_cx('binned'),
+                                             cy=self.input_object.detector.get_cy('binned'))
 
 
     def get_intensity_radial_sum(self):
@@ -437,7 +439,9 @@ class Output:
         Returns 1-dimensional array with intensity average in photons per pixel (binned). x-coordinate sampling is pixel (binned). 
         """
         I = self.get_intensity_pattern()
-        return imgutils.radial_pixel_sum(I)
+        return imgutils.radial_pixel_sum(I,
+                                         cx=self.input_object.detector.get_cx('binned'),
+                                         cy=self.input_object.detector.get_cy('binned'))
 
             
     def plot_radial_distribution(self,scaling="binned pixel and nyquist pixel",mode="all",noise=None):
@@ -618,7 +622,7 @@ class Output:
         pixel_size_detector = self.input_object.detector.pixel_size
         pixel_size_nyquist = proptools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),self.input_object.sample.get_area())
         if scaling == "nyquist":
-            I *= eff_pixel_size_nyquist**2/pixel_size_detector**2
+            I *= eff_pixel_size_nyquist**2/eff_pixel_size_detector**2
             u = eff_pixel_size_detector/pixel_size_nyquist
             str_scaling = "Nyquist pixel"
         elif scaling == "meter":
@@ -626,7 +630,6 @@ class Output:
             u = eff_pixel_size_detector
             str_scaling = "m^2"
         elif scaling == "pixel":
-            I /= 1.0*self.input_object.detector.binning**2
             u = self.input_object.detector.binning
             str_scaling = scaling
         elif scaling == "binned pixel":
@@ -664,9 +667,11 @@ class Output:
                 M[I>=self.input_object.detector.saturationlevel] = 0
             M[M==0] *= pylab.nan
 
+        #zero_pixels = False
         if logscale:
             I = pylab.log10(I)
-            #if (I==-pylab.Inf).sum()>0: I[I==-pylab.Inf] = I[I!=-pylab.Inf].min()-1.0
+            if (I==-pylab.Inf).sum()>0:
+                I[I==-pylab.Inf] = I[I!=-pylab.Inf].min()-1.0
             I *= M
             str_Iscaling = r"$\log\left( I \left[ \frac{\mbox{photons}}{\mbox{%s}} \right] \right)$" % str_scaling
         else:

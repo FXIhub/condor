@@ -567,14 +567,14 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
 
     return n_list
         
-def lanczos_interp(data,N_new,a=2.):
-
+def lanczos_interp(data,N_new_,a=2.):
+    
+    N_new = int(round(N_new_))
     dim = len(data.shape)
     N = data.shape[0]
 
     fdata = pylab.fftn(data)
     sfdata = pylab.fftshift(fdata)
-
 
     if N_new%2 == 1:
         c = N/2-1

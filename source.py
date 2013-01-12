@@ -19,8 +19,8 @@ class Source:
 class Photon:
     def __init__(self,**kwarg):
         if "wavelength" in kwarg.keys(): self.set_wavelength(kwarg["wavelength"])
-        elif "energy" in kwarg.keys(): self.set_energy(kwarg["energy"])
-        elif "energy_eV" in kwarg.keys(): self.set_energy_eV(kwarg["energy_eV"])
+        elif "energy" in kwarg.keys(): self.set_energy(kwarg["energy"],"J")
+        elif "energy_eV" in kwarg.keys(): self.set_energy(kwarg["energy_eV"],"eV")
         else:
             print "ERROR: Photon needs to be initialized with either the energy or the wavelength."
             
