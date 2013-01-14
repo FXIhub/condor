@@ -625,7 +625,7 @@ class Output:
 
         from matplotlib.colors import LogNorm
 
-        scaling = 'pixel'
+        scaling = 'binned pixel'
         scalingargs = ['nyquist','meter','binned pixel','pixel']
         noise = 'none'
         noiseargs = ['poisson','none']
