@@ -406,14 +406,20 @@ class SampleMap:
                 G[iz+it,:,:] = 0
         return G
 
-    def plot_map3d(self):
+    def plot_map3d(self,mode='surface'):
         from enthought.mayavi import mlab
-        s = mlab.pipeline.scalar_field(abs(self.map3d))
-        plane_1 = mlab.pipeline.image_plane_widget(s,plane_orientation='x_axes',
-                                                   slice_index=self.map3d.shape[2]/2)
-        plane_2 = mlab.pipeline.image_plane_widget(s,plane_orientation='y_axes',
-                                                   slice_index=self.map3d.shape[1]/2)
-        mlab.show()
+        if mode=='planes':
+            s = mlab.pipeline.scalar_field(abs(self.map3d))
+            plane_1 = mlab.pipeline.image_plane_widget(s,plane_orientation='x_axes',
+                                                       slice_index=self.map3d.shape[2]/2)
+            plane_2 = mlab.pipeline.image_plane_widget(s,plane_orientation='y_axes',
+                                                       slice_index=self.map3d.shape[1]/2)
+            mlab.show()
+        elif mode=='surface':
+            mlab.contour3d(abs(self.map3d))
+        else:
+            print "ERROR: No valid mode given."
+            
 
     def plot_fmap3d(self):
         from enthought.mayavi import mlab
@@ -598,7 +604,7 @@ class SampleMap:
         if filename[-3:] == '.h5':
             import h5py
             f = h5py.File(filename,'w')
-            map3d = f.create_dataset('map3d', self.map3d.shape, self.map3d.dtype)
+            map3d = f.create_dataset('data', self.map3d.shape, self.map3d.dtype)
             map3d[:,:,:] = self.map3d[:,:,:]
             f['voxel_dimensions_in_m'] = self.dX
             f.close()
@@ -617,12 +623,18 @@ class SampleMap:
         """
 
         if filename[-3:] == '.h5':
-            import h5py
-            f = h5py.File(filename,'r')
-            self.map3d = f['map3d'].value.copy()
-            if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
-            self.dX = f['voxel_dimensions_in_m'].value
-            f.close()
+            try:
+                import h5py
+                f = h5py.File(filename,'r')
+                self.map3d = f['data'].value.copy()
+                #if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
+                #self.dX = f['voxel_dimensions_in_m'].value
+                f.close()
+            except:
+                import spimage
+                img = spimage.sp_image_read(filename,0)
+                self.map3d = img.image.copy()
+                spimage.sp_image_free(img)
         else:
             print 'ERROR: Invalid filename extension, has to be \'.h5\'.'
 

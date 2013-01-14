@@ -199,7 +199,7 @@ class Input:
         self.sample.dX = edge_length/(1.*(self.sample.map3d.shape[0]-1))
         if materialargs != {}:
             materialargs['parent'] = self.sample
-            self.sample.material = Material(materialargs)
+            self.sample.material = Material(**materialargs)
             self.sample.map3d *= 1-self.sample.material.get_n()
 
     def set_sample_icosahedral_virus_map(self,radius=None,**kwargs):
@@ -300,7 +300,7 @@ class Input:
                         el = cX_pair[0]
                         el = el[1:].capitalize()
                         val = float(cX_pair[1])
-                        matargs.append(("'c%s'" % el,val))
+                        matargs.append(("c%s" % el,val))
             matargs.append(('massdensity',C.getfloat('sample','massdensity')))
         else:
             keys = ['cH','cN','cO','cP','cS']
@@ -825,5 +825,5 @@ class Propagation:
     
     def __init__(self,**kwargs):
         self._parent = kwargs.get('parent',None)
-        self.rs_oversampling = kwargs.get('rs_oversampling',2.0)
+        self.rs_oversampling = kwargs.get('rs_oversampling',1.0)
         self.N_processes = 1
