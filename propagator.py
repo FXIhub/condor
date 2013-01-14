@@ -16,7 +16,7 @@ from matplotlib import rc
 import matplotlib.pyplot as mpy
 rc('text', usetex=True)
 rc('font', family='serif')
-
+mpy.rcParams['figure.figsize'] = 10, 15
 import config
 config.init_configuration()
 
@@ -620,12 +620,16 @@ class Output:
         - logscale:         False / True (default)
         - saturation_level:  False (default) / True
         - use_gapmask:      False / True (default)
+        - dpi:              dpi (default 200)
 
         """
 
         from matplotlib.colors import LogNorm
 
-        scaling = 'binned pixel'
+        if self.input_object.detector.binning == 1:
+            scaling = 'pixel'
+        else:
+            scaling = 'binned pixel'
         scalingargs = ['nyquist','meter','binned pixel','pixel']
         noise = 'none'
         noiseargs = ['poisson','none']
@@ -638,11 +642,15 @@ class Output:
         outfile = False
         outfileargs = [True,False]
 
+        if 'dpi' in kwargs.keys():
+            dpi = kwargs['dpi']
+        else:
+            dpi = 200
         I = self.get_intensity_pattern()
 
-        optionkeys = ["scaling","noise","logscale","saturation_level","use_gapmask","outfile"]
+        optionkeys = ["scaling","noise","logscale","saturation_level","use_gapmask","outfile","dpi"]
         options = [scaling,noise,logscale,saturationlevel,use_gapmask]
-        optionargs = [scalingargs,noiseargs,logscaleargs,saturationlevelargs,use_gapmaskargs,outfileargs]
+        optionargs = [scalingargs,noiseargs,logscaleargs,saturationlevelargs,use_gapmaskargs,outfileargs,[]]
         keys = kwargs.keys()
         for i in range(0,len(keys)):
             key = keys[i]
@@ -652,8 +660,11 @@ class Output:
             keyarg = kwargs[key]
             j = optionkeys.index(key)
             if not keyarg in optionargs[j]:
-                print "ERROR: %s is not a proper argument for %s." % (keyarg,key)
-                return
+                if pylab.isreal(keyarg) and key == 'dpi':
+                    pass
+                else:
+                    print "ERROR: %s is not a proper argument for %s." % (keyarg,key)
+                    return
             exec "%s = '%s'" % (key,keyarg)
         
         eff_pixel_size_detector = self.input_object.detector.pixel_size * self.input_object.detector.binning
@@ -708,21 +719,22 @@ class Output:
         if logscale:
             #I = pylab.log10(I)
             I *= M
-            #str_Iscaling = r"$\log_{10}\left( I \left[ \frac{\mbox{photons}}{\mbox{%s}} \right] \right)$" % str_scaling
+            #str_Iscaling = r"$\log_{10}\left( I \left[ \frac{\mathrm{photons}}{\mathrm{%s}} \right] \right)$" % str_scaling
             str_Iscaling = r"Number of photons"
         else:
-            str_Iscaling = r"$I \left[ \frac{\mbox{photons}}{\mbox{%s}} \right]$" % str_scaling
+            str_Iscaling = r"$I \left[ \frac{\mathrm{photons}}{\mathrm{%s}} \right]$" % str_scaling
 
         Wsizey = 9
         Wsizex = 9
         fsize = 12
         pylab.clf()
         fig = mpy.figure(1,figsize=(Wsizex,Wsizey))
-        mpy.rcParams['figure.figsize'] = Wsizex,Wsizey
-        fig.suptitle(r"\n - PROPAGATOR -", fontsize=fsize+2)
+        mpy.draw()
+        fig.set_size_inches(Wsizex,Wsizey)
+        fig.suptitle("- PROPAGATOR -", fontsize=fsize+2)
         alignment = {'horizontalalignment':'center','verticalalignment':'center'}
 
-        fig.text(0.5,(16.75/18.0),r"$E_{\mbox{photon}} = %.0f$ eV ; $\lambda = %.2f$ nm ; $N_{\mbox{photons}} = %.1e$ ; $D_{\mbox{detector}} = %0.3f$ mm" %  (self.input_object.source.photon.get_energy("eV"),self.input_object.source.photon.get_wavelength()/1.0E-09,self.input_object.source.pulse_energy/self.input_object.source.photon.get_energy(),self.input_object.detector.distance/1.0E-03),fontsize=fsize,bbox=dict(fc='0.9',ec="0.9",linewidth=10.0),**alignment) 
+        fig.text(0.5,(16.75/18.0),r"$E_{\mathrm{photon}} = %.0f$ eV ; $\lambda = %.2f$ nm ; $N_{\mathrm{photons}} = %.1e$ ; $D_{\mathrm{detector}} = %0.3f$ mm" %  (self.input_object.source.photon.get_energy("eV"),self.input_object.source.photon.get_wavelength()/1.0E-09,self.input_object.source.pulse_energy/self.input_object.source.photon.get_energy(),self.input_object.detector.distance/1.0E-03),fontsize=fsize,bbox=dict(fc='0.9',ec="0.9",linewidth=10.0),**alignment) 
 
         ax = fig.add_axes([3/15.0,5/18.0,10/15.0,10/18.0])
         ax.set_xlabel(r"$x$ [" + str_scaling_label + "]",fontsize=fsize)
@@ -755,12 +767,12 @@ class Output:
         miss_Ny = gapsize*eff_pixel_size_detector/pixel_size_nyquist
         fig.text(0.5,(1./18.0),r"\textbf{Properties}\\ Linear oversampling ratio: $%.2f$ (binning $%i\times%i$) ; $%.2f$ (no pixel binning)\\" % (oversampling_ratio,self.input_object.detector.binning,self.input_object.detector.binning,oversampling_ratio_wo_binning)+
                  r"Crystallographic resolution (full period): $%.1f$ nm (horizontal) ; $%.1f$ nm (vertical) ; $%.1f$ nm (corner)\\" % (res_horizontally/1.0E-09,res_vertically/1.0E-09,res_corner/1.0E-09)+
-                 r"Gap width: $g=%.2f\mbox{ mm}=%.1f$ Nyquist pixels" % (gapsize*eff_pixel_size_detector/1.0E-03,miss_Ny),fontsize=fsize,bbox=dict(fc='0.9',ec="0.9",linewidth=10.0),**alignment)
+                 r"Gap width: $g=%.2f\mathrm{ mm}=%.1f$ Nyquist pixels" % (gapsize*eff_pixel_size_detector/1.0E-03,miss_Ny),fontsize=fsize,bbox=dict(fc='0.9',ec="0.9",linewidth=10.0),**alignment)
         #if miss_Ny>2.8:
         #    print "\n!!!\nMissing mode(s) expected (gap width: %.1f Nyquist pixels) \n\nTweaking of one of the parameters recommended:\n- Wavelength w = %.2f nm\n- Sample radius r = %.0f nm\n- Gap size g = %.1f mm\n- Detector distance d = %.0f mm" % (miss_Ny,(rec_wavelength+0.01E-9)*1.0E9,(rec_r-1.0E-9)*1.0E9,(rec_gapsize-0.1E-3)*1.0E3,(rec_d+1.0E-3)*1.0E3)
 
         if outfile:
-            mpy.savefig("intensity_pattern.png",dpi=300)
+            mpy.savefig("intensity_pattern.png",dpi=kwargs['dpi'])
         else:
             fig.show()
    
