@@ -147,7 +147,7 @@ class SampleMap:
         - dX Real space sampling distance. [Taken from input object configuration]
 
         OR:
-        - map3d: Cubic 3d refractive index map.
+        - map3d: Cubic 3d refractive index map. (map3d: dn = n-1)
         
         ADDITIONAL:
         - euler_angle_0, euler_angle_1, euler_angle_2: Euler angles defining orientation of particle in the beam. [0.0,0.0,0.0]
@@ -390,7 +390,6 @@ class SampleMap:
 
     def put_icosahedral_sample(self,radius,x=0.,y=0.,z=0.,**kwargs):
         kwargs_cp = kwargs.copy()
-        kwargs_cp['materialtype'] = kwargs['materialtype']
         dn = self._makedm_icosahedron(radius,**kwargs_cp)
         if self.map3d.max() == 0.0 and x==0. and y==0. and z==0.:
             self.map3d = dn
@@ -461,12 +460,13 @@ class SampleMap:
 
         """
 
+        materialargs = {}
         if 'massdensity' in kwargs:
-            materialargs = {'massdensity':kwargs['massdensity']}
+            materialargs['massdensity'] = kwargs['massdensity']
             for key in kwargs.keys():
-                if kwargs[i][0] == 'c': materialargs[key] = kwargs[key]
+                if key[0] == 'c': materialargs[key] = kwargs[key]
         else:
-            materialargs = {'materialtype':kwargs['materialtype']}
+            materialargs['materialtype'] = kwargs['materialtype']
         material_obj = Material(self,**materialargs)
         dn = 1.0 - material_obj.get_n()
 
@@ -486,8 +486,9 @@ class SampleMap:
         # smooth
         s = 1.0
 
-        N = int(pylab.ceil(2.2*(nRmax)))
-        
+        N = int(pylab.ceil(2.3*(nRmax)))
+        print N
+
         config.OUT.write("... build icosahedral geometry ...\n")
         
         n_list = imgutils.get_icosahedron_normal_vectors(euler1,euler2,euler3)
@@ -649,13 +650,13 @@ class SampleSphere:
     """
 
     def __init__(self,**kwargs):
-        self.radius = kwargs.get('radius',225E-09)
+        self.radius = kwargs.get('diameter',450E-09)/2.
         self._parent = kwargs.get('parent',None)
 
         material_kwargs = kwargs.copy()
         try: material_kwargs.pop('parent')
         except: pass
-        try: material_kwargs.pop('radius')
+        try: material_kwargs.pop('diameter')
         except: pass
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)

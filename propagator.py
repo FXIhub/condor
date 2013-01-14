@@ -189,13 +189,18 @@ class Input:
         """
         self.sample = SampleMap(parent=self)
 
-    def load_sample_map(self,filename):
+    def load_sample_map(self,filename,edge_length,**materialargs):
         """
         Creates empty densitymap. Size in accordance to given detector geometry.
         Densitymap resolution is set according to the detector geometry.
         """
         self.sample = SampleMap(parent=self)
         self.sample.load_map3d(filename)
+        self.sample.dX = edge_length/(1.*(self.sample.map3d.shape[0]-1))
+        if materialargs != {}:
+            materialargs['parent'] = self.sample
+            self.sample.material = Material(materialargs)
+            self.sample.map3d *= 1-self.sample.material.get_n()
 
     def set_sample_icosahedral_virus_map(self,radius=None,**kwargs):
         """
@@ -211,7 +216,11 @@ class Input:
         if radius == None:
             radius = self.sample.radius
         self.sample = SampleMap(parent=self)
-        self.sample.put_icosahedral_sample(radius,0.,0.,0.,**kwargs)
+        self.sample.put_icosahedral_sample(radius,
+                                           euler1 = kwargs.get('euler_angle_0',0.),
+                                           euler2 = kwargs.get('euler_angle_1',0.),
+                                           euler3 = kwargs.get('euler_angle_2',0.),
+                                           **kwargs)
         self.sample.radius = radius
 
     def set_sample_sphere_map(self,radius=225E-09,**materialargs):
@@ -227,10 +236,10 @@ class Input:
         Sets sample object to homogeneous sphere having the given radius. Atomic composition values and massdensity are set according to the given material arguments.
         Examples for usage:
         - setting atomic composition values and massdensity manually:
-          set_sample_homogeneous_sphere(radius,massdensity=1000,cH=2,cO=1)
+          set_sample_homogeneous_sphere(diameter=100E-09,massdensity=1000,cH=2,cO=1)
         - setting atomic composition values and massdensity according to given materialtype:
-          set_sample_homogeneous_sphere(radius,materialtype='protein')
-        available materialtypes: 'protein', 'virus', 'cell', 'latexball', 'water', 'Au'
+          set_sample_homogeneous_sphere(diameter=100E-09,materialtype='protein')
+        available materialtypes: 'protein', 'virus', 'cell', 'latexball', 'water'
         """ 
         self.sample = SampleSphere(parent=self,**kwargs)
 
@@ -253,25 +262,7 @@ class Input:
         self.source.photon.set_wavelength(C.getfloat('source','wavelength'))
         self.source.focus_diameter = C.getfloat('source','focus_diameter')
         self.source.pulse_energy = C.getfloat('source','pulse_energy')
-        mat = C.get('sample','material')
-        args = []
-        if mat == 'custom':
-            cX_list = C.items('sample')
-            for cX_pair in cX_list:
-                if cX_pair[0][0] == 'c':
-                    el = cX_pair[0]
-                    el = el[1:].capitalize()
-                    val = float(cX_pair[1])
-                    args.append(("'c%s'" % el,val))
-            args.append(('massdensity',C.getfloat('sample','massdensity')))
-        else:
-            keys = ['cH','cN','cO','cP','cS']
-            for i in range(0,len(keys)):
-                args.append((keys[i],config.DICT_atomic_composition[mat][i]))
-            args.append(('massdensity',config.DICT_massdensity[mat]))
-        args= dict(args)
-        args['radius']=C.getfloat('sample','radius')
-        self.set_sample_homogeneous_sphere(**args)
+
         args = {}
         args['distance'] = C.getfloat('detector','distance')
         args['pixel_size'] = C.getfloat('detector','pixel_size')
@@ -294,6 +285,51 @@ class Input:
         self.detector = Detector(**args)
         self.propagation.rs_oversampling = C.getfloat('propagation','rs_oversampling')
         self.propagation.N_processes = C.getint('propagation','N_processes')
+
+        sample_type = C.get('sample','sample_type','uniform_sphere')
+
+        mat = C.get('sample','material_type','none')
+        matargs = []
+        if mat == 'none':
+            pass
+        elif mat == 'custom':
+            if mat == 'custom':
+                cX_list = C.items('sample')
+                for cX_pair in cX_list:
+                    if cX_pair[0][0] == 'c':
+                        el = cX_pair[0]
+                        el = el[1:].capitalize()
+                        val = float(cX_pair[1])
+                        matargs.append(("'c%s'" % el,val))
+            matargs.append(('massdensity',C.getfloat('sample','massdensity')))
+        else:
+            keys = ['cH','cN','cO','cP','cS']
+            for i in range(0,len(keys)):
+                matargs.append((keys[i],config.DICT_atomic_composition[mat][i]))
+            matargs.append(('massdensity',config.DICT_massdensity[mat]))
+        matargs= dict(matargs)
+        
+        if sample_type == 'uniform_sphere':
+            matargs['diameter']=C.getfloat('sample','size')
+            self.set_sample_homogeneous_sphere(**matargs)
+
+        elif sample_type == 'map3d':
+            size = C.getfloat('sample','size')
+            geometry = C.get('sample','geometry','none')
+            if geometry == 'none':
+                self.set_sample_map()
+            elif geometry == 'icosahedron':
+                euler_angle_0 = C.getfloat('sample','theta')
+                euler_angle_1 = C.getfloat('sample','phi')
+                euler_angle_2 = C.getfloat('sample','psi')
+                self.set_sample_icosahedral_map(radius=size/2.,euler_angle_0=euler_angle_0,euler_angle_1=euler_angle_1,euler_angle_2=euler_angle_2,**matargs)
+            else:
+                if mat == 'none':
+                    self.load_sample_map(geometry,size)
+                else:
+                    self.load_sample_map(geometry,size,**matargs)
+            
+            
 
     def get_real_space_resolution_element(self):
         """
@@ -790,4 +826,4 @@ class Propagation:
     def __init__(self,**kwargs):
         self._parent = kwargs.get('parent',None)
         self.rs_oversampling = kwargs.get('rs_oversampling',2.0)
-        self.N_processes = 4
+        self.N_processes = 1

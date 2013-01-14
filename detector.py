@@ -96,20 +96,23 @@ class Detector:
             
         # set pixels in gap to zero
         if 'x_gap_size_in_pixel' in kwargs:
-            cy = pylab.ceil((self.mask.shape[0]-1)/2.)
-            self.mask[cy-kwargs['x_gap_size_in_pixel']/2/self.binning:cy-kwargs['x_gap_size_in_pixel']/2/self.binning+kwargs['x_gap_size_in_pixel']/self.binning,:] = 0
+            if kwargs['x_gap_size_in_pixel'] != 0:
+                cy = pylab.ceil((self.mask.shape[0]-1)/2.)
+                self.mask[cy-kwargs['x_gap_size_in_pixel']/2/self.binning:cy-kwargs['x_gap_size_in_pixel']/2/self.binning+kwargs['x_gap_size_in_pixel']/self.binning,:] = 0
         if 'y_gap_size_in_pixel' in kwargs:
-            cx = pylab.ceil((self.mask.shape[1]-1)/2.)
-            self.mask[:,cx-kwargs['y_gap_size_in_pixel']/2/self.binning:cx-kwargs['y_gap_size_in_pixel']/2/self.binning+kwargs['y_gap_size_in_pixel']/self.binning] = 0
+            if kwargs['y_gap_size_in_pixel'] != 0:
+                cx = pylab.ceil((self.mask.shape[1]-1)/2.)
+                self.mask[:,cx-kwargs['y_gap_size_in_pixel']/2/self.binning:cx-kwargs['y_gap_size_in_pixel']/2/self.binning+kwargs['y_gap_size_in_pixel']/self.binning] = 0
         if 'hole_diameter_in_pixel' in kwargs:
-            cy = pylab.ceil((self.mask.shape[0]-1)/2.)
-            cx = pylab.ceil((self.mask.shape[1]-1)/2.)
-            X,Y = pylab.meshgrid(pylab.arange(0,self.mask.shape[1],1.0),
-                                 pylab.arange(0,self.mask.shape[0],1.0))
-            X -= cx
-            Y -= cy
-            R = pylab.sqrt(X**2 + Y**2)
-            self.mask[R<=kwargs['hole_diameter_in_pixel']/(2.0*self.binning)] = 0
+            if kwargs['hole_diameter_in_pixel'] != 0:
+                cy = pylab.ceil((self.mask.shape[0]-1)/2.)
+                cx = pylab.ceil((self.mask.shape[1]-1)/2.)
+                X,Y = pylab.meshgrid(pylab.arange(0,self.mask.shape[1],1.0),
+                                     pylab.arange(0,self.mask.shape[0],1.0))
+                X -= cx
+                Y -= cy
+                R = pylab.sqrt(X**2 + Y**2)
+                self.mask[R<=kwargs['hole_diameter_in_pixel']/(2.0*self.binning)] = 0
               
     def set_cy(self,cy=None):
         """
