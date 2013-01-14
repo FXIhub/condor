@@ -615,13 +615,15 @@ class Output:
 
         Keyword arguments:
 
-        - scaling:          'nyquist', 'meter', 'binned pixel' or 'pixel' (default)
+        - scaling:          'nyquist', 'meter', 'pixel' or 'binned pixel' (default)
         - noise:            'poisson' or 'none' (default)
         - logscale:         False / True (default)
         - saturation_level:  False (default) / True
         - use_gapmask:      False / True (default)
 
         """
+
+        from matplotlib.colors import LogNorm
 
         scaling = 'pixel'
         scalingargs = ['nyquist','meter','binned pixel','pixel']
@@ -703,13 +705,11 @@ class Output:
                 M[I>=self.input_object.detector.saturationlevel] = 0
             M[M==0] *= pylab.nan
 
-        #zero_pixels = False
         if logscale:
-            I = pylab.log10(I)
-            if (I==-pylab.Inf).sum()>0:
-                I[I==-pylab.Inf] = I[I!=-pylab.Inf].min()-1.0
+            #I = pylab.log10(I)
             I *= M
-            str_Iscaling = r"$\log\left( I \left[ \frac{\mbox{photons}}{\mbox{%s}} \right] \right)$" % str_scaling
+            #str_Iscaling = r"$\log_{10}\left( I \left[ \frac{\mbox{photons}}{\mbox{%s}} \right] \right)$" % str_scaling
+            str_Iscaling = r"Number of photons"
         else:
             str_Iscaling = r"$I \left[ \frac{\mbox{photons}}{\mbox{%s}} \right]$" % str_scaling
 
@@ -724,8 +724,9 @@ class Output:
 
         fig.text(0.5,(16.75/18.0),r"$E_{\mbox{photon}} = %.0f$ eV ; $\lambda = %.2f$ nm ; $N_{\mbox{photons}} = %.1e$ ; $D_{\mbox{detector}} = %0.3f$ mm" %  (self.input_object.source.photon.get_energy("eV"),self.input_object.source.photon.get_wavelength()/1.0E-09,self.input_object.source.pulse_energy/self.input_object.source.photon.get_energy(),self.input_object.detector.distance/1.0E-03),fontsize=fsize,bbox=dict(fc='0.9',ec="0.9",linewidth=10.0),**alignment) 
 
-        ax = fig.add_axes([3/15.0,5/18.0,10/15.0,10/18.0],title=r'Simulated intensity readout')
+        ax = fig.add_axes([3/15.0,5/18.0,10/15.0,10/18.0])
         ax.set_xlabel(r"$x$ [" + str_scaling_label + "]",fontsize=fsize)
+        ax.xaxis.set_label_position('top')
         ax.set_ylabel(r"$y$ [" + str_scaling_label + "]",fontsize=fsize)
 
         axcolor = fig.add_axes([3/15.0,3.5/18.0,10/15.0,0.5/18.0])
@@ -735,7 +736,12 @@ class Output:
             for label in a.yaxis.get_ticklabels():
                 label.set_fontsize(fsize)
 
-        im = ax.matshow(I,extent=[-xlimit/2,xlimit/2,-ylimit/2,ylimit/2],interpolation="nearest",)
+        if logscale:
+            bgcol = 0.
+            imv = ax.matshow(bgcol*pylab.ones_like(I),extent=[-xlimit/2,xlimit/2,-ylimit/2,ylimit/2],interpolation="nearest",cmap='gray',vmax=1.,vmin=0.)
+            im = ax.matshow(I,extent=[-xlimit/2,xlimit/2,-ylimit/2,ylimit/2],interpolation="nearest",norm=LogNorm())
+        else:
+            im = ax.matshow(I,extent=[-xlimit/2,xlimit/2,-ylimit/2,ylimit/2],interpolation="nearest",)
         cb = fig.colorbar(im, cax=axcolor,orientation='horizontal')
         cb.set_label(str_Iscaling,fontsize=fsize)
 
