@@ -64,8 +64,9 @@ class Material:
         photon_wavelength = h*c/photon_energy_eV/qe
 
         f = self.get_f(photon_energy_eV)
-            
-        n = 1 - re/2/pylab.pi * photon_wavelength**2 * f
+        atom_density = self.get_atom_density()
+        
+        n = 1 - re/2/pylab.pi * photon_wavelength**2 * f * atom_density
 
         return n
 
@@ -75,8 +76,6 @@ class Material:
         h = config.DICT_physical_constants['h']
         c = config.DICT_physical_constants['c']
         qe = config.DICT_physical_constants['e']
-        
-        atom_density = self.get_atom_density()
 
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
@@ -84,13 +83,13 @@ class Material:
 
         atomic_composition = self.get_atomic_composition_dict()
 
-        rhof_sum = 0
+        f_sum = 0
         for element in atomic_composition.keys():
             # sum up average atom factor
             f = self.get_fX(element,photon_energy_eV)
-            rhof_sum += atomic_composition[element] * atom_density * f
-
-        return rhof_sum
+            f_sum += atomic_composition[element] * f
+        
+        return f_sum
 
 
     def get_atom_density(self):

@@ -16,7 +16,7 @@ from matplotlib import rc
 import matplotlib.pyplot as mpy
 rc('text', usetex=True)
 rc('font', family='serif')
-mpy.rcParams['figure.figsize'] = 10, 15
+mpy.rcParams['figure.figsize'] = 9, 9
 import config
 config.init_configuration()
 
@@ -639,18 +639,16 @@ class Output:
         saturationlevelargs = [False,True]
         use_gapmask = True
         use_gapmaskargs = [False,True]
-        outfile = False
-        outfileargs = [True,False]
 
-        if 'dpi' in kwargs.keys():
-            dpi = kwargs['dpi']
-        else:
+        if 'dpi' not in kwargs.keys():
             kwargs['dpi'] = 200
+        if 'outfile' not in kwargs.keys():
+            kwargs['outfile'] = False
         I = self.get_intensity_pattern()
 
         optionkeys = ["scaling","noise","logscale","saturation_level","use_gapmask","outfile","dpi"]
         options = [scaling,noise,logscale,saturationlevel,use_gapmask]
-        optionargs = [scalingargs,noiseargs,logscaleargs,saturationlevelargs,use_gapmaskargs,outfileargs,[]]
+        optionargs = [scalingargs,noiseargs,logscaleargs,saturationlevelargs,use_gapmaskargs,[],[]]
         keys = kwargs.keys()
         for i in range(0,len(keys)):
             key = keys[i]
@@ -661,6 +659,8 @@ class Output:
             j = optionkeys.index(key)
             if not keyarg in optionargs[j]:
                 if pylab.isreal(keyarg) and key == 'dpi':
+                    pass
+                elif key == 'outfile' and keyarg[-4:] == '.png':
                     pass
                 else:
                     print "ERROR: %s is not a proper argument for %s." % (keyarg,key)
@@ -771,8 +771,8 @@ class Output:
         #if miss_Ny>2.8:
         #    print "\n!!!\nMissing mode(s) expected (gap width: %.1f Nyquist pixels) \n\nTweaking of one of the parameters recommended:\n- Wavelength w = %.2f nm\n- Sample radius r = %.0f nm\n- Gap size g = %.1f mm\n- Detector distance d = %.0f mm" % (miss_Ny,(rec_wavelength+0.01E-9)*1.0E9,(rec_r-1.0E-9)*1.0E9,(rec_gapsize-0.1E-3)*1.0E3,(rec_d+1.0E-3)*1.0E3)
 
-        if outfile:
-            mpy.savefig("intensity_pattern.png",dpi=kwargs['dpi'])
+        if kwargs['outfile'] != False:
+            mpy.savefig(kwargs['outfile'],dpi=kwargs['dpi'])
         else:
             fig.show()
    
