@@ -493,7 +493,7 @@ class SampleMap:
         s = 1.0
 
         N = int(pylab.ceil(2.3*(nRmax)))
-        print N
+        #print N
 
         config.OUT.write("... build icosahedral geometry ...\n")
         

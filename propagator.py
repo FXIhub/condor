@@ -645,7 +645,7 @@ class Output:
         if 'dpi' in kwargs.keys():
             dpi = kwargs['dpi']
         else:
-            dpi = 200
+            kwargs['dpi'] = 200
         I = self.get_intensity_pattern()
 
         optionkeys = ["scaling","noise","logscale","saturation_level","use_gapmask","outfile","dpi"]
