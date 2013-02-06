@@ -48,6 +48,9 @@ def propagator(input_obj=False):
     if isinstance(input_obj.sample,SampleSphere):    
         F = calculatePattern_SampleSphere(input_obj)
 
+    if isinstance(input_obj.sample,SampleSpheroid):    
+        F = calculatePattern_SampleSpheroid(input_obj)
+
     elif isinstance(input_obj.sample,SampleSpheres):
         F = calculatePattern_SampleSpheres(input_obj)
 
@@ -63,15 +66,50 @@ def propagator(input_obj=False):
 def calculatePattern_SampleSphere(input_obj):
     # scattering amplitude from homogeneous sphere: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ 4/3 pi R^3  3 { sin(qR) - qR cos(qR) } / (qR)^3 ] dn_real
     wavelength = input_obj.source.photon.get_wavelength()
-    I_0 = input_obj.source.pulse_energy / input_obj.source.photon._energy / input_obj.source.get_area() # [I_0] = photons/m**2
+    I_0 = input_obj.source.pulse_energy / input_obj.source.photon.get_energy("J") / input_obj.source.get_area() # [I_0] = photons/m**2
     Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
     dn_real = (1-input_obj.sample.material.get_n()).real
     R = input_obj.sample.radius
     q = input_obj.generate_absqmap()
     F = pylab.zeros_like(q)
     F[q!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q[q!=0.0]*R)-q[q!=0.0]*R*pylab.cos(q[q!=0.0]*R))/(q[q!=0.0]*R)**3*dn_real)
-    if len((q!=0))!=(q.shape[0]*q.shape[1]): 
+    if ((q==0)).sum()>0:
         F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
+    return F
+
+def calculatePattern_SampleSpheroid(input_obj):
+    # scattering amplitude from homogeneous spheroid (small-angle approximation):
+    # theta: rotation around x-axis (1st)
+    # phi: rotation around (beam) z-axis (2nd)
+    # a: semidiameter perpendicular to rotation axis
+    # c: semidiameter parallel to rotation axis
+    # F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ 4/3 pi a^2 c  3 { sin(qH) - qH cos(qH) } / (qH)^3 ] dn_real
+    # H = sqrt(a^2 sin^2(g)+c^2 cos^2(g))
+    # g = arccos( ( -qX sin(phi) cos(theta) + qY cos(phi) cos(theta) ) / sqrt(qX^2+qY^2) )
+    a = input_obj.sample.a
+    c = input_obj.sample.c
+    theta = input_obj.sample.theta
+    phi = input_obj.sample.phi
+    
+    wavelength = input_obj.source.photon.get_wavelength()
+    I_0 = input_obj.source.pulse_energy / input_obj.source.photon.get_energy("J") / input_obj.source.get_area() # [I_0] = photons/m**2
+    Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
+    dn_real = (1-input_obj.sample.material.get_n()).real
+    
+    qmap = input_obj.generate_qmap() 
+    qX = qmap[:,:,2]
+    qY = qmap[:,:,1]
+    q = pylab.sqrt(qX**2+qY**2)
+    
+    g = pylab.arccos((-qX*pylab.sin(phi)*pylab.cos(theta)+qY*pylab.cos(phi)*pylab.cos(theta))/q)
+    H = pylab.sqrt(a**2*pylab.sin(g)**2+c**2*pylab.cos(g)**2)
+    F = pylab.zeros_like(q)
+    qH = (q*H)[q!=0]
+    
+    F[q!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*a**2*c*3*(pylab.sin(qH)-qH*pylab.cos(qH))/(qH)**3*dn_real)
+    if ((q==0)).sum()>0:
+        F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*a**2*c*dn_real
+    
     return F
 
 def calculatePattern_SampleSpheres(input_obj):
@@ -217,11 +255,18 @@ class Input:
             radius = self.sample.radius
         self.sample = SampleMap(parent=self)
         self.sample.put_icosahedral_sample(radius,
-                                           euler1 = kwargs.get('euler_angle_0',0.),
-                                           euler2 = kwargs.get('euler_angle_1',0.),
-                                           euler3 = kwargs.get('euler_angle_2',0.),
                                            **kwargs)
         self.sample.radius = radius
+
+    def set_sample_spheroid_map(self,a,c,**kwargs):
+        """
+        Creates refractive index map of spheroid.
+        """
+        self.sample = SampleMap(parent=self)
+        self.sample.put_spheroid_sample(a,
+                                        c,
+                                        **kwargs)
+        self.sample.radius = (a**2*c)**(1/3.)
 
     def set_sample_sphere_map(self,radius=225E-09,**materialargs):
         """
@@ -242,6 +287,9 @@ class Input:
         available materialtypes: 'protein', 'virus', 'cell', 'latexball', 'water'
         """ 
         self.sample = SampleSphere(parent=self,**kwargs)
+
+    def set_sample_homogeneous_spheroid(self,**kwargs):
+        self.sample = SampleSpheroid(parent=self,**kwargs)
 
     def read_configfile(self,configfile):
         """ 
@@ -313,16 +361,32 @@ class Input:
             matargs['diameter']=C.getfloat('sample','size')
             self.set_sample_homogeneous_sphere(**matargs)
 
+        elif sample_type == 'uniform_spheroid':
+            matargs['a']=C.getfloat('sample','a_diameter')/2.
+            matargs['c']=C.getfloat('sample','c_diameter')/2.
+            matargs['theta'] = C.getfloat('sample','theta')
+            matargs['phi'] = C.getfloat('sample','phi')
+            #euler_angle_2 = C.getfloat('sample','phi')
+            self.set_sample_homogeneous_spheroid(**matargs)
+
         elif sample_type == 'map3d':
-            size = C.getfloat('sample','size')
             geometry = C.get('sample','geometry','none')
             if geometry == 'none':
+                size = C.getfloat('sample','size')
                 self.set_sample_map()
             elif geometry == 'icosahedron':
+                size = C.getfloat('sample','size')
                 euler_angle_0 = C.getfloat('sample','theta')
-                euler_angle_1 = C.getfloat('sample','phi')
-                euler_angle_2 = C.getfloat('sample','psi')
+                euler_angle_1 = C.getfloat('sample','psi')
+                euler_angle_2 = C.getfloat('sample','phi')
                 self.set_sample_icosahedral_map(radius=size/2.,euler_angle_0=euler_angle_0,euler_angle_1=euler_angle_1,euler_angle_2=euler_angle_2,**matargs)
+            elif geometry == 'spheroid':
+                a = C.getfloat('sample','a_diameter')/2.
+                c = C.getfloat('sample','c_diameter')/2.
+                euler_angle_0 = C.getfloat('sample','theta')
+                euler_angle_1 = C.getfloat('sample','psi')
+                euler_angle_2 = C.getfloat('sample','phi')
+                self.set_sample_spheroid_map(a,c,euler_angle_0=euler_angle_0,euler_angle_1=euler_angle_1,euler_angle_2=euler_angle_2,**matargs)
             else:
                 if mat == 'none':
                     self.load_sample_map(geometry,size)
@@ -353,28 +417,21 @@ class Input:
         return [dx,dy]
 
     def generate_absqmap(self):
-        wavelength = self.source.photon.get_wavelength()
-        X,Y = pylab.meshgrid(pylab.arange(0,self.detector.mask.shape[1]),pylab.arange(0,self.detector.mask.shape[0]))
-        X -= self.detector.get_cx('binned')
-        Y -= self.detector.get_cy('binned')
-        theta = pylab.arctan2(1.0*Y,1.0*X)
-        phi = pylab.arctan2(pylab.sqrt(X**2+Y**2)*self.detector.get_pixel_size('binned'),self.detector.distance)
-        R_Ewald = 2*pylab.pi/wavelength
-        qmap = R_Ewald * pylab.sqrt((pylab.cos(phi)-1.0)**2 + (pylab.sin(phi) * pylab.sin(theta))**2 + (pylab.sin(phi) * pylab.cos(theta))**2)
+        qmap = self.generate_qmap()
+        qmap = pylab.sqrt(qmap[:,:,0]**2+qmap[:,:,1]**2+qmap[:,:,2]**2)
         return qmap
 
-    def generate_qmap(self,scaled=False):
-        qmax = self.get_absq_max()
+    def generate_qmap(self,nfft_scaled=False):
         X,Y = pylab.meshgrid(pylab.arange(self.detector.mask.shape[1]),
                              pylab.arange(self.detector.mask.shape[0]))
         X -= self.detector.get_cx('binned')
         Y -= self.detector.get_cy('binned')
         phi = pylab.arctan2(self.detector.get_pixel_size('binned')*pylab.sqrt(X**2+Y**2),self.detector.distance)
-        qx = 4*pylab.pi/self.source.photon.get_wavelength()*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*X,
-                                                                                    self.detector.distance)/2.)
-        qy = 4*pylab.pi/self.source.photon.get_wavelength()*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*Y,
-                                                                                    self.detector.distance)/2.)
-        qz = qmax*(1-pylab.cos(phi))
+        qx = 2*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*X,
+                                       self.detector.distance)/2.)
+        qy = 2*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*Y,
+                                       self.detector.distance)/2.)
+        qz = 1-pylab.cos(phi)
         q_map = pylab.zeros(shape=(self.detector.mask.shape[0],
                                    self.detector.mask.shape[1],
                                    3))
@@ -389,7 +446,7 @@ class Input:
         try: E2 = self.sample.euler_angle_2
         except: E2 = 0.0
         
-        q_before = q_map.copy()
+        #q_before = q_map.copy()
         
         if E0 != 0.0 or E1 != 0.0 or E2 != 0.0:
             M = pylab.array([[pylab.cos(E1)*pylab.cos(E2),
@@ -405,14 +462,13 @@ class Input:
                 for ix in pylab.arange(0,q_map.shape[1]):
                     q_map[iy,ix,:] = pylab.dot(M,q_map[iy,ix,:])
 
-        if scaled == True:
-            q_map_scaled = q_map/qmax*0.5
-            #if (abs(q_map_scaled)>0.5).sum() != 0:
-            #    print "ERROR: Absolute value of sampling coordinates exceeds 0.5."
-            return q_map_scaled
+        if nfft_scaled == True:
+            return q_map
 
         else:
-            return q_map
+            k = 2*pylab.pi/self.source.photon.get_wavelength()
+            return q_map*k
+
         
     def get_phase_ramp(self,qmap,dvector):
         return pylab.exp(-1.j*(dvector[0]*qmap[:,:,0]+
@@ -454,11 +510,16 @@ class Output:
         self.amplitudes = amplitudes.copy()
         self.input_object = input_object 
     
-    def get_intensity_pattern(self):
+    def get_intensity_pattern(self,mask_cut=False):
         """
         Returns 2-dimensional array with intensity values in photons per pixel (binned).
         """
-        return abs(self.amplitudes)**2
+        I = abs(self.amplitudes)**2
+        if mask_cut:
+            [X_min,X_max,Y_min,Y_max] = self._get_pattern_limits()
+            return I[Y_min:Y_max+1,X_min:X_max+1]
+        else:
+            return I
 
     def get_intensity_radial_average(self):
         """
@@ -644,11 +705,13 @@ class Output:
             kwargs['dpi'] = 200
         if 'outfile' not in kwargs.keys():
             kwargs['outfile'] = False
+        if 'bg' not in kwargs.keys():
+            kwargs['bg'] = 0.0
         I = self.get_intensity_pattern()
 
-        optionkeys = ["scaling","noise","logscale","saturation_level","use_gapmask","outfile","dpi"]
+        optionkeys = ["scaling","noise","logscale","saturation_level","use_gapmask","outfile","dpi","bg"]
         options = [scaling,noise,logscale,saturationlevel,use_gapmask]
-        optionargs = [scalingargs,noiseargs,logscaleargs,saturationlevelargs,use_gapmaskargs,[],[]]
+        optionargs = [scalingargs,noiseargs,logscaleargs,saturationlevelargs,use_gapmaskargs,[],[],[]]
         keys = kwargs.keys()
         for i in range(0,len(keys)):
             key = keys[i]
@@ -658,11 +721,18 @@ class Output:
             keyarg = kwargs[key]
             j = optionkeys.index(key)
             if not keyarg in optionargs[j]:
-                if pylab.isreal(keyarg) and key == 'dpi':
-                    pass
-                elif key == 'outfile' and keyarg[-4:] == '.png':
-                    pass
-                else:
+                err = False
+                if key == 'dpi':
+                    if not pylab.isreal(keyarg):
+                        err = True
+                elif key == 'outfile':
+                    if keyarg != False:
+                        if keyarg[-4:] != '.png':
+                            err = True
+                elif key == 'bg':
+                    if keyarg>1. or keyarg<0.:
+                        err = True
+                if err:
                     print "ERROR: %s is not a proper argument for %s." % (keyarg,key)
                     return
             exec "%s = '%s'" % (key,keyarg)
@@ -734,7 +804,12 @@ class Output:
         fig.suptitle("- PROPAGATOR -", fontsize=fsize+2)
         alignment = {'horizontalalignment':'center','verticalalignment':'center'}
 
-        fig.text(0.5,(16.75/18.0),r"$E_{\mathrm{photon}} = %.0f$ eV ; $\lambda = %.2f$ nm ; $N_{\mathrm{photons}} = %.1e$ ; $D_{\mathrm{detector}} = %0.3f$ mm" %  (self.input_object.source.photon.get_energy("eV"),self.input_object.source.photon.get_wavelength()/1.0E-09,self.input_object.source.pulse_energy/self.input_object.source.photon.get_energy(),self.input_object.detector.distance/1.0E-03),fontsize=fsize,bbox=dict(fc='0.9',ec="0.9",linewidth=10.0),**alignment) 
+        fig.text(0.5,(16.75/18.0),r"$E_{\mathrm{photon}} = %.0f$ eV ; $\lambda = %.2f$ nm ; $I = %.1e$ $\frac{\mathrm{ph}}{\mu\mathrm{m}^2}$ ; $N_{\mathrm{ph,sc}} = %.1e$ ph ; $D_{\mathrm{detector}} = %0.3f$ mm" %  (self.input_object.source.photon.get_energy("eV"),
+                                                                                                                                                                    self.input_object.source.photon.get_wavelength()/1.0E-09,
+                                                                                                                                                                    self.input_object.source.pulse_energy/self.input_object.source.photon.get_energy()/(self.input_object.source.get_area()/1E-12),
+                                                                                                                                                                    self.get_intensity_pattern().sum(),
+                                                                                                                                                                    self.input_object.detector.distance/1.0E-03),
+                 fontsize=fsize,bbox=dict(fc='0.9',ec="0.9",linewidth=10.0),**alignment) 
 
         ax = fig.add_axes([3/15.0,5/18.0,10/15.0,10/18.0])
         ax.set_xlabel(r"$x$ [" + str_scaling_label + "]",fontsize=fsize)
@@ -749,7 +824,7 @@ class Output:
                 label.set_fontsize(fsize)
 
         if logscale:
-            bgcol = 0.
+            bgcol = kwargs['bg']
             imv = ax.matshow(bgcol*pylab.ones_like(I),extent=[-xlimit/2,xlimit/2,-ylimit/2,ylimit/2],interpolation="nearest",cmap='gray',vmax=1.,vmin=0.)
             im = ax.matshow(I,extent=[-xlimit/2,xlimit/2,-ylimit/2,ylimit/2],interpolation="nearest",norm=LogNorm())
         else:
@@ -771,10 +846,10 @@ class Output:
         #if miss_Ny>2.8:
         #    print "\n!!!\nMissing mode(s) expected (gap width: %.1f Nyquist pixels) \n\nTweaking of one of the parameters recommended:\n- Wavelength w = %.2f nm\n- Sample radius r = %.0f nm\n- Gap size g = %.1f mm\n- Detector distance d = %.0f mm" % (miss_Ny,(rec_wavelength+0.01E-9)*1.0E9,(rec_r-1.0E-9)*1.0E9,(rec_gapsize-0.1E-3)*1.0E3,(rec_d+1.0E-3)*1.0E3)
 
-        if kwargs['outfile'] != False:
-            mpy.savefig(kwargs['outfile'],dpi=kwargs['dpi'])
+        if kwargs['outfile'] == False:
+            pylab.show()
         else:
-            fig.show()
+            mpy.savefig(kwargs['outfile'],dpi=kwargs['dpi'])
    
     def save_pattern_to_file(self,filename,**kwargs):
         """

@@ -100,13 +100,31 @@ class Material:
 
         M = 0
         for element in atomic_composition.keys():
-            # sum up average atom density
+            # sum up mass
             M += atomic_composition[element]*config.DICT_atomic_mass[element]*u
 
         number_density = self.massdensity/M
         
         return number_density
 
+
+    def get_electron_density(self):
+
+        u = config.DICT_physical_constants['u']
+
+        atomic_composition = self.get_atomic_composition_dict()
+
+        M = 0
+        Q = 0
+        for element in atomic_composition.keys():
+            # sum up electrons
+            M += atomic_composition[element]*config.DICT_atomic_mass[element]*u
+            Q += atomic_composition[element]*config.DICT_atomic_number[element]*u
+
+        electron_density = Q*self.massdensity/M
+        
+        return electron_density
+        
         
     def get_atomic_composition_dict(self):
 
@@ -319,7 +337,7 @@ class SampleMap:
             z_N = z/self.dX
             self.put_custom_map(spheremap,x_N,y_N,z_N,fillmode)
  
-    def put_spheroid(self,a,b,x=None,y=None,z=None,eul_ang0=0.0,eul_ang1=0.0,eul_ang2=0.0,**materialargs):
+    def put_spheroid_sample(self,a,b,**kwargs):
         """
         Function add densitymap of homogeneous ellipsoid to 3-dimensional densitymap:
         =============================================================================
@@ -329,29 +347,39 @@ class SampleMap:
         - a,b: Radii in meter.
         - x,y,z: Center coordinats (from current origin) [middle]
 
-        Keyword arguments:
-
-        EITHER:
-        - materialtype: Predefined materialtype ('protein','virus','cell','latexball','water',... For a complete list look up \'config.py\'.)
-        
-        OR:
-        - c\'X\': fraction of element \'X\' of atomic number density in material (normalization is done internally).
-        - massdensity: Massdensity of material in kg/m^3
+        Keyword arguments
 
         """
 
+        materialargs = {}
+        if 'massdensity' in kwargs:
+            materialargs['massdensity'] = kwargs['massdensity']
+            for key in kwargs.keys():
+                if key[0] == 'c': materialargs[key] = kwargs[key]
+        else:
+            materialargs['materialtype'] = kwargs['materialtype']
         material_obj = Material(self,**materialargs)
-        dn = 1.0-material_obj.get_n()        
+        dn = 1.0 - material_obj.get_n()
+
+        eul_ang0 = kwargs.get('euler_angle_0',0.0)
+        eul_ang1 = kwargs.get('euler_angle_1',0.0)
+        eul_ang2 = kwargs.get('euler_anlge_2',0.0)
+        x = kwargs.get('x',None)
+        y = kwargs.get('y',None)
+        z = kwargs.get('z',None)
+
         R_N = max([a,b])/self.dX
         a_N = a/self.dX
         b_N = b/self.dX
         size = int(round((R_N*1.2)*2))
         X,Y,Z = 1.0*pylab.mgrid[0:size,0:size,0:size]
         for J in [X,Y,Z]: J -= size/2.0-0.5
-        config.OUT.write("Rotate grid.\n")
-        [X,Y,Z] = imgutils.rotate_3d_grid(X,Y,Z,eul_ang0,eul_ang1,eul_ang2)
-        config.OUT.write("Build sphorid on a grid of %i x %i x %i\n" % (size,size,size))
-        spheroidmap = (X**2+Y**2)/a_N**2+Z**2/b_N**2
+        
+        R_sq = X**2+Y**2+Z**2
+        e_c = proptools.rotation(pylab.array([0.0,0.0,1.0]),eul_ang0,eul_ang1,eul_ang2)
+        d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
+        r_sq_c = abs( R_sq * (1 - (d_sq_c/R_sq)))
+        spheroidmap = r_sq_c/a_N**2+d_sq_c/b_N**2
         spheroidmap[spheroidmap<=1] = 1
         spheroidmap[spheroidmap>1] = 0
         smooth_factor = 1.5
@@ -387,10 +415,15 @@ class SampleMap:
             z_N = z/self.dX
             self.put_custom_map(dn,x_N,y_N,z_N)
 
-    def put_icosahedral_sample(self,radius,x=0.,y=0.,z=0.,**kwargs):
+    def put_icosahedral_sample(self,radius,**kwargs):
         kwargs_cp = kwargs.copy()
+
+        x = kwargs.get('x',None)
+        y = kwargs.get('y',None)
+        z = kwargs.get('z',None)      
+
         dn = self._makedm_icosahedron(radius,**kwargs_cp)
-        if self.map3d.max() == 0.0 and x==0. and y==0. and z==0.:
+        if x==None and y==None and z==None:
             self.map3d = dn
         else:
             x_N = x/self.dX
@@ -475,9 +508,9 @@ class SampleMap:
         material_obj = Material(self,**materialargs)
         dn = 1.0 - material_obj.get_n()
 
-        euler1 = kwargs.get('euler1',0.0)
-        euler2 = kwargs.get('euler2',0.0)
-        euler3 = kwargs.get('euler3',0.0)
+        euler1 = kwargs.get('euler_angle_0',0.0)
+        euler2 = kwargs.get('euler_angle_1',0.0)
+        euler3 = kwargs.get('euler_angle_2',0.0)
         Nlayers = kwargs.get('Nlayers',0)
 
         t_start = time.time()
@@ -623,17 +656,18 @@ class SampleMap:
 
         if filename[-3:] == '.h5':
             try:
-                import h5py
-                f = h5py.File(filename,'r')
-                self.map3d = f['data'].value.copy()
-                #if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
-                #self.dX = f['voxel_dimensions_in_m'].value
-                f.close()
-            except:
                 import spimage
                 img = spimage.sp_image_read(filename,0)
                 self.map3d = img.image.copy()
                 spimage.sp_image_free(img)
+            except:
+                import h5py
+                f = h5py.File(filename,'r')
+                self.map3d = f['data'].value.copy()
+                if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
+                self.dX = f['voxel_dimensions_in_m'].value
+                f.close()
+            
         else:
             print 'ERROR: Invalid filename extension, has to be \'.h5\'.'
 
@@ -665,16 +699,45 @@ class SampleSphere:
         self._parent = kwargs.get('parent',None)
 
         material_kwargs = kwargs.copy()
-        try: material_kwargs.pop('parent')
-        except: pass
-        try: material_kwargs.pop('diameter')
-        except: pass
+        non_material_arguments = ['parent','diameter']
+        for non_material_argument in non_material_arguments:
+            try: material_kwargs.pop(non_material_argument)
+            except: pass
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
     def get_area(self):
         """ Calculates area of projected sphere """
         return pylab.pi*self.radius**2
+
+class SampleSpheroid:
+    """
+    A class of the input-object.
+    Sample is a homogeneous spheroid defined by a semidiameter a and c (parallel to rotation axis) and a material object.
+
+    """
+
+    def __init__(self,**kwargs):
+        self.a = kwargs.get('a',225E-09)
+        self.c = kwargs.get('c',225E-09)
+        self.theta = kwargs.get('theta',0.)
+        self.phi = kwargs.get('phi',0.)
+        self._parent = kwargs.get('parent',None)
+
+        material_kwargs = kwargs.copy()
+        non_material_arguments = ['parent','a','c','euler_angle_0','euler_angle_1','theta','phi']
+        for non_material_argument in non_material_arguments:
+            try: material_kwargs.pop(non_material_argument)
+            except: pass
+        material_kwargs['parent'] = self
+        self.material = Material(**material_kwargs)
+
+    def get_area(self):
+        """
+        Calculates area of projected spheroid
+        !!!!!!!!!!!!!!!!!!!! WRONG
+        """
+        return (4/3.*pylab.pi*self.a**2*self.c)**(2/3.)
 
 
 class SampleSpheres:
