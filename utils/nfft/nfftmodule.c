@@ -192,7 +192,7 @@ static PyObject *nfft3(PyObject *self, PyObject *args)
   }
   //printf("result copied\n");
 
-  //nfft_finalize(&my_plan);
+  nfft_finalize(&my_plan);
 
   return Py_BuildValue("i", 1);
 }

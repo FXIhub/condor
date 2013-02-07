@@ -59,6 +59,7 @@ def nfft3d(coordinates, vin):
     vout = pylab.zeros(len(coordinates)/3, dtype='complex128')
     vout.real[:] = vout_real[:]
     vout.imag[:] = vout_imag[:]
+    #_nfft_c.nfft3_finalize(coordinates, vin_real, vin_imag, vout_real, vout_imag)
     return vout
 
 def test_nfft3d(N_sample=1000,N_coordinates=1000):

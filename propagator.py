@@ -447,8 +447,6 @@ class Input:
         try: E2 = self.sample.euler_angle_2
         except: E2 = 0.0
         
-        #q_before = q_map.copy()
-        
         if E0 != 0.0 or E1 != 0.0 or E2 != 0.0:
             M = pylab.array([[pylab.cos(E1)*pylab.cos(E2),
                               -pylab.cos(E0)*pylab.sin(E2)+pylab.sin(E0)*pylab.sin(E1)*pylab.cos(E2),
