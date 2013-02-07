@@ -427,11 +427,12 @@ class Input:
         X -= self.detector.get_cx('binned')
         Y -= self.detector.get_cy('binned')
         phi = pylab.arctan2(self.detector.get_pixel_size('binned')*pylab.sqrt(X**2+Y**2),self.detector.distance)
-        qx = 2*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*X,
+        R_Ewald = 2*pylab.pi/self.source.photon.get_wavelength()
+        qx = R_Ewald*2*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*X,
                                        self.detector.distance)/2.)
-        qy = 2*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*Y,
+        qy = R_Ewald*2*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*Y,
                                        self.detector.distance)/2.)
-        qz = 1-pylab.cos(phi)
+        qz = R_Ewald*(1-pylab.cos(phi))
         q_map = pylab.zeros(shape=(self.detector.mask.shape[0],
                                    self.detector.mask.shape[1],
                                    3))
@@ -463,11 +464,10 @@ class Input:
                     q_map[iy,ix,:] = pylab.dot(M,q_map[iy,ix,:])
 
         if nfft_scaled == True:
-            return q_map
+            return q_map/self.get_absq_max()*0.5
 
         else:
-            k = 2*pylab.pi/self.source.photon.get_wavelength()
-            return q_map*k
+            return q_map
 
         
     def get_phase_ramp(self,qmap,dvector):

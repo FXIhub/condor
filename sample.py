@@ -119,7 +119,7 @@ class Material:
         for element in atomic_composition.keys():
             # sum up electrons
             M += atomic_composition[element]*config.DICT_atomic_mass[element]*u
-            Q += atomic_composition[element]*config.DICT_atomic_number[element]*u
+            Q += atomic_composition[element]*config.DICT_atomic_number[element]
 
         electron_density = Q*self.massdensity/M
         
@@ -541,7 +541,7 @@ class SampleMap:
         if Nlayers == 0:
 
             for i in range(len(n_list)):
-                icomap[i,:,:,:] = -(X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0]-nRmin)
+                icomap[i,:,:,:] = nRmin-(X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0])
 
             M = icomap.copy()
             #icomap[abs(M)<=0.5*s] = abs(0.5+icomap[abs(M)<=0.5*s]/s)
@@ -568,6 +568,8 @@ class SampleMap:
         t_stop = time.time()
 
         config.OUT.write("Time: %f sec\n" % (t_stop-t_start))
+
+        self.icomap = icomap.copy()
 
         return dn*icomap    
 

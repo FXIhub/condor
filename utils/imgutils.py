@@ -561,9 +561,11 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
                 if angles_match(X[i],X[j],X[k]) and not cont_element(n,n_list):
                     n_list.append(n)
 
+                
     if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
         for i in range(0,len(n_list)):
             n_list[i] = proptools.rotation(n_list[i],euler_1,euler_2,euler_3)
+
 
     return n_list
         

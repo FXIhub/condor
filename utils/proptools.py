@@ -66,8 +66,13 @@ def print_material_xray_properties(wavelength,thickness=1.0E-06,**margs):
 def rotation(vector,phi,theta,psi):
     cos = pylab.cos
     sin = pylab.sin
+    #Lsq = vector[0]**2+vector[1]**2+vector[2]**2
     M = pylab.array([[cos(theta)*cos(psi),-cos(phi)*sin(psi)+sin(phi)*sin(theta)*cos(psi),sin(phi)*sin(psi)+cos(phi)*sin(theta)*cos(psi)],
                      [cos(theta)*sin(psi),cos(phi)*cos(psi)+sin(phi)*sin(theta)*sin(psi),-sin(phi)*cos(psi)+cos(phi)*sin(theta)*sin(psi)],
-                     [-sin(theta),sin(psi)*cos(theta),cos(phi)*cos(theta)]])
+                     [-sin(theta),sin(phi)*cos(theta),cos(phi)*cos(theta)]])
     rotated_vector = pylab.dot(M,vector)
+    #Lsq_rotated = rotated_vector[0]**2+rotated_vector[1]**2+rotated_vector[2]**2
+    #if abs((Lsq - Lsq_rotated)/Lsq) > 0.001:
+    #    print "ERROR: Rotation changes length!"
+    #    print Lsq,Lsq_rotated
     return rotated_vector
