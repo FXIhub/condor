@@ -373,7 +373,7 @@ class Input:
             geometry = C.get('sample','geometry','none')
             if geometry == 'none':
                 size = C.getfloat('sample','size')
-                self.set_sample_map()
+                self.set_sample_empty_map()
             elif geometry == 'icosahedron':
                 size = C.getfloat('sample','size')
                 euler_angle_0 = C.getfloat('sample','theta')
