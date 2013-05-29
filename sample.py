@@ -70,6 +70,12 @@ class Material:
 
         return n
 
+    # convenience functions
+    # n = 1 - delta - i beta
+    def get_delta(self,photon_energy_eV=None):
+        return (1-self.get_n(photon_energy_eV).real)
+    def get_beta(self,photon_energy_eV=None):
+        return (-self.get_n(photon_energy_eV).imag)
 
     def get_f(self,photon_energy_eV=None):
 

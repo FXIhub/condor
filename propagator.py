@@ -351,11 +351,9 @@ class Input:
                         matargs.append(("c%s" % el,val))
             matargs.append(('massdensity',C.getfloat('sample','massdensity')))
         else:
-            keys = ['cH','cN','cO','cP','cS']
-            for i in range(0,len(keys)):
-                matargs.append((keys[i],config.DICT_atomic_composition[mat][i]))
-            matargs.append(('massdensity',config.DICT_massdensity[mat]))
+            matargs.append(('materialtype',mat))
         matargs= dict(matargs)
+        
         
         if sample_type == 'uniform_sphere':
             matargs['diameter']=C.getfloat('sample','size')
@@ -903,7 +901,7 @@ class Output:
                 f = h5py.File(filename,'w')
                 pattern_ds = f.create_dataset('intensities', pattern.shape, pattern.dtype)
                 pattern_ds[:,:] = pattern[:,:]
-                amplitudes_ds = f.create_dataset('amplitudes', pattern.shape, amplitudes.dtype)
+                amplitudes_ds = f.create_dataset('amplitudes', self.amplitudes.shape, self.amplitudes.dtype)
                 amplitudes_ds[:,:] = self.amplitudes[:,:]
                 f.close()
 
