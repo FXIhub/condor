@@ -386,6 +386,7 @@ class Input:
                 euler_angle_2 = C.getfloat('sample','phi')
                 self.set_sample_spheroid_map(a,c,euler_angle_0=euler_angle_0,euler_angle_1=euler_angle_1,euler_angle_2=euler_angle_2,**matargs)
             else:
+                size = C.getfloat('sample','size')
                 if mat == 'none':
                     self.load_sample_map(geometry,size)
                 else:

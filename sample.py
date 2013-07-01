@@ -445,7 +445,10 @@ class SampleMap:
         return G
 
     def plot_map3d(self,mode='surface'):
-        from enthought.mayavi import mlab
+        try:
+            from enthought.mayavi import mlab
+        except:
+            from mayavi import mlab
         if mode=='planes':
             s = mlab.pipeline.scalar_field(abs(self.map3d))
             plane_1 = mlab.pipeline.image_plane_widget(s,plane_orientation='x_axes',
@@ -670,12 +673,16 @@ class SampleMap:
                 spimage.sp_image_free(img)
             except:
                 import h5py
-                f = h5py.File(filename,'r')
-                self.map3d = f['data'].value.copy()
-                if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
-                self.dX = f['voxel_dimensions_in_m'].value
-                f.close()
-            
+                try:
+                    f = h5py.File(filename,'r')
+                    self.map3d = f['data'].value.copy()
+                    if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
+                    self.dX = f['voxel_dimensions_in_m'].value
+                    f.close()
+                except:
+                    f = h5py.File(filename,'r')
+                    self.map3d = f['real'].value.copy()
+                    f.close()
         else:
             print 'ERROR: Invalid filename extension, has to be \'.h5\'.'
 
