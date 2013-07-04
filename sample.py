@@ -676,8 +676,8 @@ class SampleMap:
                 try:
                     f = h5py.File(filename,'r')
                     self.map3d = f['data'].value.copy()
-                    if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
-                    self.dX = f['voxel_dimensions_in_m'].value
+                    #if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
+                    #self.dX = f['voxel_dimensions_in_m'].value
                     f.close()
                 except:
                     f = h5py.File(filename,'r')
