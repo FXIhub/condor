@@ -549,12 +549,14 @@ class SampleMap:
         
         if Nlayers == 0:
 
+            # calculate distance of all voxels to all faces (negative inside, positive outside icosahedron)
             for i in range(len(n_list)):
-                icomap[i,:,:,:] = nRmin-(X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0])
+                icomap[i,:,:,:] = (X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0])+nRmin
 
             M = icomap.copy()
-            #icomap[abs(M)<=0.5*s] = abs(0.5+icomap[abs(M)<=0.5*s]/s)
-            icomap[M<=0.5*s] = 0
+            temp = abs(M)<0.5*s
+            icomap[temp] = 0.5+icomap[temp]/s
+            icomap[M<(-0.5)*s] = 0
             icomap[M>0.5*s] = 1
             icomap = icomap.min(0)
 
@@ -673,11 +675,12 @@ class SampleMap:
                 spimage.sp_image_free(img)
             except:
                 import h5py
+                print filename
                 try:
                     f = h5py.File(filename,'r')
                     self.map3d = f['data'].value.copy()
-                    if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
-                    self.dX = f['voxel_dimensions_in_m'].value
+                    #if f['voxel_dimensions_in_m'].value != self.dX: config.OUT.write("WARNING: Sampling of map and setup does not match.")
+                    #self.dX = f['voxel_dimensions_in_m'].value
                     f.close()
                 except:
                     f = h5py.File(filename,'r')
