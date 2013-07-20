@@ -5,13 +5,9 @@ print 'Generate file of scattering factors...'
 sf.generate_datafile("constants_data/sf",".")
 print 'Done.'
 
-print 'Setting up directory...'
-PROPAGATOR_DIR = raw_input("Please enter the installation path of PROPAGATOR: ")
-if PROPAGATOR_DIR[-1] == '/': PROPAGATOR_DIR = PROPAGATOR_DIR[:-1]
-f = open('_config.py','w')
-f.writelines(["# Personal configuration file for propagator\n",
-              "PROPAGATOR_DIR = \"%s\"\n" % PROPAGATOR_DIR])
-f.close()
-print 'Done.'
-
-print 'Setup ended successfully.'
+print 'Set-up nfft wrapper'
+pdir = os.path.dirname(os.path.realpath(__file__))
+os.chdir("%s/utils/nfft" % pdir)
+os.system("python setup.py build")
+os.chdir(pdir)
+print 'done'
