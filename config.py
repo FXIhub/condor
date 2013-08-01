@@ -172,8 +172,8 @@ def init_global_dictionaries():
     global DICT_physical_constants
     DICT_physical_constants = {'e':1.60217657E-19,
                                'c':299792458.,
-                               'h':6.62606896E-34,
-                               're':2.8179402894E-15,
+                               'h':6.62606957E-34,
+                               're':2.8179403267E-15,
                                'barn':1E-28,
                                'u':1.66053886E-27}
 

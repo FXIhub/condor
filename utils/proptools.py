@@ -1,6 +1,6 @@
 import pylab, sys, numpy, types, pickle, time, math
 #from constants import *
-from propagator import *
+#from propagator import *
 
 def random_euler_angles():
     """
@@ -76,3 +76,88 @@ def rotation(vector,phi,theta,psi):
     #    print "ERROR: Rotation changes length!"
     #    print Lsq,Lsq_rotated
     return rotated_vector
+
+def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
+    qmap = generate_qmap(X,Y,pixel_size,detector_distance,wavelength)
+    qmap = pylab.sqrt(qmap[:,:,0]**2+qmap[:,:,1]**2+qmap[:,:,2]**2)
+    return qmap
+
+def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.):
+    phi = pylab.arctan2(pixel_size*pylab.sqrt(X**2+Y**2),detector_distance)
+    R_Ewald = 2*pylab.pi/wavelength
+    qx = R_Ewald*2*pylab.sin(pylab.arctan2(pixel_size*X,detector_distance)/2.)
+    qy = R_Ewald*2*pylab.sin(pylab.arctan2(pixel_size*Y,detector_distance)/2.)
+    qz = R_Ewald*(1-pylab.cos(phi))
+    qmap = pylab.zeros(shape=(X.shape[0],Y.shape[1],3))
+    qmap[:,:,0] = qz[:,:]
+    qmap[:,:,1] = qy[:,:]
+    qmap[:,:,2] = qx[:,:]
+    if euler_angle_0 != 0. and euler_angle_1 != 0. and euler_angle_2 != 0.:
+        E0 = euler_angle_0
+        E1 = euler_angle_1
+        E2 = euler_angle_2
+        M = pylab.array([[pylab.cos(E1)*pylab.cos(E2),
+                          -pylab.cos(E0)*pylab.sin(E2)+pylab.sin(E0)*pylab.sin(E1)*pylab.cos(E2),
+                          pylab.sin(E0)*pylab.sin(E2)+pylab.cos(E0)*pylab.sin(E1)*pylab.cos(E2)],
+                         [pylab.cos(E1)*pylab.sin(E2),
+                          pylab.cos(E0)*pylab.cos(E2)+pylab.sin(E0)*pylab.sin(E1)*pylab.sin(E2),
+                          -pylab.sin(E0)*pylab.cos(E2)+pylab.cos(E0)*pylab.sin(E1)*pylab.sin(E2)],
+                         [-pylab.sin(E1),
+                          pylab.sin(E0)*pylab.cos(E1),
+                          pylab.cos(E0)*pylab.cos(E1)]])
+        for iy in pylab.arange(0,qmap.shape[0]):
+            for ix in pylab.arange(0,qmap.shape[1]):
+                qmap[iy,ix,:] = pylab.dot(M,qmap[iy,ix,:])
+    return qmap
+
+
+# scattering amplitude from homogeneous sphere:
+# -----------------------------------------------
+# Source:
+# Feigin 1987
+#
+# r: sphere radius
+#
+# F = sqrt(I_0) rho_e p/D r_0 4/3 pi r^3 [ 3 { sin(qr) - qr cos(qr) } / (qr)^3 ]
+#   = sqrt(I_0) rho_e p/D r_0 V f(r,qx,qy)
+# f = 3 { sin(qr) - qr cos(qr) } / (qr)^3
+# K = I_0 (rho_e p/D r_0 V)^2
+# S = I_0 rho_e^2 = K / (p/D r_0 V)^2
+# ============================================================================================
+# I = F^2 = K [ f(r,qx,qy) ]^2
+# ============================================================================================
+_F_sphere_diffraction = lambda K,q,r: pylab.sqrt(abs(K))*3*(pylab.sin(q*r)-q*r*pylab.cos(q*r))/((q*r)**3+pylab.finfo("float64").eps)
+F_sphere_diffraction = lambda K,q,r: ((q*r)**6 < pylab.finfo("float64").resolution)*pylab.sqrt(abs(K)) + ((q*r)**6 >= pylab.finfo("float64").resolution)*_F_sphere_diffraction(K,q,r)
+_I_sphere_diffraction = lambda K,q,r: abs(K)*(3*(pylab.sin(q*r)-q*r*pylab.cos(q*r))/((q*r)**3+pylab.finfo("float64").eps))**2
+I_sphere_diffraction = lambda K,q,r: ((q*r)**6 < pylab.finfo("float64").resolution)*abs(K) + ((q*r)**6 >= pylab.finfo("float64").resolution)*_I_sphere_diffraction(K,q,r)
+                                                                            
+# scattering amplitude from homogeneous spheroid:
+# -----------------------------------------------
+# Sources:
+# Feigin 1987
+# Hamzeh,Bragg 1974
+#
+# a: radius perpendicular to the rotation axis of the ellipsoid (a)
+# c: radius along the rotation axis of the ellipsoid (c)
+# theta: rotation around x-axis (1st)
+# phi: rotation around z-axis (2nd)
+#
+# F = sqrt(I_0) rho_e p/D r_0 4/3 pi a^2 c [ 3 { sin(qH) - qH cos(qH) } / (qH)^3 ]
+#   = sqrt(I_0) rho_e p/D r_0 V f(a,c,theta,phi,qx,qy)
+# f = 3 { sin(qH) - qH cos(qH) } / (qH)^3
+# H = sqrt(asq sin^2(g)+csq cos^2(g))
+# g = arccos( ( -qX cos(theta) sin(phi) + qY cos(theta) cos(phi) ) / sqrt(qX^2+qY^2) 
+# K = I_0 (rho_e p/D r_0 V)^2
+# S = I_0 rho_e^2 = K / (p/D r_0 V)^2
+# ============================================================================================
+# I = K [ f(asq,csq,theta,phi,qx,qy) ]^2
+# ============================================================================================
+_q_spheroid_diffraction = lambda qX,qY: pylab.sqrt(qX**2+qY**2)
+_g_spheroid_diffraction = lambda qX,qY,theta,phi: pylab.arccos((-qX*pylab.cos(theta)*pylab.sin(phi)+qY*pylab.cos(theta)*pylab.cos(phi))/(_q_spheroid_diffraction(qX,qY)+pylab.finfo("float64").eps))
+_H_spheroid_diffraction = lambda qX,qY,a,c,theta,phi: pylab.sqrt(a**2*pylab.sin(_g_spheroid_diffraction(qX,qY,theta,phi))**2+c**2*pylab.cos(_g_spheroid_diffraction(qX,qY,theta,phi))**2)
+_qH_spheroid_diffraction = lambda qX,qY,a,c,theta,phi: _q_spheroid_diffraction(qX,qY)*_H_spheroid_diffraction(qX,qY,a,c,theta,phi)
+_F_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: pylab.sqrt(abs(K))*3.*(pylab.sin(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi))-_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)*pylab.cos(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)))/(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**3+pylab.finfo("float64").eps)
+F_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < pylab.finfo("float64").resolution)*pylab.sqrt(abs(K)) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= pylab.finfo("float64").resolution)*_F_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+_I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: abs(K)*(3.*(pylab.sin(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi))-_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)*pylab.cos(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)))/(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**3+pylab.finfo("float64").eps))**2
+I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < pylab.finfo("float64").resolution)*abs(K) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= pylab.finfo("float64").resolution)*_I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+                                               
