@@ -526,57 +526,15 @@ class SampleMap:
 
         a = radius*(16*pylab.pi/5.0/(3+pylab.sqrt(5)))**(1/3.0)
         Rmax = pylab.sqrt(10.0+2*pylab.sqrt(5))*a/4.0 # radius at corners
-        Rmin = pylab.sqrt(3)/12*(3.0+pylab.sqrt(5))*a # radius at faces
         nRmax = Rmax/self.dX
-        nRmin = Rmin/self.dX
 
         # smooth
         s = 1.0
 
         N = int(pylab.ceil(2.3*(nRmax)))
         #print N
-
-        config.OUT.write("... build icosahedral geometry ...\n")
         
-        n_list = imgutils.get_icosahedron_normal_vectors(euler1,euler2,euler3)
-        X,Y,Z = 1.0*pylab.mgrid[0:N,0:N,0:N]
-        X -= (N-1)/2.
-        Y -= (N-1)/2.
-        Z -= (N-1)/2.
-
-        config.OUT.write("... %i x %i x %i grid (%i voxels) ...\n" % (N,N,N,N**3))
-        icomap = pylab.zeros((len(n_list),N,N,N))
-        
-        if Nlayers == 0:
-
-            for i in range(len(n_list)):
-                icomap[i,:,:,:] = nRmin-(X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0])
-
-            M = icomap.copy()
-            #icomap[abs(M)<=0.5*s] = abs(0.5+icomap[abs(M)<=0.5*s]/s)
-            icomap[M<=0.5*s] = 0
-            icomap[M>0.5*s] = 1
-            icomap = icomap.min(0)
-
-        else:
-            nlayerdistance = 2*nRmin/(1.0*Nlayers)
-
-            for i in range(len(n_list)):
-                icomap[i,:,:,:] = X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0]
-
-            M = icomap-nRmin
-            M = M.max(0)
-            M[M>0] = 0
-
-            icomap = pylab.zeros_like(M)
-            icomap = (1-pylab.cos(2*pylab.pi*M/nlayerdistance))/2.
-            #f = 1.
-            #icomap[abs(M)<nRmin*f] = (1-pylab.cos(2*pylab.pi*M[abs(M)<nRmin*f]/nlayerdistance))/2.
-            #icomap[abs(M)>=nRmin*3/4.] = (1-pylab.cos(2*pylab.pi*Z[abs(M)>=nRmin*3/4.]/nlayerdistance))/2.
-
-        t_stop = time.time()
-
-        config.OUT.write("Time: %f sec\n" % (t_stop-t_start))
+        icomap = make_icomap(N,nRmax,euler1,euler2,euler3,s)
 
         self.icomap = icomap.copy()
 
@@ -1009,3 +967,36 @@ class SampleSpheres:
         return radii
 
     
+def make_icomap(N,nRmax,euler1=0.,euler2=0.,euler3=0.,s=1.):
+
+    na = nRmax/pylab.sqrt(10.0+2*pylab.sqrt(5))*4.
+    nRmin = pylab.sqrt(3)/12*(3.0+pylab.sqrt(5))*na # radius at faces
+
+    #config.OUT.write("... build icosahedral geometry ...\n")
+
+    n_list = imgutils.get_icosahedron_normal_vectors(euler1,euler2,euler3)
+    X,Y,Z = 1.0*pylab.mgrid[0:N,0:N,0:N]
+    X = X - (N-1)/2.
+    Y = Y - (N-1)/2.
+    Z = Z - (N-1)/2.
+
+    #config.OUT.write("... %i x %i x %i grid (%i voxels) ...\n" % (N,N,N,N**3))
+    
+    icomap = pylab.zeros((len(n_list),N,N,N))
+        
+    # calculate distance of all voxels to all faces (negative inside, positive outside icosahedron)
+    for i in range(len(n_list)):
+        icomap[i,:,:,:] = (X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0])+nRmin
+
+    M = icomap.copy()
+    temp = abs(M)<0.5*s
+    icomap[temp] = 0.5+icomap[temp]/s
+    icomap[M<(-0.5)*s] = 0
+    icomap[M>0.5*s] = 1
+    icomap = icomap.min(0)
+
+    #t_stop = time.time()
+
+    #config.OUT.write("Time: %f sec\n" % (t_stop-t_start))
+
+    return icomap
