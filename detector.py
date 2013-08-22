@@ -81,7 +81,11 @@ class Detector:
             self.binning = 1
         if 'mask' in kwargs: 
             self.mask = kwargs['mask']
+            self.Nx = self.mask.shape[1]*self.binning
+            self.Ny = self.mask.shape[0]*self.binning
         elif 'Nx' in kwargs and 'Ny' in kwargs:
+            self.Nx = kwargs["Nx"]
+            self.Ny = kwargs["Ny"]
             Nx = kwargs['Nx']/self.binning; Ny = kwargs['Ny']/self.binning
             if 'x_gap_size_in_pixel' in kwargs:
                 x_gap = kwargs['x_gap_size_in_pixel']/self.binning

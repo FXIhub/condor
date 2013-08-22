@@ -72,7 +72,7 @@ def calculatePattern_SampleSphere(input_obj):
     R = input_obj.sample.radius
     q = input_obj.generate_absqmap()
     F = pylab.zeros_like(q)
-    F[q!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q[q!=0.0]*R)-q[q!=0.0]*R*pylab.cos(q[q!=0.0]*R))/(q[q!=0.0]*R)**3*dn_real)
+    F[q!=0.0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q[q!=0.0]*R)-q[q!=0.0]*R*pylab.cos(q[q!=0.0]*R))/(q[q!=0.0]*R)**3*dn_real
     if ((q==0)).sum()>0:
         F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
     return F
