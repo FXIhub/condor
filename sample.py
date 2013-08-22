@@ -532,7 +532,6 @@ class SampleMap:
         s = 1.0
 
         N = int(pylab.ceil(2.3*(nRmax)))
-        #print N
         
         icomap = make_icomap(N,nRmax,euler1,euler2,euler3,s)
 
@@ -631,6 +630,7 @@ class SampleMap:
                 spimage.sp_image_free(img)
             except:
                 import h5py
+                print filename
                 try:
                     f = h5py.File(filename,'r')
                     self.map3d = f['data'].value.copy()
