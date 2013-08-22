@@ -4,7 +4,6 @@ Module that performs some nonequispaced ffts using the nfft C library.
 This module is made for simulation of diffraction
 patterns and is not intended for general use.
 """
-
 import pylab
 import nfft_c as _nfft_c
 

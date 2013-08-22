@@ -65,16 +65,19 @@ def propagator(input_obj=False):
 
 def calculatePattern_SampleSphere(input_obj):
     # scattering amplitude from homogeneous sphere: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ 4/3 pi R^3  3 { sin(qR) - qR cos(qR) } / (qR)^3 ] dn_real
+
     wavelength = input_obj.source.photon.get_wavelength()
     I_0 = input_obj.source.pulse_energy / input_obj.source.photon.get_energy("J") / input_obj.source.get_area() # [I_0] = photons/m**2
     Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
     dn_real = (1-input_obj.sample.material.get_n()).real
+
     R = input_obj.sample.radius
+    V = 4/3.*pylab.pi*R**3
+    K = I_0*Omega_p*(2*pylab.pi/wavelength**2*V*dn_real)**2
+
     q = input_obj.generate_absqmap()
-    F = pylab.zeros_like(q)
-    F[q!=0.0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*3*(pylab.sin(q[q!=0.0]*R)-q[q!=0.0]*R*pylab.cos(q[q!=0.0]*R))/(q[q!=0.0]*R)**3*dn_real
-    if ((q==0)).sum()>0:
-        F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*R**3*dn_real
+    cx,cy = input_obj.detector.get_cx('binned'),input_obj.detector.get_cy('binned')
+    F = proptools.F_sphere_diffraction(K,q,R)
     return F
 
 def calculatePattern_SampleSpheroid(input_obj):
@@ -86,30 +89,23 @@ def calculatePattern_SampleSpheroid(input_obj):
     # F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ 4/3 pi a^2 c  3 { sin(qH) - qH cos(qH) } / (qH)^3 ] dn_real
     # H = sqrt(a^2 sin^2(g)+c^2 cos^2(g))
     # g = arccos( ( -qX sin(phi) cos(theta) + qY cos(phi) cos(theta) ) / sqrt(qX^2+qY^2) )
-    a = input_obj.sample.a
-    c = input_obj.sample.c
-    theta = input_obj.sample.theta
-    phi = input_obj.sample.phi
-    
+
     wavelength = input_obj.source.photon.get_wavelength()
     I_0 = input_obj.source.pulse_energy / input_obj.source.photon.get_energy("J") / input_obj.source.get_area() # [I_0] = photons/m**2
     Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
     dn_real = (1-input_obj.sample.material.get_n()).real
     
-    qmap = input_obj.generate_qmap() 
-    qX = qmap[:,:,2]
-    qY = qmap[:,:,1]
-    q = pylab.sqrt(qX**2+qY**2)
-    
-    g = pylab.arccos((-qX*pylab.sin(phi)*pylab.cos(theta)+qY*pylab.cos(phi)*pylab.cos(theta))/q)
-    H = pylab.sqrt(a**2*pylab.sin(g)**2+c**2*pylab.cos(g)**2)
-    F = pylab.zeros_like(q)
-    qH = (q*H)[q!=0]
-    
-    F[q!=0.0] = (pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*a**2*c*3*(pylab.sin(qH)-qH*pylab.cos(qH))/(qH)**3*dn_real)
-    if ((q==0)).sum()>0:
-        F[q==0] = pylab.sqrt(I_0*Omega_p)*2*pylab.pi/wavelength**2*4/3.0*pylab.pi*a**2*c*dn_real
-    
+    a = input_obj.sample.a
+    c = input_obj.sample.c
+    theta = input_obj.sample.theta
+    phi = input_obj.sample.phi
+    V = 4/3.*pylab.pi*a**2*c
+    K = I_0*Omega_p*(2*pylab.pi/wavelength**2*V*dn_real)**2
+
+    [qX,qY,qZ] = input_obj.generate_qmap() 
+
+    F = proptools.F_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+
     return F
 
 def calculatePattern_SampleSpheres(input_obj):
@@ -416,56 +412,40 @@ class Input:
         return [dx,dy]
 
     def generate_absqmap(self):
-        qmap = self.generate_qmap()
-        qmap = pylab.sqrt(qmap[:,:,0]**2+qmap[:,:,1]**2+qmap[:,:,2]**2)
-        return qmap
+        X,Y = pylab.meshgrid(pylab.arange(self.detector.mask.shape[1]),
+                             pylab.arange(self.detector.mask.shape[0]))
+        # THIS CAST IS VERY IMPORTANT, in python A += B is not the same as A = A + B
+        X = pylab.float64(X)
+        Y = pylab.float64(Y)
+        X -= self.detector.get_cx('binned')
+        Y -= self.detector.get_cy('binned')
+        p = self.detector.get_pixel_size('binned')
+        D = self.detector.distance
+        w = self.source.photon.get_wavelength()
+        return proptools.generate_absqmap(X,Y,p,D,w)
 
     def generate_qmap(self,nfft_scaled=False):
         X,Y = pylab.meshgrid(pylab.arange(self.detector.mask.shape[1]),
                              pylab.arange(self.detector.mask.shape[0]))
+        # THIS CAST IS VERY IMPORTANT, in python A += B is not the same as A = A + B
+        X = pylab.float64(X)
+        Y = pylab.float64(Y)
         X -= self.detector.get_cx('binned')
         Y -= self.detector.get_cy('binned')
-        phi = pylab.arctan2(self.detector.get_pixel_size('binned')*pylab.sqrt(X**2+Y**2),self.detector.distance)
-        R_Ewald = 2*pylab.pi/self.source.photon.get_wavelength()
-        qx = R_Ewald*2*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*X,
-                                       self.detector.distance)/2.)
-        qy = R_Ewald*2*pylab.sin(pylab.arctan2(self.detector.get_pixel_size('binned')*Y,
-                                       self.detector.distance)/2.)
-        qz = R_Ewald*(1-pylab.cos(phi))
-        q_map = pylab.zeros(shape=(self.detector.mask.shape[0],
-                                   self.detector.mask.shape[1],
-                                   3))
-        q_map[:,:,0] = qz[:,:]
-        q_map[:,:,1] = qy[:,:]
-        q_map[:,:,2] = qx[:,:]
-
-        try: E0 = self.sample.euler_angle_0
-        except: E0 = 0.0
-        try: E1 = self.sample.euler_angle_1
-        except: E1 = 0.0
-        try: E2 = self.sample.euler_angle_2
-        except: E2 = 0.0
-        
-        if E0 != 0.0 or E1 != 0.0 or E2 != 0.0:
-            M = pylab.array([[pylab.cos(E1)*pylab.cos(E2),
-                              -pylab.cos(E0)*pylab.sin(E2)+pylab.sin(E0)*pylab.sin(E1)*pylab.cos(E2),
-                              pylab.sin(E0)*pylab.sin(E2)+pylab.cos(E0)*pylab.sin(E1)*pylab.cos(E2)],
-                             [pylab.cos(E1)*pylab.sin(E2),
-                              pylab.cos(E0)*pylab.cos(E2)+pylab.sin(E0)*pylab.sin(E1)*pylab.sin(E2),
-                              -pylab.sin(E0)*pylab.cos(E2)+pylab.cos(E0)*pylab.sin(E1)*pylab.sin(E2)],
-                             [-pylab.sin(E1),
-                               pylab.sin(E0)*pylab.cos(E1),
-                               pylab.cos(E0)*pylab.cos(E1)]])
-            for iy in pylab.arange(0,q_map.shape[0]):
-                for ix in pylab.arange(0,q_map.shape[1]):
-                    q_map[iy,ix,:] = pylab.dot(M,q_map[iy,ix,:])
-
+        p = self.detector.get_pixel_size('binned')
+        D = self.detector.distance
+        w = self.source.photon.get_wavelength()
+        try: E0 = self.euler_angle_0
+        except: E0 = 0.
+        try: E1 = self.euler_angle_1
+        except: E1 = 0.
+        try: E2 = self.euler_angle_2
+        except: E2 = 0.
+        qmap = proptools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
         if nfft_scaled == True:
-            return q_map/self.get_absq_max()*0.5
-
+            return qmap/self.get_absq_max()*0.5
         else:
-            return q_map
-
+            return qmap
         
     def get_phase_ramp(self,qmap,dvector):
         return pylab.exp(-1.j*(dvector[0]*qmap[:,:,0]+

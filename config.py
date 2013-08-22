@@ -1,9 +1,8 @@
-import pylab, sys, numpy, types, pickle, time, math
-import _config
+import pylab, sys, os, numpy, types, pickle, time, math
 
 PROPAGATION_MODE_PROJECTION = 0
 PROPAGATION_MODE_3DSAMPLING = 1
-PROPAGATOR_DIR = _config.PROPAGATOR_DIR
+PROPAGATOR_DIR = os.path.dirname(os.path.realpath(__file__))
 
 def init_configuration():
     # Load global dictionaries

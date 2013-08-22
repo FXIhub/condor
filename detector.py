@@ -125,7 +125,7 @@ class Detector:
         Arguments:
         cy : vertical center position in pixel. If argument is None or not given center is set to the middle.
         """
-        if not cy:
+        if cy == None:
             self.cy = (self.mask.shape[0]-1)/2.
         else:
             self.cy = cy
@@ -137,7 +137,7 @@ class Detector:
         Arguments:
         cx : horizontal center position in pixel. If argument is None or not given center is set to the middle.
         """
-        if not cx:
+        if cx == None:
             self.cx = (self.mask.shape[1]-1)/2.
         else:
             self.cx = cx
