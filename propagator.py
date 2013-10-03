@@ -435,11 +435,11 @@ class Input:
         p = self.detector.get_pixel_size('binned')
         D = self.detector.distance
         w = self.source.photon.get_wavelength()
-        try: E0 = self.euler_angle_0
+        try: E0 = self.sample.euler_angle_0
         except: E0 = 0.
-        try: E1 = self.euler_angle_1
+        try: E1 = self.sample.euler_angle_1
         except: E1 = 0.
-        try: E2 = self.euler_angle_2
+        try: E2 = self.sample.euler_angle_2
         except: E2 = 0.
         qmap = proptools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
         if nfft_scaled == True:
