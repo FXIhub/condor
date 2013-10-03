@@ -77,9 +77,7 @@ def calculatePattern_SampleSphere(input_obj):
 
     q = input_obj.generate_absqmap()
     cx,cy = input_obj.detector.get_cx('binned'),input_obj.detector.get_cy('binned')
-
     F = proptools.F_sphere_diffraction(K,q,R)
-
     return F
 
 def calculatePattern_SampleSpheroid(input_obj):
