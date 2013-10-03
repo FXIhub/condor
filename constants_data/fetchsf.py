@@ -5,7 +5,6 @@ def generate_datafile(inpath,outpath):
 
     sf_list = []
 
-
     PICKLEFILE = open('%s/elements.dat' % (outpath),'w')
     MASS_FILE = open('%s/masses.txt' % (inpath),'r')
     masslines = MASS_FILE.readlines()
@@ -13,8 +12,6 @@ def generate_datafile(inpath,outpath):
     #sys.stdout.write('[')
     dmasses = {}
     OUT = {}
-
-
 
     #for infile in glob.glob(os.path.join(path, 'sf/*.nff') ):
     for infile in glob.glob(os.path.join(path, '%s/*.nff' % (inpath)) ):
@@ -46,11 +43,6 @@ def generate_datafile(inpath,outpath):
                 break
 
     pickle.dump([dmasses,OUT],PICKLEFILE)
-
-
-    #sys.stdout.write(']\n')
-
-
 
     MASS_FILE.close()
     PICKLEFILE.close()

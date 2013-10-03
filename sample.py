@@ -76,6 +76,21 @@ class Material:
         return (1-self.get_n(photon_energy_eV).real)
     def get_beta(self,photon_energy_eV=None):
         return (-self.get_n(photon_energy_eV).imag)
+    def get_photoabsorption_cross_section(self,photon_energy_eV=None):
+        re = config.DICT_physical_constants['re']
+        h = config.DICT_physical_constants['h']
+        c = config.DICT_physical_constants['c']
+        qe = config.DICT_physical_constants['e']
+        if not photon_energy_eV:
+            photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
+        photon_wavelength = h*c/photon_energy_eV/qe
+        mu = 2*re*photon_wavelength*self.get_f(photon_energy_eV).imag
+        return mu
+    def get_transmission(self,thickness,photon_energy_eV=None):
+        n = self.get_n(photon_energy_eV)
+        mu = self.get_photoabsorption_cross_section(photon_energy_eV)
+        rho = self.get_atom_density()
+        return pylab.exp(-rho*mu*thickness)
 
     def get_f(self,photon_energy_eV=None):
 

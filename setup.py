@@ -1,16 +1,18 @@
+# Installation of propagator
 import sys, os, fileinput
 import constants_data.fetchsf as sf
 
-print 'Generate file of scattering factors...'
+# Scattering factors and massesfile from the Henke tables
+print 'Loading scattering constants...'
 sf.generate_datafile("constants_data/sf",".")
 print 'Done.'
 
-print 'Set-up nfft wrapper'
+print 'Wrapping NFFT...'
 pdir = os.path.dirname(os.path.realpath(__file__))
 os.chdir("%s/utils/nfft" % pdir)
 os.system("python setup.py build")
 os.chdir(pdir)
-print 'done'
+print 'Done.'
 
 in_path = False
 if "PYTHONPATH" in os.environ.keys():
