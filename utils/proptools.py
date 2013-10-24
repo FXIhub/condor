@@ -92,7 +92,7 @@ def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0=0.,e
     qmap[:,:,0] = qz[:,:]
     qmap[:,:,1] = qy[:,:]
     qmap[:,:,2] = qx[:,:]
-    if euler_angle_0 != 0. and euler_angle_1 != 0. and euler_angle_2 != 0.:
+    if euler_angle_0 != 0. or euler_angle_1 != 0. or euler_angle_2 != 0.:
         E0 = euler_angle_0
         E1 = euler_angle_1
         E2 = euler_angle_2
@@ -110,6 +110,7 @@ def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0=0.,e
                 qmap[iy,ix,:] = pylab.dot(M,qmap[iy,ix,:])
     return qmap
 
+x_to_q = lambda x,pixel_size,detector_distance,wavelength: 4*pylab.pi/wavelength*pylab.sin(pylab.arctan(x*pixel_size/detector_distance)/2.)
 
 def get_sphere_diffraction_extrema_positions(N=1,xtol=1E-12,plot=False):
     from scipy.optimize import fmin
@@ -139,7 +140,7 @@ def get_sphere_diffraction_extrema_positions(N=1,xtol=1E-12,plot=False):
         pylab.plot(s_maxs,pylab.zeros(len(s_maxs)),".")
         pylab.show()
 
-    return [s_mins,s_max]
+    return [s_mins,s_maxs]
 
 def mask_fringe_sphere(q,r,i_fringe):
     s_mins = get_sphere_diffraction_extrema_positions(i_fringe+1)[0]
@@ -147,6 +148,12 @@ def mask_fringe_sphere(q,r,i_fringe):
     M = s < s_mins[i_fringe]
     if i_fringe != 0:
         M *= s > s_mins[i_fringe-1]
+    return M
+
+def mask_min_sphere(q,r,i_min,ds=0.25):
+    s_mins = get_sphere_diffraction_extrema_positions(i_min+1)[0]
+    s = q*r/2./pylab.pi
+    M = (s > s_mins[i_min]-ds)*(s < s_mins[i_min]+ds)
     return M
 
 def mask_fringe_spheroid(qX,qY,a,c,theta,phi,i_fringe):
@@ -158,6 +165,16 @@ def mask_fringe_spheroid(qX,qY,a,c,theta,phi,i_fringe):
     if i_fringe != 0:
         M *= s > s_mins[i_fringe-1]
     return M
+
+def mask_min_spheroid(qX,qY,a,c,theta,phi,i_min,ds=0.25):
+    s_mins = get_sphere_diffraction_extrema_positions(i_min+1)[0]
+    H = _H_spheroid_diffraction(qX,qY,a,c,theta,phi)
+    q = pylab.sqrt(qX**2+qY**2)
+    s = q*H/2./pylab.pi
+    M = (s > s_mins[i_min]-ds)*(s < s_mins[i_min]+ds)
+    return M
+
+
 
 # scattering amplitude from homogeneous sphere:
 # -----------------------------------------------
