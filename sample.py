@@ -1,4 +1,4 @@
-import sys,pylab,time,multiprocessing
+import sys,numpy,pylab,time,multiprocessing
 import logging
 logger = logging.getLogger("Propagator")
 if "utils" not in sys.path: sys.path.append("utils")
@@ -47,8 +47,8 @@ class Material:
         e = config.DICT_physical_constants['e']
         c = config.DICT_physical_constants['c']
         h = config.DICT_physical_constants['h']
-        f1 = pylab.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
-        f2 = pylab.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
+        f1 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
+        f2 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
         return complex(f1,f2) 
  
     def get_n(self,photon_energy_eV=None):
@@ -72,7 +72,7 @@ class Material:
         f = self.get_f(photon_energy_eV)
         atom_density = self.get_atom_density()
         
-        n = 1 - re/2/pylab.pi * photon_wavelength**2 * f * atom_density
+        n = 1 - re/2/numpy.pi * photon_wavelength**2 * f * atom_density
 
         return n
 
@@ -99,7 +99,7 @@ class Material:
         n = self.get_n(photon_energy_eV)
         mu = self.get_photoabsorption_cross_section(photon_energy_eV)
         rho = self.get_atom_density()
-        return pylab.exp(-rho*mu*thickness)
+        return numpy.exp(-rho*mu*thickness)
 
     def get_f(self,photon_energy_eV=None):
 
@@ -174,9 +174,6 @@ class Material:
 class Sample:
     def __init__(self,**kwargs):
         self._parent = kwargs.get('parent',None)
-        self.euler_angle_0 = kwargs.get("euler_angle_0",0.)
-        self.euler_angle_1 = kwargs.get("euler_angle_1",0.)
-        self.euler_angle_2 = kwargs.get("euler_angle_2",0.)
         # Material
         materialargs = {}
         if 'massdensity' in kwargs:
@@ -223,30 +220,29 @@ class SampleSphere(Sample):
 
     def get_area(self):
         """ Calculates area of projected sphere """
-        return pylab.pi*self.radius**2
+        return numpy.pi*self.radius**2
 
 class SampleSpheroid(Sample):
     """
     A class of the input-object.
-    Sample is a homogeneous spheroid defined by a semidiameter a and c (parallel to rotation axis) and a material object.
+    Sample is a homogeneous spheroid defined by the orthogonal diameters a and c (c is the one along the rotation axis) and a material object.
 
     """
 
     def __init__(self,**kwargs):
         Sample.__init__(self,**kwargs)
-        reqk = ["diameter_a","diameter_c","euler_angle_0","euler_angle_1"]
+        reqk = ["diameter_a","diameter_c","theta","phi"]
         for k in reqk:
             if k not in kwargs.keys():
                 logger.error("Cannot initialize SampleSpheroid instance. %s is a necessary keyword." % k)
                 return
-        self.a = kwargs.get('diameter_a',225E-09)
-        self.c = kwargs.get('diameter_c',225E-09)
-        self.theta = kwargs.get('euler_angle_0',0.)
-        self.phi = kwargs.get('euler_angle_1',0.)
-        self._parent = kwargs.get('parent',None)
+        self.a = kwargs['diameter_a']/2.
+        self.c = kwargs['diameter_c']/2.
+        self.theta = kwargs["theta"]
+        self.phi = kwargs["phi"]
 
         material_kwargs = kwargs.copy()
-        non_material_arguments = ['parent','diameter_a','diameter_c','euler_angle_0','euler_angle_1']
+        non_material_arguments = ['parent','diameter_a','diameter_c','theta','phi']
         for non_material_argument in non_material_arguments:
             try: material_kwargs.pop(non_material_argument)
             except: pass
@@ -258,7 +254,7 @@ class SampleSpheroid(Sample):
         Calculates area of projected spheroid
         """
         logger.warning("Calculates area of WRONGLY projected spheroid, fix when there is time.")
-        return (4/3.*pylab.pi*self.a**2*self.c)**(2/3.)
+        return (4/3.*numpy.pi*self.a**2*self.c)**(2/3.)
 
 
 class SampleMap(Sample):
@@ -279,11 +275,6 @@ class SampleMap(Sample):
         
         EITHER (default):
         - N_fine: Edge length in number of voxels [1]
-          ADDITIONAL:
-          EITHER:
-          - dX_fine: Real space sampling distance.
-          OR:
-          - oversampling_fine: Real space oversampling in relation to detector/source configuration. [1]
 
         OR:
         - map3d_fine: Cubic 3d map.
@@ -296,11 +287,11 @@ class SampleMap(Sample):
         - geometry: Geometry that shall be generated (icosahedron, sphere, spheroid)
           - oversampling_fine: Additional oversampling for the initial map self.map3d_fine [1.]
           ADDITIONAL (icosahedron):
-          - size in meter (sphere-volume equivalent diameter)
+          - diameter in meter (sphere-volume equivalent diameter)
           - geometry_euler_angle_0, geometry_euler_angle_1, geometry_euler_angle_2: Euler angles defining orientation of 5-fold axis in relation to z-axis in grid. [0.0,0.0,0.0]
           - oversampling_fine: Real space oversampling in relation to detector/source configuration.
           ADDITIONAL (sphere):
-          - size in meter (diameter)
+          - diameter in meter
           - oversampling_fine: Real space oversampling in relation to detector/source configuration.
           ADDITIONAL (spheroid):
           - diameter_c: diameter along the singular axis (rotation axis of ellipsoid:
@@ -311,6 +302,11 @@ class SampleMap(Sample):
         - euler_angle_0, euler_angle_1, euler_angle_2: Euler angles defining orientation of 3D grid in the experimental reference frame (beam axis). [0.0,0.0,0.0]
         - size: Characteristic size of the object in meters. [1]
         - parent: Input object that this SampleMap object shall be linked to. [None]
+        - SAMPLING:
+          EITHER:
+          - dX_fine: Real space sampling distance.
+          OR:
+          - oversampling_fine: Real space oversampling in relation to detector/source configuration. [1]
         - MATERIAL:
           (For more documentation look at the help of the Material class.)
           - material_type: predefined material type. 
@@ -321,22 +317,37 @@ class SampleMap(Sample):
         """
 
         Sample.__init__(self,**kwargs)
+        self.euler_angle_0 = kwargs.get("euler_angle_0",0.)
+        self.euler_angle_1 = kwargs.get("euler_angle_1",0.)
+        self.euler_angle_2 = kwargs.get("euler_angle_2",0.)
         self.map3d_fine = None
+        self._map3d = None
+        self._dX = None
         self.radius = kwargs.get('radius',None)
+
+        if "dX_fine" in kwargs:
+            self.dX_fine = kwargs["dX_fine"]
+        elif "oversampling_fine":
+            self.dX_fine = self._parent.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
 
         # Map
         if "geometry" in kwargs:
             if "geometry" in kwargs:
                 if kwargs["geometry"] == "icosahedron":
-                    if "size" not in kwargs:
-                        logger.error("Cannot initialize SampleMap instance. %s is a necessary keyword for geometry=icosahedron." % k) 
-                    self.put_icosahedral_sample(kwargs["size"]/2.,dn,**kwargs)
+                    if "diameter" not in kwargs:
+                        logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=icosahedron.") 
+                    self.put_icosahedron(kwargs["diameter"]/2.,**kwargs)
+                    self.radius = kwargs["diameter"]/2.
+                elif kwargs["geometry"] == "spheroid":
+                    if "diameter_a" not in kwargs or "diameter_c" in kwargs:
+                        logger.error("Cannot initialize SampleMap instance. a_diameter and c_diameter are necessary keywords for geometry=spheroid.")
+                    self.put_spheroid(kwargs["diameter_a"],kwargs["diameter_c"],k)
+                    self.radius = (2*kwargs["diameter_a"]+kwargs["diameter_c"])/3./2.
                 elif kwargs["geometry"] == "sphere":
-                    if "size" not in kwargs:
-                        logger.error("Cannot initialize SampleMap instance. %s is a necessary keyword for geometry=icosahedron." % k)                
-                    self.radius = kwargs["size"]/2.
-                    self.put_sphere_sample(self.radius,**kwargs)
-
+                    if "diameter" not in kwargs:
+                        logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=sphere.")                
+                    self.put_sphere(self.radius,**kwargs)
+                    self.radius = kwargs["diameter"]/2.
         else:
             if "map3d_fine" in kwargs:
                 s = numpy.array(self.maprgs["map3d_fine"].shape)
@@ -348,10 +359,6 @@ class SampleMap(Sample):
                 # default
                 N = kwargs.get("N_fine",1)
                 self.map3d_fine = numpy.zeros(shape=(N,N,N),dtype="complex64")
-            if "dX_fine" in kwargs:
-                self.dX_fine = kwargs["dX_fine"]
-            elif "oversampling_fine":
-                self.dX_fine = self._parent.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
 
     def get_refractive_index_map3d_fine(self):
         if self.material == None:
@@ -379,44 +386,43 @@ class SampleMap(Sample):
     def put_sphere(self,radius,**kwargs):
         R_N = radius/self.dX_fine
         size = int(round((R_N*1.2)*2))
-        X,Y,Z = 1.0*pylab.mgrid[0:size,0:size,0:size]
+        X,Y,Z = 1.0*numpy.mgrid[0:size,0:size,0:size]
         for J in [X,Y,Z]: J = J - size/2.0-0.5
-        R = pylab.sqrt(X**2+Y**2+Z**2)
-        spheremap = pylab.zeros(shape=R.shape,dtype="complex64")
+        R = numpy.sqrt(X**2+Y**2+Z**2)
+        spheremap = numpy.zeros(shape=R.shape,dtype="complex64")
         spheremap[R<R_N] = 1
         spheremap[abs(R_N-R)<0.5] = 0.5+0.5*(R_N-R[abs(R_N-R)<0.5])
         self.put_custom_map(spheremap,**kwargs)
  
-    def put_spheroid(self,a,b,euler_angle_0=0.,euler_angle_1=0.,**kwargs):
-        R_N = max([a,b])/self.dX_fine
-        a_N = a/self.dX_fine
-        b_N = b/self.dX_fine
-        size = int(round((R_N*1.2)*2))
-        X,Y,Z = 1.0*pylab.mgrid[0:size,0:size,0:size]
-        for J in [X,Y,Z]: J -= size/2.0-0.5        
-        R_sq = X**2+Y**2+Z**2
-        e_c = proptools.rotation(pylab.array([0.0,0.0,1.0]),euler_angle_0,euler_angle_1,0.)
-        d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
-        r_sq_c = abs( R_sq * (1 - (d_sq_c/R_sq)))
-        spheroidmap = r_sq_c/a_N**2+d_sq_c/b_N**2
-        spheroidmap[spheroidmap<=1] = 1
-        spheroidmap[spheroidmap>1] = 0
-        smooth_factor = 1.5
-        logger.info("Smoothing by a factor of %f\n" % smooth_factor)
-        spheroidmap = abs(imgutils.smooth3d(spheroidmap,smooth_factor))
-        spheroidmap /= spheroidmap.max()
-        spheroidmap = pylab.array(spheroidmap,dtype="complex64")
+    def put_spheroid(self,a,b,**kwargs):
+        e0 = kwargs.get("geometry_euler_angle_0")
+        e1 = kwargs.get("geometry_euler_angle_1")
+        e2 = kwargs.get("geometry_euler_angle_2")
+        # mxaximum radius
+        Rmax = max([a,b])
+        # maximum radius in pixel
+        nRmax = Rmax/self.dX_fine
+        # dimensions in pixel
+        nA = a/self.dX_fine
+        nB = b/self.dX_fine
+        # leaving a bit of free space around spheroid
+        N = int(round((R_N*1.2)*2))
+        spheromap = make_spheroid_map(N,nA,nB,e0,e1,e2)
         self.put_custom_map(spheroidmap,**kwargs)
 
-    def put_icosahedron(self,radius,euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.,**kwargs):
-        a = radius*(16*pylab.pi/5.0/(3+pylab.sqrt(5)))**(1/3.0)
+    def put_icosahedron(self,radius,**kwargs):
+        e0 = kwargs.get("geometry_euler_angle_0")
+        e1 = kwargs.get("geometry_euler_angle_1")
+        e2 = kwargs.get("geometry_euler_angle_2")
+        # icosahedon size parameter
+        a = radius*(16*numpy.pi/5.0/(3+numpy.sqrt(5)))**(1/3.0)
         # radius at corners in meter
-        Rmax = pylab.sqrt(10.0+2*pylab.sqrt(5))*a/4.0 
+        Rmax = numpy.sqrt(10.0+2*numpy.sqrt(5))*a/4.0 
         # radius at corners in pixel
         nRmax = Rmax/self.dX_fine 
         # leaving a bit of free space around icosahedron 
-        N = int(pylab.ceil(2.3*(nRmax)))
-        icomap = make_icosahedron_map(N,nRmax,euler1,euler2,euler3)
+        N = int(numpy.ceil(2.3*(nRmax)))
+        icomap = make_icosahedron_map(N,nRmax,e0,e1,e2)
         self.put_custom_map(icomap,**kwargs)
 
     def plot_map3d_fine(self,mode='surface'):
@@ -446,7 +452,7 @@ class SampleMap(Sample):
         fM.mask[:,:,:] = 1
         fsM = spimage.sp_image_shift(fM)
         self.fmap3d_fine = abs(fsM.image).copy()
-        self.fmap3d_fine[self.fmap3d!=0] = pylab.log10(self.fmap3d_fine[self.fmap3d_fine!=0])
+        self.fmap3d_fine[self.fmap3d!=0] = numpy.log10(self.fmap3d_fine[self.fmap3d_fine!=0])
         
         s = mlab.pipeline.scalar_field(self.fmap3d_fine)
         plane_1 = mlab.pipeline.image_plane_widget(s,plane_orientation='x_axes',
@@ -462,17 +468,17 @@ class SampleMap(Sample):
         if not eul_ang2: eul_ang2 = self.grid_euler_angle_2
 
         if eul_ang0 == 0.0 and eul_ang1 == 0.0 and eul_ang2 == 0.0:
-            map2d = pylab.zeros((self.map3d_fine.shape[1],self.map3d_fine.shape[2]))
-            for iy in pylab.arange(0,map2d.shape[0]):
-                for ix in pylab.arange(0,map2d.shape[1]):
-                    map2d[iy,ix] = self.map3d_fine[:,iy,ix].real.sum()*self.dX_fine*pylab.exp(-self.map3d_fine[:,iy,ix].imag.sum()*self.dX_fine)
+            map2d = numpy.zeros((self.map3d_fine.shape[1],self.map3d_fine.shape[2]))
+            for iy in numpy.arange(0,map2d.shape[0]):
+                for ix in numpy.arange(0,map2d.shape[1]):
+                    map2d[iy,ix] = self.map3d_fine[:,iy,ix].real.sum()*self.dX_fine*numpy.exp(-self.map3d_fine[:,iy,ix].imag.sum()*self.dX_fine)
         else:
-            x_0 = proptools.rotation(pylab.array([0.0,0.0,1.0]),eul_ang0,eul_ang1,eul_ang2)
-            y_0 = proptools.rotation(pylab.array([0.0,1.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
-            z_0 = proptools.rotation(pylab.array([1.0,0.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
+            x_0 = proptools.rotation(numpy.array([0.0,0.0,1.0]),eul_ang0,eul_ang1,eul_ang2)
+            y_0 = proptools.rotation(numpy.array([0.0,1.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
+            z_0 = proptools.rotation(numpy.array([1.0,0.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
             N = self.map3d_fine.shape[0]
             extra_space = 10
-            map2d = pylab.zeros(shape=(N,N),dtype="complex64")
+            map2d = numpy.zeros(shape=(N,N),dtype="complex64")
             def valid_coordinate(v):
                 for i in range(0,3):
                     if v[i] < N and v[i] > 0:
@@ -483,12 +489,12 @@ class SampleMap(Sample):
             for y in range(0,N):
                 for x in range(0,N):
                     for z in range(0,N):
-                        vector = pylab.array([(N-1)/2.0,(N-1)/2.0,(N-1)/2.0])-(N-1)/2.0*(x_0+y_0+z_0)+(z*z_0+y*y_0+x*x_0)
-                        cases = [pylab.floor,lambda x: 1.0 + pylab.floor(x)]
+                        vector = numpy.array([(N-1)/2.0,(N-1)/2.0,(N-1)/2.0])-(N-1)/2.0*(x_0+y_0+z_0)+(z*z_0+y*y_0+x*x_0)
+                        cases = [numpy.floor,lambda x: 1.0 + numpy.floor(x)]
                         for y_func in cases:
                             for x_func in cases:
                                 for z_func in cases:
-                                    if valid_coordinate(pylab.array([z_func(vector[0]),y_func(vector[1]),x_func(vector[2])])):
+                                    if valid_coordinate(numpy.array([z_func(vector[0]),y_func(vector[1]),x_func(vector[2])])):
                                         map2d[y,x] +=\
                                             self.dX_fine*\
                                             (1.0-abs(z_func(vector[0]) - vector[0]))*\
@@ -500,7 +506,7 @@ class SampleMap(Sample):
         if "padding" in kwargs.keys():
             if kwargs["padding"]=="squared":
                 N_new = max([map2d.shape[0],map2d.shape[1]])
-                map2d_new = pylab.zeros(shape=(N_new,N_new))
+                map2d_new = numpy.zeros(shape=(N_new,N_new))
                 map2d_new[(N_new-map2d.shape[0])/2:(N_new-map2d.shape[0])/2+map2d.shape[0],
                           (N_new-map2d.shape[1])/2:(N_new-map2d.shape[1])/2+map2d.shape[1]] = map2d[:,:]
                 map2d = map2d_new
@@ -565,10 +571,10 @@ class SampleMap(Sample):
 
         """
         if mode == 'auto':
-            if self.radius != None: return pylab.pi*self.radius**2
+            if self.radius != None: return numpy.pi*self.radius**2
         projection = self.project(self.grid_euler_angle_0,self.grid_euler_angle_1,self.grid_euler_angle_2)
-        binary = pylab.ones(shape=projection.shape)
-        binary[abs(projection)<pylab.median(abs(projection))] = 0
+        binary = numpy.ones(shape=projection.shape)
+        binary[abs(projection)<numpy.median(abs(projection))] = 0
         area = binary.sum()*self.dX_fine**2
         return area
 
@@ -578,20 +584,20 @@ class SampleMap(Sample):
     
 def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.,s=1.):
 
-    na = nRmax/pylab.sqrt(10.0+2*pylab.sqrt(5))*4.
-    nRmin = pylab.sqrt(3)/12*(3.0+pylab.sqrt(5))*na # radius at faces
+    na = nRmax/numpy.sqrt(10.0+2*numpy.sqrt(5))*4.
+    nRmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*na # radius at faces
 
-    looging.debug("Building icosahedral geometry")
+    logger.debug("Building icosahedral geometry")
 
     n_list = imgutils.get_icosahedron_normal_vectors(euler1,euler2,euler3)
-    X,Y,Z = 1.0*pylab.mgrid[0:N,0:N,0:N]
+    X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     X = X - (N-1)/2.
     Y = Y - (N-1)/2.
     Z = Z - (N-1)/2.
 
     logger.debug("Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
     
-    icomap = pylab.zeros((len(n_list),N,N,N))
+    icomap = numpy.zeros((len(n_list),N,N,N))
         
     # calculate distance of all voxels to all faces (negative inside, positive outside icosahedron)
     for i in range(len(n_list)):
@@ -605,3 +611,19 @@ def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.,s=1.):
     icomap = icomap.min(0)
 
     return icomap
+
+
+def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.,s=1.):
+    X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
+    for J in [X,Y,Z]: J -= N/2.0-0.5        
+    R_sq = X**2+Y**2+Z**2
+    e_c = proptools.rotation(numpy.array([0.0,0.0,1.0]),e0,e1,e2)
+    d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
+    r_sq_c = abs( R_sq * (1 - (d_sq_c/R_sq)))
+    spheroidmap = r_sq_c/a_N**2+d_sq_c/b_N**2
+    spheroidmap[spheroidmap<=1] = 1
+    spheroidmap[spheroidmap>1] = 0
+    logger.info("Smoothing by a factor of %f\n" % s)
+    spheroidmap = abs(imgutils.smooth3d(spheroidmap,s))
+    spheroidmap /= spheroidmap.max()
+    return spheroidmap

@@ -1,8 +1,10 @@
-import sys,pylab,multiprocessing
+import sys,numpy,pylab,multiprocessing
 import config
 sys.path.append(config.PROPAGATOR_DIR+"/utils/nfft")
 import nfft
 import time
+import logging
+logger = logging.getLogger("Propagator")
 
 #def generate_phase_ramp(coordinates,phi,theta,psi):
 #    M = pylab.array([[pylab.cos(theta)*pylab.cos(psi),
@@ -20,12 +22,18 @@ import time
 #    return phase_ramp
     
 def arrange_values(values,arrayshape):
-    return values.reshape(arrayshape)
+    return numpy.reshape(values,arrayshape)
 
 def nfftSingleCore(sample,q):
+    invalid_mask = (abs(q)>0.5)
+    if (invalid_mask).sum() > 0:
+        q[invalid_mask] = 0.
+    logger.info("%s invalid pixel positions." % invalid_mask.sum())
     qflat = q.flatten()
     fourierpattern = nfft.nfft3d(qflat,sample)
     fourierpattern = arrange_values(fourierpattern,(q.shape[0],q.shape[1]))
+    if (invalid_mask).sum() > 0:
+        fourierpattern[numpy.any(invalid_mask,2)] = numpy.nan
     return fourierpattern
 
 def tester():
@@ -43,14 +51,14 @@ def tester():
     pylab.imsave("testpattern.png",result)
 
 def nfftXCore(object3d,q,N_processes=None):
-    #object3d = pylab.complex128(object3d)
+    #object3d = numpy.complex128(object3d)
     if abs(q).max() > 0.5:
         print "ERROR: nfft accepts only a frequency range from -0.5 to 0.5."
         return
     if N_processes == None:
         N_processes = multiprocessing.cpu_count()
     q_fragments = []
-    for n in pylab.arange(0,N_processes,1):
+    for n in numpy.arange(0,N_processes,1):
         if n < (N_processes-1): 
             q_fragments.append(q[round(n*q.shape[0]/(1.0*N_processes)):round((n+1)*q.shape[0]/(1.0*N_processes)),:])
         else:
@@ -62,7 +70,7 @@ def nfftXCore(object3d,q,N_processes=None):
         results.append(pool.apply_async(nfftSingleCore, (object3d,q_fragments[n])))
     pool.close()
     pool.join()
-    A = pylab.zeros(q.shape[0]*q.shape[1],dtype="complex128")
+    A = numpy.zeros(q.shape[0]*q.shape[1],dtype="complex128")
     offset = 0
     for n in range(0,N_processes):
         config.OUT.write("Collect results from process %i\n" % n)
@@ -73,15 +81,15 @@ def nfftXCore(object3d,q,N_processes=None):
 
 # For debugging purposes
 def generate_cube(size):
-    return pylab.ones(shape=(size,size,size))     
+    return numpy.ones(shape=(size,size,size))     
 
 def generate_sphere(size):
-    x,y,z = pylab.mgrid[0:size,0:size,0:size]
+    x,y,z = numpy.mgrid[0:size,0:size,0:size]
     x -= (size-1)/2.0 
     y -= (size-1)/2.0
     z -= (size-1)/2.0
-    r = pylab.sqrt(x**2+y**2+z**2)
-    s = pylab.ones(shape=(size,size,size))     
+    r = numpy.sqrt(x**2+y**2+z**2)
+    s = numpy.ones(shape=(size,size,size))     
     s[r>size/2.0] = 0.0
     return s
 

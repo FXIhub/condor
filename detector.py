@@ -4,6 +4,8 @@ import numpy
 import logging
 logger = logging.getLogger("Propagator")
 
+import proptools
+
 # Pythontools
 import gentools,cxitools,imgtools
 
@@ -223,7 +225,7 @@ class Detector:
         p = self.get_pixel_size('binned')
         D = self.distance
         if "wavelength" in kwargs:
-            w = kwargs["wavelength"]:
+            w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
         return proptools.generate_absqmap(X,Y,p,D,w)
@@ -239,30 +241,30 @@ class Detector:
         p = self.get_pixel_size('binned')
         D = self.distance
         if "wavelength" in kwargs:
-            w = kwargs["wavelength"]:
+            w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
         if "euler_angle_0" in kwargs:
             E0 = kwargs["euler_angle_0"]
         else:
-            E0 = self._paren.sample.euler_angle_0
+            E0 = self._parent.sample.euler_angle_0
         if "euler_angle_1" in kwargs:
             E1 = kwargs["euler_angle_1"]
         else:
-            E1 = self._paren.sample.euler_angle_1
+            E1 = self._parent.sample.euler_angle_1
         if "euler_angle_2" in kwargs:
             E2 = kwargs["euler_angle_2"]
         else:
-            E2 = self._paren.sample.euler_angle_2
+            E2 = self._parent.sample.euler_angle_2
         qmap = proptools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
         nfft_scaled = kwargs.get("nfft_scaled",False)
         if nfft_scaled:
-            qmap =/ self.get_absq_max()*0.5
+            qmap /= self.get_absq_max()/0.5
         return qmap
-        
+
     def get_absqx_max(self,**kwargs):
         if "wavelength" in kwargs:
-            w = kwargs["wavelength"]:
+            w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
         x_max = max([self.get_cx('binned'),self.mask.shape[1]-1-self.get_cx('binned')]) * self.get_pixel_size('binned')
@@ -272,7 +274,7 @@ class Detector:
 
     def get_absqy_max(self,**kwargs):
         if "wavelength" in kwargs:
-            w = kwargs["wavelength"]:
+            w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
         y_max = max([self.get_cy('binned'),self.mask.shape[1]-1-self.get_cy('binned')]) * self.get_pixel_size('binned')
@@ -282,7 +284,7 @@ class Detector:
 
     def get_absqz_max(self,**kwargs):
         if "wavelength" in kwargs:
-            w = kwargs["wavelength"]:
+            w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
         absqx_max = self.get_absqx_max()

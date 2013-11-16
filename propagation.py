@@ -1,7 +1,7 @@
 import logging
 logger = logging.getLogger("Propagator")
-import numpy
-import config,proptools
+import numpy,pylab
+import config,proptools,xcorepropagation
 
 
 def calculatePattern_SampleSphere(input_obj):
@@ -19,7 +19,7 @@ def calculatePattern_SampleSphere(input_obj):
     V = 4/3.*numpy.pi*R**3
     K = I_0*Omega_p*(2*numpy.pi/wavelength**2*V*dn_real)**2
 
-    q = input_obj.generate_absqmap()
+    q = input_obj.detector.generate_absqmap()
     F = proptools.F_sphere_diffraction(K,q,R)
     return F
 
@@ -34,31 +34,40 @@ def calculatePattern_SampleSpheroid(input_obj):
     # g = arccos( ( -qX sin(phi) cos(theta) + qY cos(phi) cos(theta) ) / sqrt(qX^2+qY^2) )
 
     wavelength = input_obj.source.photon.get_wavelength()
-    I_0 = input_obj.source.pulse_energy / input_obj.source.photon.get_energy("J") / input_obj.source.get_area() # [I_0] = photons/m**2
-    Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
-    dn_real = (1-input_obj.sample.material.get_n()).real
+    I_0 = input_obj.source.get_intensity("ph/m2")
+    Omega_p = input_obj.detector.get_pixel_solid_angle("binned")
+    if input_obj.sample.material == None:
+        dn_real = 1.
+    else:
+        dn_real = input_obj.sample.material.get_dn().real
     
     a = input_obj.sample.a
     c = input_obj.sample.c
-    theta = input_obj.sample.theta
-    phi = input_obj.sample.phi
     V = 4/3.*numpy.pi*a**2*c
     K = I_0*Omega_p*(2*numpy.pi/wavelength**2*V*dn_real)**2
 
-    [qX,qY,qZ] = input_obj.generate_qmap() 
-
-    F = proptools.F_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+    q = input_obj.detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
+    qx = q[:,:,2]
+    qy = q[:,:,1]
+    qz = q[:,:,0]
+    
+    F = proptools.F_spheroid_diffraction(K,qx,qy,a,c,input_obj.sample.theta,input_obj.sample.phi)
 
     return F
 
 def calculatePattern_SampleSpheres(input_obj):
     wavelength = input_obj.source.photon.get_wavelength()
-    I_0 = input_obj.source.pulse_energy / input_obj.source.photon._energy / input_obj.source.get_area() # [I_0] = photons/m**2
-    Omega_p = (input_obj.detector.pixel_size*input_obj.detector.binning)**2 / input_obj.detector.distance**2
+    I_0 = input_obj.source.get_intensity("ph/m2")
+    Omega_p = input_obj.detector.get_pixel_solid_angle("binned")
+    if input_obj.sample.material == None:
+        dn_real = 1.
+    else:
+        dn_real = input_obj.sample.material.get_dn().real
+
     radii = input_obj.sample.get_radii()
     dn_real = (1-input_obj.sample.material.get_n()).real
-    absq = input_obj.generate_absqmap()
-    q = input_obj.generate_qmap()
+    absq = input_obj.detector.generate_absqmap()
+    q = input_obj.detector.generate_qmap()
     F = numpy.zeros(shape=absq.shape,dtype='complex')
     for R in radii:
         Fr = numpy.zeros_like(F)
@@ -78,58 +87,44 @@ def calculatePattern_SampleSpheres(input_obj):
 
 
 def calculatePattern_SampleMap(input_obj):
-    wavelength = input_obj.source.photon.get_wavelength()
-    I_0 = input_obj.source.pulse_energy / input_obj.source.photon._energy / input_obj.source.get_area() # [I_0] = photons/m**2
-    Omega_p = (input_obj.detector.get_pixel_size('binned'))**2 / input_obj.detector.distance**2
     # scattering amplitude from dn-map: F = sqrt(I_0 Omega_p) 2pi/wavelength^2 [ DFT{dn_perp} ] dA
-    #print input_obj.sample.dX/input_obj.get_real_space_resolution_element()
-    if abs(input_obj.sample.dX/input_obj.get_real_space_resolution_element()-1) < 0.05:
-        pass
-    elif input_obj.sample.dX <= input_obj.get_real_space_resolution_element():
-        input_obj.sample.map3d_fine = input_obj.sample.map3d.copy()
-        d = input_obj.get_real_space_resolution_element()/input_obj.sample.dX
-        N_mapfine = input_obj.sample.map3d_fine.shape[0]
-        N_map = int(round(N_mapfine/d))
-        input_obj.sample.map3d = imgutils.lanczos_interp(input_obj.sample.map3d_fine,N_map)
-        input_obj.sample.dX_fine = numpy.copy(input_obj.sample.dX)
-        input_obj.sample.dX = N_mapfine/(1.*N_map)*input_obj.sample.dX
+    wavelength = input_obj.source.photon.get_wavelength()
+    I_0 = input_obj.source.get_intensity("ph/m2")
+    Omega_p = input_obj.detector.get_pixel_solid_angle("binned")
+    F0 = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2 
+
+    # refractive index from material
+    if input_obj.sample.material == None:
+        dn = complex(1.,0.)
     else:
-        if 'input_obj.sample.dX_fine' in locals():
-            if input_obj.sample.dX_fine <= input_obj.get_real_space_resolution_element():
-                d = input_obj.get_real_space_resolution_element()/input_obj.sample.dX
-                N_mapfine = input_obj.sample.map3d_fine.shape[0]
-                N_map = int(round(N_mapfine/d))
-                input_obj.sample.map3d = imgutils.lanczos_interp(input_obj.sample.map3d_fine,N_map)
-                input_obj.sample.dX = N_mapfine/(1.*N_map)*input_obj.sample.dX
-            else:
-                logger.error("Finer real space sampling required for chosen geometry.")
-                return
-        else:
-            logger.error("Finer real space sampling required for chosen geometry.")
-            return
+        dn = input_obj.sample.material.get_dn()
 
-    q_scaled = input_obj.generate_qmap(True)
-    valid_mask = (abs(q_scaled[:,:,0])<0.5)*(abs(q_scaled[:,:,1])<0.5)*(abs(q_scaled[:,:,2])<0.5)
-    qx = q_scaled[:,:,2]
-    qy = q_scaled[:,:,1]
-    qz = q_scaled[:,:,0]
-    qx[valid_mask==False] = 0.
-    qy[valid_mask==False] = 0.
-    qz[valid_mask==False] = 0.
+    # interpolation of map if required
+    dX = input_obj.get_real_space_resolution_element()
+    if input_obj.sample._dX != None:
+        if abs(input_obj.sample._dX/dX-1) < 0.001:
+            pass
+    elif abs(input_obj.sample.dX_fine/dX-1) < 0.001:
+        input_obj.sample._map3d = input_obj.sample.map3d_fine
+    elif input_obj.sample.dX_fine <= dX:
+        N_mapfine = input_obj.sample.map3d_fine.shape[0]
+        N_map = int(round(N_mapfine*input_obj.sample.dX_fine/dX))
+        input_obj.sample._map3d = imgutils.lanczos_interp(input_obj.sample.map3d_fine,N_map)
+        input_obj.sample._dX = N_mapfine/(1.*N_map)*input_obj.sample.dX_fine
+    else:
+        logger.error("Finer real space sampling required for chosen geometry.")
+        return
+    map3d = numpy.array(input_obj.sample._map3d,dtype="complex128") * dn
 
+    # scattering vector grid
+    e0 = input_obj.sample.euler_angle_0
+    e1 = input_obj.sample.euler_angle_1
+    e2 = input_obj.sample.euler_angle_2
+    q_scaled = input_obj.detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
+     
     logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
-    F = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2 \
-        * xcorepropagation.nfftSingleCore(input_obj.sample.map3d,q_scaled) \
-        * input_obj.sample.dX**3
-
-    F *= valid_mask
-    
-
-    #F = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2 \
-    #    * xcorepropagation.nfftXCore(input_obj.sample.map3d-numpy.median(input_obj.sample.map3d),
-    #                                 q_scaled,
-    #                                 input_obj.propagation.N_processes) \
-    #                                 * input_obj.sample.dX**3
+    F = F0 * xcorepropagation.nfftSingleCore(map3d,q_scaled) * dX**3
     logger.debug("Got pattern of %i x %i pixels." % (F.shape[1],F.shape[0]))
-    F = imgutils.crop(F,numpy.array([input_obj.detector.mask.shape[0],input_obj.detector.mask.shape[1]]))
+    
     return F
+
