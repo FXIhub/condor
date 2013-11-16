@@ -1,5 +1,6 @@
 import pylab
-import config
+import config,logging
+logger = logging.getLogger('Propagator')
 
 class Source:
     """
@@ -9,9 +10,26 @@ class Source:
     """
     def __init__(self,**kwargs):
         self._parent = kwargs.get('parent',None)
-        self.photon = Photon(wavelength=kwargs.get('wavelength',5.7E-09))
-        self.focus_diameter = kwargs.get('focus_diameter',20E-06)
-        self.pulse_energy = kwargs.get('pulse_energy',100E-06)
+        reqk = ["wavelength","focus_diameter","pulse_energy"]
+        for k in reqk:
+            if k not in kwargs.keys():
+                logger.error("Cannot initialize Source instance. %s is a necessary keyword." % k)
+                return
+        self.photon = Photon(wavelength=kwargs["wavelength"])
+        self.focus_diameter = kwargs["focus_diameter"]
+        self.pulse_energy = kwargs["pulse_energy"]
+        logger.debug("Source configured")
+
+    def get_intensity(self,unit="J/m2"):
+        I = self.pulse_energy / self.get_area()
+        if unit == "ph/m2":
+            I /= self.photon.get_energy("J") 
+        elif unit == "J/um2":
+            I *= 1.E-12
+        else:
+            logger.error("%s is not a valid unit." % unit)
+            return
+        return I
 
     def get_area(self):
         return pylab.pi*(self.focus_diameter/2.0)**2
@@ -22,7 +40,7 @@ class Photon:
         elif "energy" in kwarg.keys(): self.set_energy(kwarg["energy"],"J")
         elif "energy_eV" in kwarg.keys(): self.set_energy(kwarg["energy_eV"],"eV")
         else:
-            print "ERROR: Photon needs to be initialized with either the energy or the wavelength."
+            logger.error("Photon could not be initialized. It needs to be initialized with either the a given photon energy or the wavelength.")
             
     def get_energy(self,unit="J"):
         if unit == "J":
@@ -30,7 +48,7 @@ class Photon:
         elif unit == "eV":
             return self._energy/config.DICT_physical_constants["e"]
         else:
-            print "ERROR: %s is not a valid energy unit." % unit
+            logger.error("%s is not a valid energy unit." % unit)
 
     def set_energy(self,energy,unit="J"):
         if unit == "J":
@@ -38,7 +56,7 @@ class Photon:
         elif unit == "eV":
             self._energy = energy*config.DICT_physical_constants["e"]
         else:
-            print "ERROR: %s is not a valid energy unit." % unit
+            logger.error("%s is not a valid energy unit." % unit)
 
     def get_wavelength(self):
         return config.DICT_physical_constants["c"]*config.DICT_physical_constants["h"]/self._energy

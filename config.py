@@ -1,14 +1,17 @@
-import pylab, sys, os, numpy, types, pickle, time, math
-
-PROPAGATION_MODE_PROJECTION = 0
-PROPAGATION_MODE_3DSAMPLING = 1
-PROPAGATOR_DIR = os.path.dirname(os.path.realpath(__file__))
+import pylab, sys, os, numpy, types, pickle, time, math, logging
+logging.basicConfig(format='%(levelname)s: %(message)s')
+logger = logging.getLogger('Propagator')
 
 def init_configuration():
+    # Some global configuration variables
+    global PROPAGATION_MODE_PROJECTION
+    PROPAGATION_MODE_PROJECTION = 0
+    global PROPAGATION_MODE_3DSAMPLING
+    PROPAGATION_MODE_3DSAMPLING = 1
+    global PROPAGATOR_DIR
+    PROPAGATOR_DIR = os.path.dirname(os.path.realpath(__file__))
     # Load global dictionaries
     init_global_dictionaries()
-    # Direct output to writable object
-    commandline_out_deactivate()
     # Add path of propagator to sys.path
     sys.path.append(PROPAGATOR_DIR+"/utils")
     
@@ -190,19 +193,3 @@ def unpickle_scattering_factors():
     for var in DICT_scattering_factors.values():
         if F_MIN_ENERGY_EV < var[0,0] or F_MIN_ENERGY_EV == 0: F_MIN_ENERGY_EV = var[0,0]
         if F_MAX_ENERGY_EV > var[-1,0] or F_MAX_ENERGY_EV == 0: F_MAX_ENERGY_EV = var[-1,0]
-
-class _WritableObject:
-    """ Class that can be assigned to stdout in order to switch off output to commandline and instead to write it to self.content"""
-    def __init__(self):
-        self.content = []
-    def write(self, string):
-        self.content.append(string)
-
-def commandline_out_deactivate():
-    global OUT
-    OUT = _WritableObject()
-
-def commandline_out_activate():
-    global OUT
-    OUT = sys.stdout
-
