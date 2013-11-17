@@ -11,7 +11,6 @@ if len(sys.argv) < 2:
 else:
     sample = sys.argv[1]
 
-
 if sample == "all":
     samples = ["icosahedron","sphere","spheroid","uniform_sphere","uniform_spheroid"]
 else:

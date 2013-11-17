@@ -640,42 +640,31 @@ class SampleMap(Sample):
         """
         if self.radius != None: return numpy.pi*self.radius**2
 
-    
-    
-
-    
-def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.,s=1.):
-
+def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
     na = nRmax/numpy.sqrt(10.0+2*numpy.sqrt(5))*4.
     nRmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*na # radius at faces
-
     logger.debug("Building icosahedral geometry")
-
     n_list = imgutils.get_icosahedron_normal_vectors(euler1,euler2,euler3)
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     X = X - (N-1)/2.
     Y = Y - (N-1)/2.
     Z = Z - (N-1)/2.
-
     logger.debug("Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
-    
     icomap = numpy.zeros((len(n_list),N,N,N))
-        
     # calculate distance of all voxels to all faces (negative inside, positive outside icosahedron)
     for i in range(len(n_list)):
         icomap[i,:,:,:] = (X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0])+nRmin
-
+    s = 1.
     M = icomap.copy()
     temp = abs(M)<0.5*s
     icomap[temp] = 0.5+icomap[temp]/s
     icomap[M<(-0.5)*s] = 0
     icomap[M>0.5*s] = 1
     icomap = icomap.min(0)
-
     return icomap
 
 
-def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.,s=None):
+def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.):
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     X = X-(N-1)/2.
     Y = Y-(N-1)/2.
@@ -687,13 +676,9 @@ def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.,s=None):
     spheroidmap = r_sq_c/nA**2+d_sq_c/nB**2
     spheroidmap[spheroidmap<=1] = 1
     spheroidmap[spheroidmap>1] = 0
-    if s != None:
-        logger.info("Smoothing by a factor of %f\n" % s)
-        spheroidmap = abs(imgutils.smooth3d(spheroidmap,s))
-        spheroidmap /= spheroidmap.max()
     return spheroidmap
 
-def make_sphere_map(N,nR,s=None):
+def make_sphere_map(N,nR):
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     X = X-(N-1)/2.
     Y = Y-(N-1)/2.
@@ -702,10 +687,6 @@ def make_sphere_map(N,nR,s=None):
     spheremap = numpy.zeros(shape=R.shape,dtype="float64")
     spheremap[R<=nR] = 1
     spheremap[abs(nR-R)<0.5] = 0.5+0.5*(nR-R[abs(nR-R)<0.5])
-    if s != None:
-        logger.info("Smoothing by a factor of %f\n" % s)
-        spheremap= abs(imgutils.smooth3d(spheremap,s))
-        spheremap /= spheremap.max()
     return spheremap
 
 

@@ -2,7 +2,17 @@
 import sys, os, fileinput
 import constants_data.fetchsf as sf
 
-# Scattering factors and massesfile from the Henke tables
+# Check if python_tools are installed
+try:
+    print "Checking if python_tools are installed..."
+    import imgtools, gentools, cxitools
+    print "Necessary python tools are installed."
+except:
+    print "ERROR: Cannot import python_tools. Please install Max' python_tools before you proceed."
+    print "Installation of propagator failed."
+    quit(0)
+
+# Scattering factors from the Henke tables and atomic masses 
 print 'Loading scattering constants...'
 sf.generate_datafile("constants_data/sf",".")
 print 'Done.'

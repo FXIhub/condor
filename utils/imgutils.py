@@ -398,64 +398,7 @@ def get_random_circle_positions(N,d,dimension=2):
             return None
     return X
 
-def generate_random_colloid_planes(edge_pix,diameter_pix,thickness_pix,Np,Nppp):
-    # edge_pix: edge length of planes in pixel
-    # diameter_pix: diameter of particles in pixel
-    # thickness_pix: thickness of layer in pixel
-    # Np: number of planes
-    # Nppp: number of particles per plane
-    box_hight = pylab.ceil(Np*thickness_pix+diameter_pix)
-    box_width = pylab.ceil(edge_pix+diameter_pix)
-    diameter = diameter_pix/(1.*box_width)
-    config.OUT.write("Generate box of %i x %i x %i voxels.\n" % (box_width,box_width,box_hight))
-    P = pylab.zeros((box_width,box_width,box_hight))
-    X, Y, Z = numpy.mgrid[0:box_width,0:box_width,0:box_hight]
-    positions = get_random_circle_positions(Nppp,diameter)
-    y = positions[:,0]
-    x = positions[:,1]
-    x = x*(box_width-diameter_pix)+diameter_pix/2.
-    y = y*(box_width-diameter_pix)+diameter_pix/2.
-    for p in range(Np):
-        config.OUT.write("Plane %i/%i" % (p+1,Np))
-        for i in range(Nppp):
-            R = pylab.sqrt((Y-y[i])**2+(X-x[i])**2+(Z-thickness_pix*(p+0.5))**2)
-            P[R<diameter_pix/2.-1.0] = 1
-            P[abs(R-diameter_pix/2.)<=1.0] = ((R[abs(R-diameter_pix/2.)<=1.0]-diameter_pix/2.0)+1.0)/2.0
-    return P
 
-#def position_spheres_in_icosahedron(d,N):
-#    n_list = get_icosahedron_normal_vectors()
-#    r = 0.5*
-
-    # position circles randomly on a plane [0..1,0..1] without allowing overlap with border and neighboring circles (if d > 0)
-#    positions = zeros((N,3))
-#    i = 0
-#    n_fails = 0
-#    dsq = d**2
-#    while i < N:
-#        v = pylab.rand(3)
-#        inicosahedron = True
-#        for n in n_list:
-#            if pylab.dot(v,n) > 1.0:
-#                inicosahedron = False
-#                break
-#        if inicosahedron == True:
-#            intersect = False
-#            for j in range(i):
-#                if (v[:]-positions[i,:])**2 <= dsq:
-#                    intersect = True
-#                    break
-#            if intersect == False:
-#                positions[i,:] = v.copy()[:]
-#                i += 1
-#        else:
-#            n_fails += 1
-#        if n_fails > 1E4:
-#            print "ERROR: Find no place to put more circles onto plane."
-#            return positions
-#    
-#    return positions
-    
     
 def rotate_3d_grid(X,Y,Z,eul_ang0,eul_ang1,eul_ang2):
     if eul_ang0 != 0.0 or eul_ang1 != 0.0 or eul_ang2 != 0.0:
@@ -472,53 +415,6 @@ def rotate_3d_grid(X,Y,Z,eul_ang0,eul_ang1,eul_ang2):
                     Z[zi,yi,xi] = new_vector[0]
     return [X,Y,Z]
 
-def get_icosahedrally_symmetrical_vectors(v,ico_n5=[1]):
-    # construct normal vectors of faces
-    phi = (1+sqrt(5))/2.0
-    ri = phi**2/2./sqrt(3.)
-    normalization_factor = 1/sqrt(phi**2+1.)
-    # normal vectors for every vertice
-    x1 = array([0.0,1.0,phi])*normalization_factor
-    x2 = array([0.0,1.0,-phi])*normalization_factor
-    x3 = array([0.0,-1.0,phi])*normalization_factor
-    x4 = array([0.0,-1.0,-phi])*normalization_factor
-    x5 = array([1.0,phi,0.0])*normalization_factor
-    x6 = array([1.0,-phi,0.0])*normalization_factor
-    x7 = array([-1.0,phi,0.0])*normalization_factor
-    x8 = array([-1.0,-phi,0.0])*normalization_factor
-    x9 = array([phi,0.0,1.0])*normalization_factor
-    x10 = array([-phi,0.0,1.0])*normalization_factor
-    x11 = array([phi,0.0,-1.0])*normalization_factor
-    x12 = array([-phi,0.0,-1.0])*normalization_factor
-    list5folds = [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12]
-    # angle between normals
-    an = dot(x5,x1)
-
-    def cont_element(el,l):
-        for i in range(0,len(l)):
-            if (sqrt(((el-l[i])**2)).sum()<0.01).any():
-                return True
-        return False
-
-    def angles_match(y1,y2,y3):
-        if abs(dot(y1,y2) - an) < 0.01 and abs(dot(y2,y3) - an) < 0.01 and abs(dot(y3,y1) - an) < 0.01:
-            return True
-        else:
-            return False
-
-    list3folds = []
-    for i in range(0,len(list5folds)):
-        for j in range(0,len(list5folds)):
-            for k in range(0,len(list5folds)):
-                n = (list5folds[i]+list5folds[j]+list5folds[k])/3.
-                if angles_match(list5folds[i],list5folds[j],list5folds[k]) and not cont_element(n,list3folds):
-                    list3folds.append(n)
-
-    if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
-        for i in range(0,len(list3folds)):
-            list3folds[i] = proptools.rotation(list3folds[i],euler_1,euler_2,euler_3)
-
-    return list3folds
 
 def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
     # construct normal vectors of faces
@@ -568,58 +464,3 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
 
 
     return n_list
-        
-def lanczos_interp(data,N_new_,a=2.):
-    
-    N_new = int(round(N_new_))
-    dim = len(data.shape)
-    N = data.shape[0]
-
-    fdata = pylab.fftn(data)
-    sfdata = pylab.fftshift(fdata)
-
-    if N_new%2 == 1:
-        c = N/2-1
-    else:
-        c = N/2
-
-    if dim == 1:
-        sfdata_cropped = sfdata[c-N_new/2:c-N_new/2+N_new]
-        X = (1.*pylab.arange(N_new)-N_new/2)/((N_new-1)/2.)
-        lanczos_kernel = (pylab.sinc(X*a)*pylab.sinc(X))
-
-    elif dim == 2:
-        if data.shape[0] != data.shape[1]:
-            print "ERROR: Only accept data with equal dimensions."
-            return
-
-        sfdata_cropped = sfdata[c-N_new/2:c-N_new/2+N_new,
-                                c-N_new/2:c-N_new/2+N_new]
-        X,Y = pylab.meshgrid((pylab.arange(N_new)-N_new/2)/((N_new-1)*2.),
-                             (pylab.arange(N_new)-N_new/2)/((N_new-1)*2.))
-        lanczos_kernel = pylab.sinc(X*a)*pylab.sinc(X)*pylab.sinc(Y*a)*pylab.sinc(Y)
-
-    elif dim == 3:
-        if data.shape[0] != data.shape[1] or data.shape[1] != data.shape[2]:
-            print "ERROR: Only accept data with equal dimensions."
-            return
-
-        sfdata_cropped = sfdata[c-N_new/2:c-N_new/2+N_new,
-                                c-N_new/2:c-N_new/2+N_new,
-                                c-N_new/2:c-N_new/2+N_new]
-        X,Y,Z = pylab.mgrid[:N_new,:N_new,:N_new]
-        X = (X-N_new/2)/(2.*(N_new-1))
-        Y = (Y-N_new/2)/(2.*(N_new-1))
-        Z = (Z-N_new/2)/(2.*(N_new-1))
-        lanczos_kernel = \
-            pylab.sinc(X*a)*pylab.sinc(X)* \
-            pylab.sinc(Y*a)*pylab.sinc(Y)* \
-            pylab.sinc(Z*a)*pylab.sinc(Z)
-
-    sfdata_cropped *= lanczos_kernel
-    fdata_cropped = pylab.fftshift(sfdata_cropped)
-    ffdata = pylab.ifftn(fdata_cropped)
-    norm_factor = N_new/(1.*N)
-    ffdata *= (N_new**dim/(1.*N)**dim)
-    return ffdata
-
