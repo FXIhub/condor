@@ -2,7 +2,7 @@ import sys,numpy,pylab,time,multiprocessing
 import logging
 logger = logging.getLogger("Propagator")
 if "utils" not in sys.path: sys.path.append("utils")
-import config,imgutils,proptools
+import config,imgutils,proptools,xcorepropagation
 
 # Pythontools
 import gentools,cxitools,imgtools
@@ -187,6 +187,30 @@ class Sample:
         else:
             self.material = None
 
+    def _get_dn(self):
+        # refractive index from material
+        if self.material == None:
+            dn = complex(1.,0.)
+        else:
+            dn = self.material.get_dn()
+        return dn
+
+    def _get_F0(self,source0=None,detector0=None):
+        if source0 == None:
+            source = self._parent.source
+        else:
+            source = source0
+        if detector0 == None:
+            detector = self._parent.detector
+        else:
+            detector = detector0
+        # F0 = sqrt(I_0 Omega_p) 2pi/wavelength^2
+        wavelength = source.photon.get_wavelength()
+        I_0 = source.get_intensity("ph/m2")
+        Omega_p = detector.get_pixel_solid_angle("binned")
+        F0 = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2 
+        return F0
+
     def set_random_orientation(self):
         [e0,e1,e2] = proptools.random_euler_angles()
         self.euler_angle_0 = e0
@@ -202,12 +226,12 @@ class SampleSphere(Sample):
 
     def __init__(self,**kwargs):
         Sample.__init__(self,**kwargs)
-        reqk = ["size"]
+        reqk = ["diameter"]
         for k in reqk:
             if k not in kwargs.keys():
                 logger.error("Cannot initialize SampleSphere instance. %s is a necessary keyword." % k)
                 return
-        self.radius = kwargs['size']/2.
+        self.radius = kwargs['diameter']/2.
         self._parent = kwargs.get('parent',None)
 
         material_kwargs = kwargs.copy()
@@ -218,16 +242,32 @@ class SampleSphere(Sample):
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
+    def propagate(self,detector0=None,source0=None):
+        # scattering amplitude from homogeneous sphere
+        if source0 == None:
+            source = self._parent.source
+        else:
+            source = source0
+        if detector0 == None:
+            detector = self._parent.detector
+        else:
+            detector = detector0
+
+        R = self.radius
+        V = 4/3.*numpy.pi*R**3
+        dn = self._get_dn()
+        F0 = self._get_F0(source,detector)
+        K = (F0*V*dn.real)**2
+        q = detector.generate_absqmap()
+        F = proptools.F_sphere_diffraction(K,q,R)
+
+        return F
+
     def get_area(self):
         """ Calculates area of projected sphere """
         return numpy.pi*self.radius**2
 
 class SampleSpheroid(Sample):
-    """
-    A class of the input-object.
-    Sample is a homogeneous spheroid defined by the orthogonal diameters a and c (c is the one along the rotation axis) and a material object.
-
-    """
 
     def __init__(self,**kwargs):
         Sample.__init__(self,**kwargs)
@@ -249,6 +289,28 @@ class SampleSpheroid(Sample):
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
+    def propagate(self,detector0=None,source0=None):
+        # scattering amplitude from homogeneous sphere
+        if source0 == None:
+            source = self._parent.source
+        else:
+            source = source0
+        if detector0 == None:
+            detector = self._parent.detector
+        else:
+            detector = detector0
+
+        V = 4/3.*numpy.pi*self.a**2*self.c
+        dn = self._get_dn()
+        F0 = self._get_F0(detector,source)
+        K = (F0*V*dn.real)**2
+        q = detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
+        qx = q[:,:,2]
+        qy = q[:,:,1]
+        F = proptools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)
+
+        return F
+
     def get_area(self):
         """
         Calculates area of projected spheroid
@@ -258,11 +320,6 @@ class SampleSpheroid(Sample):
 
 
 class SampleMap(Sample):
-    """
-    A class of the input-object.
-    Class of the sample described by a refractive index map (self.map3d_fine: dn = n-1) 
-
-    """
 
     def __init__(self,**kwargs):
         """
@@ -323,12 +380,14 @@ class SampleMap(Sample):
         self.map3d_fine = None
         self._map3d = None
         self._dX = None
+        self._map3d_fine = None
+        self._dX_fine = None
         self.radius = kwargs.get('radius',None)
 
         if "dX_fine" in kwargs:
             self.dX_fine = kwargs["dX_fine"]
         elif "oversampling_fine":
-            self.dX_fine = self._parent.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
+            self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
 
         # Map
         if "geometry" in kwargs:
@@ -345,8 +404,8 @@ class SampleMap(Sample):
                     self.radius = (2*kwargs["diameter_a"]+kwargs["diameter_c"])/3./2.
                 elif kwargs["geometry"] == "sphere":
                     if "diameter" not in kwargs:
-                        logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=sphere.")                
-                    self.put_sphere(self.radius,**kwargs)
+                        logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=sphere.")
+                    self.put_sphere(kwargs["diameter"]/2.,**kwargs)
                     self.radius = kwargs["diameter"]/2.
         else:
             if "map3d_fine" in kwargs:
@@ -358,14 +417,80 @@ class SampleMap(Sample):
             else:
                 # default
                 N = kwargs.get("N_fine",1)
-                self.map3d_fine = numpy.zeros(shape=(N,N,N),dtype="complex64")
+                self.map3d_fine = numpy.zeros(shape=(N,N,N),dtype="float64")
 
-    def get_refractive_index_map3d_fine(self):
-        if self.material == None:
-            dn = 1.
+
+    def propagate(self,detector0=None,source0=None):
+        # scattering amplitude from dn-map: F = F0 DFT{dn} dV
+        if source0 == None:
+            source = self._parent.source
         else:
-            dn = self.material.get_dn()
-        return self.map3d_fine*dn
+            source = source0
+        if detector0 == None:
+            detector = self._parent.detector
+        else:
+            detector = detector0
+
+        map3d = None
+        dX = detector.get_real_space_resolution_element()
+
+        if self.dX_fine > dX:
+            logger.error("Finer real space sampling required for chosen geometry.")
+            return
+
+        # has map3d_fine the required real space grid?
+        if map3d == None and abs(self.dX_fine/dX-1) < 0.001:
+            # ok, we'll take the fine map
+            map3d = self.map3d_fine
+            logger.debug("Using the fine map for propagtion.")
+
+        # do we have an interpolated map?
+        if map3d == None and self._dX != None:
+            # does it have the right spacing?
+            if abs(self._dX/dX-1) < 0.001:
+                # are the shapes of the original fine map and our current fine map the same?
+                if numpy.all(numpy.array(self.map3d_fine.shape)==numpy.array(self._map3d_fine.shape)):
+                    # is the grid of the original fine map and the current fine map the same?
+                    if self.dX_fine == self._dX_fine:
+                        # are the values of the original fine map and the cached fine map the same?
+                        if numpy.all(self.map3d_fine==self._map3d_fine):
+                            # ok, we take the cached map!
+                            map3d = self._map3d
+                            logger.debug("Using the cached interpolated map for propagtion.")
+                
+        # do we have to do interpolation?
+        if map3d == None and self.dX_fine < dX:
+            from scipy import ndimage
+            f = self.dX_fine/dX
+            N_mapfine = self.map3d_fine.shape[0]
+            L_mapfine = (N_mapfine-1)*self.dX_fine
+            N_map = int(numpy.floor((N_mapfine-1)*f))+1
+            L_map = (N_map-1)*dX
+            gt = numpy.float64(numpy.indices((N_map,N_map,N_map)))/float(N_map-1)*(N_mapfine-1)*L_map/L_mapfine
+            map3d = ndimage.map_coordinates(self.map3d_fine, gt, order=3)
+            # Cache interpolated data 
+            self._map3d = map3d
+            self._dX = N_mapfine/(1.*N_map)*self.dX_fine
+            # Cace fine data for later decision whether or not the interpolated map can be used again
+            self._map3d_fine = self.map3d_fine
+            self._dX_fine = self.dX_fine
+            logger.debug("Using a newly interpolated map for propagtion.")
+
+        print map3d.max()
+        dn_map3d = map3d * self._get_dn().real
+        dn_map3d = numpy.array(map3d,dtype="complex128")
+
+        # scattering vector grid
+        e0 = self.euler_angle_0
+        e1 = self.euler_angle_1
+        e2 = self.euler_angle_2
+        q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
+     
+        logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
+        F = self._get_F0(source,detector) * xcorepropagation.nfftSingleCore(dn_map3d,q_scaled) * dX**3
+        logger.debug("Got pattern of %i x %i pixels." % (F.shape[1],F.shape[0]))
+    
+        return F
         
     def put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")
@@ -377,21 +502,16 @@ class SampleMap(Sample):
         origin = kwargs.get("origin","middle")
         mode = kwargs.get("mode","sum")
         if self.map3d_fine == None:
-            self.map3d_fine = numpy.array(map_add,dtype="complex64")
+            self.map3d_fine = numpy.array(map_add,dtype="float64")
             return
         else:
             p = numpy.array([z/self.dX_fine,y/self.dX_fine,z/self.dX_fine])
             self.map3d_fine = imgtools.array_to_array(self.map3d_fine,map_add,p,origin,mode)
 
     def put_sphere(self,radius,**kwargs):
-        R_N = radius/self.dX_fine
-        size = int(round((R_N*1.2)*2))
-        X,Y,Z = 1.0*numpy.mgrid[0:size,0:size,0:size]
-        for J in [X,Y,Z]: J = J - size/2.0-0.5
-        R = numpy.sqrt(X**2+Y**2+Z**2)
-        spheremap = numpy.zeros(shape=R.shape,dtype="complex64")
-        spheremap[R<R_N] = 1
-        spheremap[abs(R_N-R)<0.5] = 0.5+0.5*(R_N-R[abs(R_N-R)<0.5])
+        nR = radius/self.dX_fine
+        N = int(round((nR*1.2)*2))
+        spheremap = make_sphere_map(N,nR)
         self.put_custom_map(spheremap,**kwargs)
  
     def put_spheroid(self,a,b,**kwargs):
@@ -461,56 +581,6 @@ class SampleMap(Sample):
                                                    slice_index=self.fmap3d_fine.shape[1]/2)
         mlab.show()
 
-    def project(self,eul_ang0=None,eul_ang1=None,eul_ang2=None,**kwargs):
-        """ Projection of 3-dimensional map."""
-        if not eul_ang0: eul_ang0 = self.grid_euler_angle_0
-        if not eul_ang1: eul_ang1 = self.grid_euler_angle_1
-        if not eul_ang2: eul_ang2 = self.grid_euler_angle_2
-
-        if eul_ang0 == 0.0 and eul_ang1 == 0.0 and eul_ang2 == 0.0:
-            map2d = numpy.zeros((self.map3d_fine.shape[1],self.map3d_fine.shape[2]))
-            for iy in numpy.arange(0,map2d.shape[0]):
-                for ix in numpy.arange(0,map2d.shape[1]):
-                    map2d[iy,ix] = self.map3d_fine[:,iy,ix].real.sum()*self.dX_fine*numpy.exp(-self.map3d_fine[:,iy,ix].imag.sum()*self.dX_fine)
-        else:
-            x_0 = proptools.rotation(numpy.array([0.0,0.0,1.0]),eul_ang0,eul_ang1,eul_ang2)
-            y_0 = proptools.rotation(numpy.array([0.0,1.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
-            z_0 = proptools.rotation(numpy.array([1.0,0.0,0.0]),eul_ang0,eul_ang1,eul_ang2)
-            N = self.map3d_fine.shape[0]
-            extra_space = 10
-            map2d = numpy.zeros(shape=(N,N),dtype="complex64")
-            def valid_coordinate(v):
-                for i in range(0,3):
-                    if v[i] < N and v[i] > 0:
-                        pass
-                    else:
-                        return False
-                return True
-            for y in range(0,N):
-                for x in range(0,N):
-                    for z in range(0,N):
-                        vector = numpy.array([(N-1)/2.0,(N-1)/2.0,(N-1)/2.0])-(N-1)/2.0*(x_0+y_0+z_0)+(z*z_0+y*y_0+x*x_0)
-                        cases = [numpy.floor,lambda x: 1.0 + numpy.floor(x)]
-                        for y_func in cases:
-                            for x_func in cases:
-                                for z_func in cases:
-                                    if valid_coordinate(numpy.array([z_func(vector[0]),y_func(vector[1]),x_func(vector[2])])):
-                                        map2d[y,x] +=\
-                                            self.dX_fine*\
-                                            (1.0-abs(z_func(vector[0]) - vector[0]))*\
-                                            (1.0-abs(y_func(vector[1]) - vector[1]))*\
-                                            (1.0-abs(x_func(vector[2]) - vector[2]))*\
-                                            self.map3d_fine[int(z_func(vector[0])),
-                                                  int(y_func(vector[1])),
-                                                  int(x_func(vector[2]))]
-        if "padding" in kwargs.keys():
-            if kwargs["padding"]=="squared":
-                N_new = max([map2d.shape[0],map2d.shape[1]])
-                map2d_new = numpy.zeros(shape=(N_new,N_new))
-                map2d_new[(N_new-map2d.shape[0])/2:(N_new-map2d.shape[0])/2+map2d.shape[0],
-                          (N_new-map2d.shape[1])/2:(N_new-map2d.shape[1])/2+map2d.shape[1]] = map2d[:,:]
-                map2d = map2d_new
-        return map2d
 
     def save_map3d_fine(self,filename):
         """
@@ -570,13 +640,7 @@ class SampleMap(Sample):
         ======================================================================
 
         """
-        if mode == 'auto':
-            if self.radius != None: return numpy.pi*self.radius**2
-        projection = self.project(self.grid_euler_angle_0,self.grid_euler_angle_1,self.grid_euler_angle_2)
-        binary = numpy.ones(shape=projection.shape)
-        binary[abs(projection)<numpy.median(abs(projection))] = 0
-        area = binary.sum()*self.dX_fine**2
-        return area
+        if self.radius != None: return numpy.pi*self.radius**2
 
     
     
@@ -613,7 +677,7 @@ def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.,s=1.):
     return icomap
 
 
-def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.,s=1.):
+def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.,s=None):
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     for J in [X,Y,Z]: J -= N/2.0-0.5        
     R_sq = X**2+Y**2+Z**2
@@ -624,6 +688,52 @@ def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.,s=1.):
     spheroidmap[spheroidmap<=1] = 1
     spheroidmap[spheroidmap>1] = 0
     logger.info("Smoothing by a factor of %f\n" % s)
-    spheroidmap = abs(imgutils.smooth3d(spheroidmap,s))
-    spheroidmap /= spheroidmap.max()
+    if s != None:
+        spheroidmap = abs(imgutils.smooth3d(spheroidmap,s))
+        spheroidmap /= spheroidmap.max()
     return spheroidmap
+
+def make_sphere_map(N,nR,s=None):
+    X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
+    X = X-(N-1)/2.
+    Y = Y-(N-1)/2.
+    Z = Z-(N-1)/2.
+    R = numpy.sqrt(X**2+Y**2+Z**2)
+    spheremap = numpy.zeros(shape=R.shape,dtype="float64")
+    spheremap[R<=nR] = 1
+    spheremap[abs(nR-R)<0.5] = 0.5+0.5*(nR-R[abs(nR-R)<0.5])
+    if s != None:
+        spheremap= abs(imgutils.smooth3d(spheremap,s))
+        spheremap /= spheremap.max()
+    return spheremap
+
+
+#def calculatePattern_SampleSpheres(input_obj):
+#    wavelength = input_obj.source.photon.get_wavelength()
+#    I_0 = input_obj.source.get_intensity("ph/m2")
+#    Omega_p = input_obj.detector.get_pixel_solid_angle("binned")
+#    if self.material == None:
+#        dn_real = 1.
+#    else:
+#        dn_real = self.material.get_dn().real
+
+#    radii = self.get_radii()
+#    dn_real = (1-self.material.get_n()).real
+#    absq = input_obj.detector.generate_absqmap()
+#    q = input_obj.detector.generate_qmap()
+#    F = numpy.zeros(shape=absq.shape,dtype='complex')
+#    for R in radii:
+#        Fr = numpy.zeros_like(F)
+#        Fr[absq!=0.0] = (numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2*4/3.0*numpy.pi*R**3*3*(numpy.sin(absq[absq!=0.0]*R)-absq[absq!=0.0]*R*numpy.cos(absq[absq!=0.0]*R))/(absq[absq!=0.0]*R)**3*dn_real)
+#        try: Fr[absq==0] = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2*4/3.0*numpy.pi*R**3*dn_real
+#        except: pass
+
+#        indices = self.r==R
+
+#        for i in range(sum(indices)):
+#            looger.debug("%i" % i)
+#            d = [numpy.array(self.z)[indices][i],
+#                 numpy.array(self.y)[indices][i],
+#                 numpy.array(self.x)[indices][i]]
+#            F[:,:] += (Fr*input_obj.get_phase_ramp(q,d))[:,:]
+#    return F

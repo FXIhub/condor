@@ -277,7 +277,7 @@ class Detector:
             w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
-        y_max = max([self.get_cy('binned'),self.mask.shape[1]-1-self.get_cy('binned')]) * self.get_pixel_size('binned')
+        y_max = max([self.get_cy('binned'),self.mask.shape[0]-1-self.get_cy('binned')]) * self.get_pixel_size('binned')
         R_Ewald = 2*numpy.pi/w
         phi = numpy.arctan2(y_max,self.distance)
         return 2 * R_Ewald * numpy.sin(phi/2.0)
@@ -297,3 +297,11 @@ class Detector:
     def get_absq_max(self,**kwargs):
         return max([self.get_absqx_max(**kwargs),self.get_absqy_max(**kwargs)])
 
+    def get_real_space_resolution_element(self,**kwargs):
+        dX = numpy.pi / self.get_absq_max(**kwargs)
+        return dX
+
+    def get_max_achievable_crystallographic_resolution(self,**kwargs):
+        dx = 2 * numpy.pi / self.get_absqx_max(**kwargs)
+        dy = 2 * numpy.pi / self.get_absqy_max(**kwargs)
+        return [dx,dy]
