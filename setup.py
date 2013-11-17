@@ -8,7 +8,7 @@ try:
     import imgtools, gentools, cxitools
     print "Necessary python tools are installed."
 except:
-    print "ERROR: Cannot import python_tools. Please install Max' python_tools before you proceed."
+    print "ERROR: Cannot import python_tools. Please install Max' python_tools and add them to your PYTHONPATH before you proceed."
     print "Installation of propagator failed."
     quit(0)
 
