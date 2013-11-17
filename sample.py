@@ -302,7 +302,7 @@ class SampleSpheroid(Sample):
 
         V = 4/3.*numpy.pi*self.a**2*self.c
         dn = self._get_dn()
-        F0 = self._get_F0(detector,source)
+        F0 = self._get_F0(source,detector)
         K = (F0*V*dn.real)**2
         q = detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
         qx = q[:,:,2]
@@ -398,9 +398,9 @@ class SampleMap(Sample):
                     self.put_icosahedron(kwargs["diameter"]/2.,**kwargs)
                     self.radius = kwargs["diameter"]/2.
                 elif kwargs["geometry"] == "spheroid":
-                    if "diameter_a" not in kwargs or "diameter_c" in kwargs:
+                    if "diameter_a" not in kwargs or "diameter_c" not in kwargs:
                         logger.error("Cannot initialize SampleMap instance. a_diameter and c_diameter are necessary keywords for geometry=spheroid.")
-                    self.put_spheroid(kwargs["diameter_a"],kwargs["diameter_c"],k)
+                    self.put_spheroid(kwargs["diameter_a"]/2.,kwargs["diameter_c"]/2.,**kwargs)
                     self.radius = (2*kwargs["diameter_a"]+kwargs["diameter_c"])/3./2.
                 elif kwargs["geometry"] == "sphere":
                     if "diameter" not in kwargs:
@@ -476,9 +476,7 @@ class SampleMap(Sample):
             self._dX_fine = self.dX_fine
             logger.debug("Using a newly interpolated map for propagtion.")
 
-        print map3d.max()
-        dn_map3d = map3d * self._get_dn().real
-        dn_map3d = numpy.array(map3d,dtype="complex128")
+        dn_map3d = numpy.array(map3d,dtype="complex128") * self._get_dn()
 
         # scattering vector grid
         e0 = self.euler_angle_0
@@ -526,9 +524,9 @@ class SampleMap(Sample):
         nA = a/self.dX_fine
         nB = b/self.dX_fine
         # leaving a bit of free space around spheroid
-        N = int(round((R_N*1.2)*2))
+        N = int(round((nRmax*1.2)*2))
         spheromap = make_spheroid_map(N,nA,nB,e0,e1,e2)
-        self.put_custom_map(spheroidmap,**kwargs)
+        self.put_custom_map(spheromap,**kwargs)
 
     def put_icosahedron(self,radius,**kwargs):
         e0 = kwargs.get("geometry_euler_angle_0")
@@ -679,16 +677,18 @@ def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.,s=1.):
 
 def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.,s=None):
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
-    for J in [X,Y,Z]: J -= N/2.0-0.5        
+    X = X-(N-1)/2.
+    Y = Y-(N-1)/2.
+    Z = Z-(N-1)/2.
     R_sq = X**2+Y**2+Z**2
-    e_c = proptools.rotation(numpy.array([0.0,0.0,1.0]),e0,e1,e2)
+    e_c = proptools.rotation(numpy.array([0.0,0.0,1.0]),euler0,euler1,euler2)
     d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
-    r_sq_c = abs( R_sq * (1 - (d_sq_c/R_sq)))
-    spheroidmap = r_sq_c/a_N**2+d_sq_c/b_N**2
+    r_sq_c = abs( R_sq * (1 - (d_sq_c/(R_sq+numpy.finfo("float32").eps))))
+    spheroidmap = r_sq_c/nA**2+d_sq_c/nB**2
     spheroidmap[spheroidmap<=1] = 1
     spheroidmap[spheroidmap>1] = 0
-    logger.info("Smoothing by a factor of %f\n" % s)
     if s != None:
+        logger.info("Smoothing by a factor of %f\n" % s)
         spheroidmap = abs(imgutils.smooth3d(spheroidmap,s))
         spheroidmap /= spheroidmap.max()
     return spheroidmap
@@ -703,6 +703,7 @@ def make_sphere_map(N,nR,s=None):
     spheremap[R<=nR] = 1
     spheremap[abs(nR-R)<0.5] = 0.5+0.5*(nR-R[abs(nR-R)<0.5])
     if s != None:
+        logger.info("Smoothing by a factor of %f\n" % s)
         spheremap= abs(imgutils.smooth3d(spheremap,s))
         spheremap /= spheremap.max()
     return spheremap
