@@ -172,6 +172,16 @@ def mask_min_spheroid(qX,qY,a,c,theta,phi,i_min,ds=0.25):
     M = (s > s_mins[i_min]-ds)*(s < s_mins[i_min]+ds)
     return M
 
+def spheroid_support(N,dx,a,c,phi):
+    Y,X = numpy.indices((N,N))
+    X = numpy.float64(X-N/2)*dx
+    Y = numpy.float64(Y-N/2)*dx
+    T = numpy.arctan2(Y,X)-phi
+    R = numpy.sqrt(X**2+Y**2)
+    Rmax = a*c/numpy.sqrt((a*numpy.sin(T))**2+(c*numpy.cos(T))**2)
+    M = R<=Rmax
+    return M
+                
 
 
 # scattering amplitude from homogeneous sphere:
