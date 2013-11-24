@@ -263,7 +263,7 @@ def get_spheroid_diffraction_formula(p,D,wavelength,X=None,Y=None):
         qX = qmap[:,:,2]
         qY = qmap[:,:,1]
         qZ = qmap[:,:,0]
-        I = lambda K,a,c,theta,phi: proptools.I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+        I = lambda K,a,c,theta,phi: I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
     else:
         qmap = lambda X,Y: generate_qmap(X,Y,p,D,wavelength)
         I = lambda X,Y,K,a,c,theta,phi: I_sphere_diffraction(K,qmap(X,Y)[0],qmap(X,Y)[1],a,c,theta,phi)
