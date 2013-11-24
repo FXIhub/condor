@@ -236,7 +236,6 @@ _I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: abs(K)*(3.*(numpy.sin(_q
 I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < numpy.finfo("float64").resolution)*abs(K) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= numpy.finfo("float64").resolution)*_I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
 
 
-
 # scattering amplitude from homogeneous spheroid:
 # -----------------------------------------------
 # Sources:
@@ -260,7 +259,10 @@ I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: (_qH_spheroid_diffraction
 # ============================================================================================        
 def get_spheroid_diffraction_formula(p,D,wavelength,X=None,Y=None):
     if X != None and Y != None:
-        qX,qY,qZ = generate_qmap(X,Y,p,D,wavelength)
+        qmap = generate_qmap(X,Y,p,D,wavelength)
+        qX = qmap[:,:,2]
+        qY = qmap[:,:,1]
+        qZ = qmap[:,:,0]
         I = lambda K,a,c,theta,phi: proptools.I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
     else:
         qmap = lambda X,Y: generate_qmap(X,Y,p,D,wavelength)
