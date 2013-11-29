@@ -6,7 +6,9 @@
 # -----------------------------------------------------------------------------------------------------
 # All variables in SI units by default. Exceptions only if expressed by variable name.
 
-import pylab, sys, ConfigParser, numpy, types, pickle, time, math
+import pylab, sys, ConfigParser, numpy, types, pickle, time, math, os
+
+propdir = os.path.dirname(os.path.realpath(__file__)))
 
 import logging
 logger = logging.getLogger("Propagator")
@@ -44,7 +46,7 @@ class Input:
         - configfile: Filename of configuration file. If not given variables are set to default values.
 
         """
-        self.default_configuration = "conf/default.conf"
+        self.default_configuration = propdir+"/conf/default.conf"
         self.configuration = gentools.Configuration(configuration,self.default_configuration)
         self.reconfigure()
         self._photon_changed = False
