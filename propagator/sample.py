@@ -1,11 +1,11 @@
-import sys,numpy,pylab,time,multiprocessing
+import sys,numpy,time,multiprocessing
 import logging
 logger = logging.getLogger("Propagator")
 if "utils" not in sys.path: sys.path.append("utils")
 import config,imgutils,proptools,xcorepropagation
 
 # Pythontools
-import gentools,cxitools,imgtools
+from python_tools import gentools,cxitools,imgtools
 
 
 class Material:

@@ -1,4 +1,4 @@
-import pylab, sys, os, numpy, types, pickle, time, math, logging
+import sys, os, numpy, types, pickle, time, math, logging
 logging.basicConfig(format='%(levelname)s: %(message)s')
 logger = logging.getLogger('Propagator')
 
@@ -186,7 +186,8 @@ def unpickle_scattering_factors():
     DICT_atomic_mass = {}
     global DICT_scattering_factors
     DICT_scattering_factors = {}
-    ELEMENTS_FILE = open('%s/elements.dat' % PROPAGATOR_DIR,'r')
+    this_dir = os.path.dirname(os.path.realpath(__file__))
+    ELEMENTS_FILE = open('%s/data/elements.dat' % this_dir,'r')
     DICT_atomic_mass,DICT_scattering_factors = pickle.load(ELEMENTS_FILE)
     F_MIN_ENERGY_EV = 0
     F_MAX_ENERGY_EV = 0

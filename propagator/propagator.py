@@ -6,30 +6,21 @@
 # -----------------------------------------------------------------------------------------------------
 # All variables in SI units by default. Exceptions only if expressed by variable name.
 
-import pylab, sys, ConfigParser, numpy, types, pickle, time, math, os
+import sys, ConfigParser, numpy, types, pickle, time, math, os
 
-propdir = os.path.dirname(os.path.realpath(__file__)))
+this_dir = os.path.dirname(os.path.realpath(__file__))
 
 import logging
 logger = logging.getLogger("Propagator")
-
-# For plotting
-from matplotlib import rc
-import matplotlib.pyplot as mpy
-rc('text', usetex=True)
-rc('font', family='serif')
-mpy.rcParams['figure.figsize'] = 9, 9
 
 # Initial configuration and importing propagator files
 import config
 config.init_configuration()
 import xcorepropagation,imgutils,proptools
-from source import *
-from sample import *
-from detector import *
+import source,sample,detector
 
 # Pythontools
-import gentools,cxitools,imgtools
+from python_tools import gentools,cxitools,imgtools
 
 class Input:
     """
@@ -46,7 +37,7 @@ class Input:
         - configfile: Filename of configuration file. If not given variables are set to default values.
 
         """
-        self.default_configuration = propdir+"/conf/default.conf"
+        self.default_configuration = this_dir+"/data/default.conf"
         self.configuration = gentools.Configuration(configuration,self.default_configuration)
         self.reconfigure()
         self._photon_changed = False
@@ -99,64 +90,3 @@ class Output:
         A = self.amplitudes
         A[numpy.isfinite(A)==False] = 0.
         return numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(self.amplitudes)))
-
-    #def get_nyquist_pixel_size(self):
-    #    return proptools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),self.input_object.sample.get_area())
-
-    #def save_pattern_to_file(self,filename,**kwargs):
-    #    """
-    #    Function saves dataset to file of specified format.
-    #    ===================================================
-    #    
-    #    Arguments:
-    #    - filename: The file-format is specified using one of the following file-endings:
-    #                - \'.h5\'
-    #                - \'.png\'
-
-        
-    #    Keyword arguments:
-    #    - log: True / False (default)
-    #    - poisson: True / False (default)
-    #    - colorscale: \'jet\' (default) / \'gray\'
-    #    - use_spimage: True / False (default)
-
-    #    """
-    #    pattern = self.get_intensity_pattern()
-    #    mask = self.input_object.detector.mask
-    #    if 'poisson' in kwargs:
-    #        if kwargs['poisson']:
-    #            pattern = pylab.poisson(pattern)
-    #    if 'log' in kwargs:
-    #        if kwargs['log']:
-    #            pattern = pylab.log10(pattern)
-    #            pattern[pylab.isfinite(pattern)==False] = pattern[pylab.isfinite(pattern)].min()
-    #    use_spimage = kwargs.get('use_spimage',False)
-    #    colorscale = kwargs.get('colorscale','jet')
-    #    if use_spimage:
-    #        import spimage
-    #        if filename[-3:]=='.h5':
-    #            color = 0
-    #        elif filename[-3:]=='.png':
-    #            if colorscale  == 'gray':
-    #                    color = 1
-    #            elif colorscale  == 'jet':
-    #                    color = 16
-    #        else:
-    #            logger.error("%s is not a valid fileformat for this function." % filename[-3:])
-    #            return
-    #        tmp_data = spimage.sp_image_alloc(pattern.shape[1],pattern.shape[0],1)
-    #        tmp_data.image[:,:] = pattern[:,:]
-    #        tmp_data.mask[:,:] = mask[:,:]
-    #        spimage.sp_image_write(tmp_data,filename,0)
-    #        spimage.sp_image_free(tmp_data)
-    #    else:
-    #        if filename[-4:]=='.png':
-    #            pylab.imsave(filename,pattern*pylab.log10(mask*10),cmap=pylab.cm.get_cmap(colorscale))
-    #        elif filename[-3:]=='.h5':
-    #            import h5py
-    #            f = h5py.File(filename,'w')
-    #            pattern_ds = f.create_dataset('intensities', pattern.shape, pattern.dtype)
-    #            pattern_ds[:,:] = pattern[:,:]
-    #            amplitudes_ds = f.create_dataset('amplitudes', self.amplitudes.shape, self.amplitudes.dtype)
-    #            amplitudes_ds[:,:] = self.amplitudes[:,:]
-    #            f.close()

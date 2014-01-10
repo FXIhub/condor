@@ -7,7 +7,7 @@ logger = logging.getLogger("Propagator")
 import proptools
 
 # Pythontools
-import gentools,cxitools,imgtools
+from python_tools import gentools,cxitools,imgtools
 
 
 class Detector:

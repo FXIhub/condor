@@ -1,4 +1,4 @@
-import pylab
+import numpy
 import config,logging
 logger = logging.getLogger('Propagator')
 
@@ -32,7 +32,7 @@ class Source:
         return I
 
     def get_area(self):
-        return pylab.pi*(self.focus_diameter/2.0)**2
+        return numpy.pi*(self.focus_diameter/2.0)**2
     
 class Photon:
     def __init__(self,**kwarg):

@@ -1,7 +1,6 @@
-import sys,numpy,pylab,multiprocessing
-import config
-sys.path.append(config.PROPAGATOR_DIR+"/utils/nfft")
-import nfft
+import sys,numpy,multiprocessing
+import propagator.config
+import propagator.utils.nfft
 import time
 import logging
 logger = logging.getLogger("Propagator")
@@ -37,6 +36,7 @@ def nfftSingleCore(sample,q):
     return fourierpattern
 
 def tester():
+    import pylab
     s = generate_sample("cube",100)
     result = nfftSingleCore({"y_min":-0.25,
                              "y_steps":500,
