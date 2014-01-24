@@ -2,6 +2,7 @@ import numpy
 import config,logging
 logger = logging.getLogger('Propagator')
 
+
 class Source:
     """
     A subclass of the input object.

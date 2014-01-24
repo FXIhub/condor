@@ -17,7 +17,9 @@ logger = logging.getLogger("Propagator")
 import config
 config.init_configuration()
 import xcorepropagation,imgutils,proptools
-import source,sample,detector
+from source import Source
+from sample import SampleMap,SampleSphere,SampleSpheroid
+from detector import Detector
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools
@@ -38,8 +40,7 @@ class Input:
 
         """
         self.default_configuration = this_dir+"/data/default.conf"
-        self.configuration = gentools.Configuration(configuration,self.default_configuration)
-        self.reconfigure()
+        self.reconfigure(configuration)
         self._photon_changed = False
         self._detector_changed = False
     
@@ -47,6 +48,7 @@ class Input:
         """ 
         Function reconfigures Input subclasses based on the given configuration [self.configuration]
         """
+
         if configuration != {}:
             self.configuration = gentools.Configuration(configuration,self.default_configuration)
 
@@ -63,6 +65,9 @@ class Input:
         else:
             logger.error("%s is not a valid sample type.")
             return
+        
+
+
 
 class Output:
     """

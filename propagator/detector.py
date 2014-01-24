@@ -9,7 +9,6 @@ import proptools
 # Pythontools
 from python_tools import gentools,cxitools,imgtools
 
-
 class Detector:
     """
     A subclass of the input object.

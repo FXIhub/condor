@@ -4,7 +4,7 @@ Module that performs some nonequispaced ffts using the nfft C library.
 This module is made for simulation of diffraction
 patterns and is not intended for general use.
 """
-import pylab
+import numpy
 import nfft_c as _nfft_c
 
 def nfft1d(coordinates, vin):
@@ -18,7 +18,7 @@ def nfft1d(coordinates, vin):
     Output:
     vout        : values of the transform at the positions specified in coordinates
     """
-    vout = pylab.zeros(len(coordinates), dtype='complex128')
+    vout = numpy.zeros(len(coordinates), dtype='complex128')
 
     vin.dtype = 'float64'
     vout.dtype = 'float64'
@@ -48,30 +48,30 @@ def nfft3d(coordinates, vin):
         print 'number of good values = %d (%d)' % (sum(good_values_1d), len(good_values_1d))
         return []
     if vin.dtype != "complex128":
-        vin = pylab.complex128(vin)
+        vin = numpy.complex128(vin)
         print "Convert to complex128"
-    vout_real = pylab.zeros(len(coordinates)/3, dtype='float64')
-    vout_imag = pylab.zeros(len(coordinates)/3, dtype='float64')
-    vin_real = pylab.array(vin.real, dtype='float64')
-    vin_imag = pylab.array(vin.imag, dtype='float64')
+    vout_real = numpy.zeros(len(coordinates)/3, dtype='float64')
+    vout_imag = numpy.zeros(len(coordinates)/3, dtype='float64')
+    vin_real = numpy.array(vin.real, dtype='float64')
+    vin_imag = numpy.array(vin.imag, dtype='float64')
     _nfft_c.nfft3(coordinates, vin_real, vin_imag, vout_real, vout_imag)
-    vout = pylab.zeros(len(coordinates)/3, dtype='complex128')
+    vout = numpy.zeros(len(coordinates)/3, dtype='complex128')
     vout.real[:] = vout_real[:]
     vout.imag[:] = vout_imag[:]
     #_nfft_c.nfft3_finalize(coordinates, vin_real, vin_imag, vout_real, vout_imag)
     return vout
 
 def test_nfft3d(N_sample=1000,N_coordinates=1000):
-    cube = pylab.ones(shape=(N_sample,N_sample,N_sample))
+    cube = numpy.ones(shape=(N_sample,N_sample,N_sample))
     #print "2 %f" % (psutil.avail_phymem()/(1.0*mem0))
-    x = pylab.arange(0,N_coordinates,1)/(1.0*(N_coordinates-1))-0.5
+    x = numpy.arange(0,N_coordinates,1)/(1.0*(N_coordinates-1))-0.5
     #print "3 %f" % (psutil.avail_phymem()/(1.0*mem0))
-    X,Y = pylab.meshgrid(x,x)
+    X,Y = numpy.meshgrid(x,x)
     #print "4 %f" % (psutil.avail_phymem()/(1.0*mem0))
-    #Z = pylab.zeros(shape=(N,N))
+    #Z = numpy.zeros(shape=(N,N))
     print N_coordinates
     print len(X.flatten())
-    coordinates = pylab.zeros(shape=(N_coordinates*N_coordinates,3))
+    coordinates = numpy.zeros(shape=(N_coordinates*N_coordinates,3))
     #print "5 %f" % (psutil.avail_phymem()/(1.0*mem0))
     coordinates[:,1] = Y.flatten()
     #print "6 %f" % (psutil.avail_phymem()/(1.0*mem0))

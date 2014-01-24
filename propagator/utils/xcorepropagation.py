@@ -29,7 +29,7 @@ def nfftSingleCore(sample,q):
         q[invalid_mask] = 0.
     logger.info("%s invalid pixel positions." % invalid_mask.sum())
     qflat = q.flatten()
-    fourierpattern = nfft.nfft3d(qflat,sample)
+    fourierpattern = propagator.utils.nfft.nfft3d(qflat,sample)
     fourierpattern = arrange_values(fourierpattern,(q.shape[0],q.shape[1]))
     if (invalid_mask).sum() > 0:
         fourierpattern[numpy.any(invalid_mask,2)] = numpy.nan
