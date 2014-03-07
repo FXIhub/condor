@@ -79,9 +79,11 @@ class Output:
         t_start = time.time()
         outdict = self.input_object.sample.propagate()
         self.amplitudes = outdict["amplitudes"]
-        if "phi" in outdict: self.phi = outdict["phi"]
-        if "theta" in outdict: self.theta = outdict["theta"]
-        if "psi" in outdict: self.psi = outdict["psi"]
+        self.sample_phi = outdict.get("sample_phi",None)
+        self.sample_theta = outdict.get("sample_theta",None)
+        self.sample_psi = outdict.get("sample_psi",None)
+        self.sample_orientations = outdict.get("sample_orientations",None)
+        self.sample_diameter = outdict.get("sample_diameter",None)        
         t_stop = time.time()
         logger.debug("Propagation finished (time = %f sec)",t_stop-t_start)
 
@@ -95,3 +97,14 @@ class Output:
         A = self.amplitudes[i]
         A[numpy.isfinite(A)==False] = 0.
         return numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(self.amplitudes[i])))
+
+    def get_linear_oversampling_ratio(self):
+        if self.input_object.sample.radius == None:
+            return None
+        else:
+            pN = proptools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),numpy.pi*self.input_object.sample.radius**2)
+            pD = self.input_object.detector.get_pixel_size("binned")
+            return pN/pD
+            
+    def get_full_period_edge_resolution(self):
+        return proptools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)

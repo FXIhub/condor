@@ -259,7 +259,7 @@ class SampleSphere(Sample):
         F0 = self._get_F0(source,detector)
         K = (F0*V*dn.real)**2
         q = detector.generate_absqmap()
-        F = proptools.F_sphere_diffraction(K,q,R)
+        F = [proptools.F_sphere_diffraction(K,q,R)]
 
         return {"amplitudes":F}
 
@@ -307,7 +307,7 @@ class SampleSpheroid(Sample):
         q = detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
         qx = q[:,:,2]
         qy = q[:,:,1]
-        F = proptools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)
+        F = [proptools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)]
 
         return {"amplitudes":F}
 

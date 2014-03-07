@@ -201,7 +201,12 @@ class Detector:
                 return cy/(1.0*self.binning)
         else:
             logger.error("No valid option chosen.")
-    
+    def get_minimum_center_edge_distance(self):
+        cx = self.get_cx()
+        icx = self.Nx-cx
+        cy = self.get_cy()
+        icy = self.Ny-cy
+        return min([cx,icx,cy,icy])*self.get_pixel_size()
     def get_pixel_size(self,option='unbinned'):
         if option == 'unbinned':
             return self.pixel_size
