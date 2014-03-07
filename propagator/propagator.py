@@ -49,8 +49,7 @@ class Input:
         Function reconfigures Input subclasses based on the given configuration [self.configuration]
         """
 
-        if configuration != {}:
-            self.configuration = gentools.Configuration(configuration,self.default_configuration)
+        self.configuration = gentools.Configuration(configuration,self.default_configuration)
 
         C = self.configuration.confDict
         self.detector = Detector(parent=self,**C["detector"])
@@ -65,9 +64,6 @@ class Input:
         else:
             logger.error("%s is not a valid sample type.")
             return
-        
-
-
 
 class Output:
     """
@@ -81,17 +77,21 @@ class Output:
         self.input_object = input_object 
         logger.debug("Propagation started.")
         t_start = time.time()
-        self.amplitudes = self.input_object.sample.propagate()
+        outdict = self.input_object.sample.propagate()
+        self.amplitudes = outdict["amplitudes"]
+        if "phi" in outdict: self.phi = outdict["phi"]
+        if "theta" in outdict: self.theta = outdict["theta"]
+        if "psi" in outdict: self.psi = outdict["psi"]
         t_stop = time.time()
         logger.debug("Propagation finished (time = %f sec)",t_stop-t_start)
 
-    def get_intensity_pattern(self):
+    def get_intensity_pattern(self,i=0):
         """
         Returns 2-dimensional array with intensity values in photons per pixel (binned).
         """
-        return abs(self.amplitudes)**2
+        return abs(self.amplitudes[i])**2
 
-    def get_real_space_image(self):
-        A = self.amplitudes
+    def get_real_space_image(self,i=0):
+        A = self.amplitudes[i]
         A[numpy.isfinite(A)==False] = 0.
-        return numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(self.amplitudes)))
+        return numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(self.amplitudes[i])))

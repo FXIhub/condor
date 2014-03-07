@@ -5,8 +5,34 @@ import sys, os, fileinput
 import constants_data.fetchsf as sf
 from distutils.core import setup
 
-# Check if python_tools are installed
-import python_tools.imgtools, python_tools.gentools, python_tools.cxitools
+# Check if necessary packages are installed
+try:
+    print "Checking if numpy is installed..."
+    import numpy
+    print "Necessary package numpy is installed."
+except:
+    print "ERROR: Cannot import numpy. Please install it and try to install propagator again."
+    print "Installation of propagator failed."
+    quit(0)
+
+try:
+    print "Checking if scipy is installed..."
+    import scipy
+    print "Necessary package scipy is installed."
+except:
+    print "ERROR: Cannot import scipy. Please install it and try to install propagator again."
+    print "Installation of propagator failed."
+    quit(0)
+
+try:
+    print "Checking if h5py is installed..."
+    import h5py
+    print "Necessary package h5py is installed."
+except:
+    print "ERROR: Cannot import h5py. Please install it and try to install propagator again."
+    print "Installation of propagator failed."
+    quit(0)
+
 try:
     print "Checking if python_tools are installed..."
     import python_tools.imgtools, python_tools.gentools, python_tools.cxitools
@@ -15,6 +41,7 @@ except:
     print "ERROR: Cannot import python_tools. Please install Max' python_tools and add them to your PYTHONPATH before you proceed."
     print "Installation of propagator failed."
     quit(0)
+
 
 # Create dir for data
 print 'Clean up data directory'
