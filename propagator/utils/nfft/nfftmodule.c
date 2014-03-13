@@ -1,3 +1,7 @@
+// PYNFFT
+// Taken from a repository that make some of the nfft functions available to python.
+// Author: Tomas Ekeberg
+
 #include <Python.h>
 #include "structmember.h"
 #include <numpy/arrayobject.h>
