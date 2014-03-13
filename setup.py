@@ -69,7 +69,7 @@ setup(name='propagator',
       author_email='maxhantke@gmail.com',
       url='github.com/mhantke/propagator',
       packages=['propagator','propagator.utils','propagator.utils.nfft'],
-      package_data={'propagator':['data/*'],'propagator.utils.nfft':['nfft_c.so']},
+      package_data={'propagator':['data/*'],'propagator.utils.nfft':['nfft.so']},
      )
 
 import propagator

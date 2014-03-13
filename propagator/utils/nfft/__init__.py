@@ -1,1 +1,1 @@
-from nfft import nfft3d
+from nfft import nfftn

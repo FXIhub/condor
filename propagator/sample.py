@@ -2,7 +2,8 @@ import sys,numpy,time,multiprocessing
 import logging
 logger = logging.getLogger("Propagator")
 if "utils" not in sys.path: sys.path.append("utils")
-import config,imgutils,proptools,xcorepropagation
+import config,imgutils,proptools
+import utils.nfft
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools
@@ -538,8 +539,20 @@ class SampleMap(Sample):
             q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0[i],euler_angle_1=e1[i],euler_angle_2=e2[i])
      
             logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
-            F.append(self._get_F0(source,detector) * xcorepropagation.nfftSingleCore(dn_map3d,q_scaled) * dX**3)
-            logger.debug("Got pattern of %i x %i pixels." % (F[-1].shape[1],F[-1].shape[0]))
+            
+            invalid_mask = (abs(q_scaled)>0.5)
+            if (invalid_mask).sum() > 0:
+                q[invalid_mask] = 0.
+            logger.info("%s invalid pixel positions." % invalid_mask.sum())
+            q_reshaped = q_scaled.reshape(q_scaled.shape[0]*q_scaled.shape[1],3)
+            fourierpattern = utils.nfft.nfftn(dn_map3d,q_reshaped)
+            fourierpattern = numpy.reshape(fourierpattern,(q_scaled.shape[0],q_scaled.shape[1]))
+            if (invalid_mask).sum() > 0:
+                fourierpattern[numpy.any(invalid_mask,2)] = numpy.nan
+
+            logger.debug("Got pattern of %i x %i pixels." % (fourierpattern.shape[1],fourierpattern.shape[0]))
+
+            F.append(self._get_F0(source,detector) * fourierpattern * dX**3)
     
         return {"amplitudes":F,"phi":e0,"theta":e1,"psi":e2}
         
