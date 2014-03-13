@@ -1,3 +1,7 @@
+# PYNFFT
+# Taken from a repository that make some of the nfft functions available to python.
+# Authors: Tomas Ekeberg, Max Hantke
+
 from distutils.core import setup, Extension
 import numpy.distutils.misc_util
 import socket,os
