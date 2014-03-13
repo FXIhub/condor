@@ -33,6 +33,7 @@ class Material:
             self.cO = config.DICT_atomic_composition[self.material_type][3]
             self.cP = config.DICT_atomic_composition[self.material_type][4]
             self.cS = config.DICT_atomic_composition[self.material_type][5]
+            self.cAu = config.DICT_atomic_composition[self.material_type][6]
         else:
             logger.error("No valid arguments for Material initialization.")
             return
@@ -387,7 +388,8 @@ class SampleMap(Sample):
         if "dX_fine" in kwargs:
             self.dX_fine = kwargs["dX_fine"]
         elif "oversampling_fine" in kwargs:
-            self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
+            #self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
+            self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])/numpy.sqrt(2)
 
         # Map
         if "geometry" in kwargs:
@@ -461,7 +463,8 @@ class SampleMap(Sample):
             detector = detector0
 
         map3d = None
-        dX = detector.get_real_space_resolution_element()
+        #dX = detector.get_real_space_resolution_element()
+        dX = detector.get_real_space_resolution_element() / numpy.sqrt(2)
 
         if self.dX_fine > dX:
             logger.error("Finer real space sampling required for chosen geometry.")

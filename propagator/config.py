@@ -18,26 +18,27 @@ def init_configuration():
 def init_global_dictionaries():
     # Load scattering factors and atomic masses from Henke tables
     unpickle_scattering_factors()
-    # Realative atomic compositions of certain material types (order: H,C,N.O,P,S)
+    # Realative atomic compositions of certain material types (order: H,C,N,O,P,S,Au)
     global DICT_atomic_composition
-    DICT_atomic_composition = {'protein':[86,52,13,15,0,3],
-                               'cell':[23,3,1,10,0,1], # Bergh et al. 2008
-                               'latex':[1,1,0,0,0,0], 
-                               'water':[2,0,0,1,0,0], 
-                               'dna':[11,10,4,6,1,0],
-                               'lipid':[69,36,0,6,1,0],
-                               'genophore':[205,134,38,48,3,6],
-                               'virus':[72.43,49.85,16.32,24.49,2.57,1.39],
-                               'mimivirus':[23,3,1,10,0,1],
-                               'carboxysome':[0.51,0.30,0.07,0.10,0.,0.02],
-                               'sucrose':[22,12,0,11,0,0]}
+    DICT_atomic_composition = {'protein':[86,52,13,15,0,3,0],
+                               'cell':[23,3,1,10,0,1,0], # Bergh et al. 2008
+                               'latex':[1,1,0,0,0,0,0], 
+                               'water':[2,0,0,1,0,0,0], 
+                               'dna':[11,10,4,6,1,0,0],
+                               'lipid':[69,36,0,6,1,0,0],
+                               'genophore':[205,134,38,48,3,6,0],
+                               'virus':[72.43,49.85,16.32,24.49,2.57,1.39,0],
+                               'mimivirus':[23,3,1,10,0,1,0],
+                               'carboxysome':[0.51,0.30,0.07,0.10,0.,0.02,0],
+                               'sucrose':[22,12,0,11,0,0,0],
+                               'gold':[0,0,0,0,0,0,1]}
     # Estimated mass densities of certain material types
     global DICT_massdensity
     DICT_massdensity = {'protein':1350,
                         'cell':1000,
                         'latex':1050,
                         'water':998,
-                        'Au':19300,
+                        'gold':19300,
                         'dna':1700,
                         'lipid':1000,
                         'genophore':1560,

@@ -91,7 +91,7 @@ class Output:
         """
         Returns 2-dimensional array with intensity values in photons per pixel (binned).
         """
-        return abs(self.amplitudes[i])**2
+        return self.input_object.detector.detect_photons(abs(self.amplitudes[i])**2)
 
     def get_real_space_image(self,i=0):
         A = self.amplitudes[i]
