@@ -16,7 +16,7 @@ logger = logging.getLogger("Propagator")
 # Initial configuration and importing propagator files
 import config
 config.init_configuration()
-import xcorepropagation,imgutils,proptools
+import imgutils,proptools
 from source import Source
 from sample import SampleMap,SampleSphere,SampleSpheroid
 from detector import Detector

@@ -1,1 +1,1 @@
-from nfft import nfftn
+from nfft import nfft_inplace

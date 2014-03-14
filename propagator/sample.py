@@ -537,16 +537,26 @@ class SampleMap(Sample):
         for i in range(number_of_orientations):
             # scattering vector grid
             q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0[i],euler_angle_1=e1[i],euler_angle_2=e2[i])
-     
             logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
-            
-            invalid_mask = (abs(q_scaled)>0.5)
-            if (invalid_mask).sum() > 0:
-                q[invalid_mask] = 0.
-            logger.info("%s invalid pixel positions." % invalid_mask.sum())
             q_reshaped = q_scaled.reshape(q_scaled.shape[0]*q_scaled.shape[1],3)
-            fourierpattern = utils.nfft.nfftn(dn_map3d,q_reshaped)
+            
+            # Check inputs
+            invalid_mask = (abs(q_reshaped)>0.5)
+            if (invalid_mask).sum() > 0:
+                q_reshaped[invalid_mask] = 0.
+            logger.debug("%i invalid pixel positions." % invalid_mask.sum())
+
+            logger.debug("Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn_map3d.shape[0],dn_map3d.shape[1],dn_map3d.shape[2],len(list(dn_map3d.shape)),abs(dn_map3d).sum()))
+            if (numpy.isfinite(dn_map3d)==False).sum() > 0:
+                logger.warning("There are infinite values in the map3d of the object.")
+            logger.debug("Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (q_reshaped.shape[0],q_reshaped.shape[1],len(list(q_reshaped.shape))))
+            if (numpy.isfinite(q_reshaped)==False).sum() > 0:
+                logger.warning("There are infinite values in the scattering vectors.")
+            # NFFT
+            fourierpattern = utils.nfft.nfft(dn_map3d,q_reshaped)
+            # reshaping
             fourierpattern = numpy.reshape(fourierpattern,(q_scaled.shape[0],q_scaled.shape[1]))
+            # Check output - masking in case of invalid values
             if (invalid_mask).sum() > 0:
                 fourierpattern[numpy.any(invalid_mask,2)] = numpy.nan
 
