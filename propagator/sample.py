@@ -535,6 +535,8 @@ class SampleMap(Sample):
 
         F = []
         for i in range(number_of_orientations):
+            logger.info("Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1,number_of_orientations))
+
             # scattering vector grid
             q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0[i],euler_angle_1=e1[i],euler_angle_2=e2[i])
             logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
@@ -554,11 +556,11 @@ class SampleMap(Sample):
                 logger.warning("There are infinite values in the scattering vectors.")
             # NFFT
             fourierpattern = utils.nfft.nfft(dn_map3d,q_reshaped)
-            # reshaping
-            fourierpattern = numpy.reshape(fourierpattern,(q_scaled.shape[0],q_scaled.shape[1]))
             # Check output - masking in case of invalid values
             if (invalid_mask).sum() > 0:
-                fourierpattern[numpy.any(invalid_mask,2)] = numpy.nan
+                fourierpattern[numpy.any(invalid_mask)] = numpy.nan
+            # reshaping
+            fourierpattern = numpy.reshape(fourierpattern,(q_scaled.shape[0],q_scaled.shape[1]))
 
             logger.debug("Got pattern of %i x %i pixels." % (fourierpattern.shape[1],fourierpattern.shape[0]))
 
