@@ -4,6 +4,7 @@ logger = logging.getLogger("Propagator")
 if "utils" not in sys.path: sys.path.append("utils")
 import config,imgutils,proptools
 import utils.nfft
+import utils.icosahedron
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools
@@ -409,6 +410,11 @@ class SampleMap(Sample):
                     logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=sphere.")
                 self.put_sphere(kwargs["diameter"]/2.,**kwargs)
                 self.radius = kwargs["diameter"]/2.
+            if kwargs["geometry"] == "cube":
+                if "edge_length" not in kwargs:
+                    logger.error("Cannot initialize SampleMap instance. edge_length is a necessary keyword for geometry=cube.") 
+                self.put_cube(kwargs["edge_length"],**kwargs)
+                self.radius = (4/3/numpy.pi)**(1/3.)*kwargs["edge_length"] # volume equivalent radius
             elif kwargs["geometry"] == "custom":
                 import h5py
                 f = h5py.File(kwargs.get("filename","./sample.h5"),"r")
@@ -466,6 +472,7 @@ class SampleMap(Sample):
         map3d = None
         #dX = detector.get_real_space_resolution_element()
         dX = detector.get_real_space_resolution_element() / numpy.sqrt(2)
+        self.dX = dX
 
         if self.dX_fine > dX:
             logger.error("Finer real space sampling required for chosen geometry.")
@@ -510,6 +517,7 @@ class SampleMap(Sample):
             logger.debug("Using a newly interpolated map for propagtion.")
 
         dn_map3d = numpy.array(map3d,dtype="complex128") * self._get_dn()
+        self.dn_map3d = dn_map3d
 
         if isinstance(self.euler_angle_0,list):
             number_of_orientations = len(self.euler_angle_0)
@@ -566,7 +574,7 @@ class SampleMap(Sample):
 
             F.append(self._get_F0(source,detector) * fourierpattern * dX**3)
     
-        return {"amplitudes":F,"phi":e0,"theta":e1,"psi":e2}
+        return {"amplitudes":F,"euler_angle_0":e0,"euler_angle_1":e1,"euler_angle_2":e2}
         
     def put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")
@@ -620,6 +628,31 @@ class SampleMap(Sample):
         N = int(numpy.ceil(2.3*(nRmax)))
         icomap = make_icosahedron_map(N,nRmax,e0,e1,e2)
         self.put_custom_map(icomap,**kwargs)
+
+    def put_cube(self,a,**kwargs):
+        e0 = kwargs.get("geometry_euler_angle_0")
+        e1 = kwargs.get("geometry_euler_angle_1")
+        e2 = kwargs.get("geometry_euler_angle_2")
+        # edge_length in pixels
+        nel = a/self.dX_fine 
+        # leaving a bit of free space around
+        N = int(numpy.ceil(2.3*nel))
+        # make map
+        X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
+        X = X - (N-1)/2.
+        Y = Y - (N-1)/2.
+        Z = Z - (N-1)/2.
+        DX = abs(X)-nel/2.
+        DY = abs(Y)-nel/2.
+        DZ = abs(Z)-nel/2.
+        D = numpy.array([DZ,DY,DX])
+        cubemap = numpy.zeros(shape=(N,N,N))
+        Dmax = D.max(0)
+        cubemap[Dmax<-0.5] = 1.
+        temp = (Dmax<0.5)*(cubemap==0.)
+        d = Dmax[temp]
+        cubemap[temp] = 0.5-d
+        self.put_custom_map(cubemap,**kwargs)        
 
     def plot_map3d_fine(self,mode='surface'):
         try:
@@ -719,6 +752,15 @@ class SampleMap(Sample):
         if self.radius != None: return numpy.pi*self.radius**2
 
 def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
+    logger.debug("Building icosahedral geometry")
+    logger.debug("Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
+    t0 = time.time()
+    icomap = utils.icosahedron.icosahedron(N,nRmax,(euler1,euler2,euler3))
+    t1 = time.time()
+    logger.debug("Built map within %f seconds." % (t1-t0))
+    return icomap
+
+def make_icosahedron_map_old(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
     na = nRmax/numpy.sqrt(10.0+2*numpy.sqrt(5))*4.
     nRmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*na # radius at faces
     logger.debug("Building icosahedral geometry")
