@@ -38,7 +38,7 @@ try:
     import python_tools.imgtools, python_tools.gentools, python_tools.cxitools
     print "Necessary python tools are installed."
 except:
-    print "ERROR: Cannot import python_tools. Please install Max' python_tools and add them to your PYTHONPATH before you proceed."
+    print "ERROR: Cannot import python_tools. Please install Max' python_tools and add them to your PYTHONPATH before you proceed. You can clone python_tools from git@bitbucket.org:maxhantke/python_tools.git. Execute 'cd ~/target/directory; git clone git@bitbucket.org:maxhantke/python_tools.git; cd python_tools; python setup.py install'."
     print "Installation of propagator failed."
     quit(0)
 
