@@ -79,10 +79,9 @@ class Output:
         t_start = time.time()
         outdict = self.input_object.sample.propagate()
         self.amplitudes = outdict["amplitudes"]
-        self.sample_phi = outdict.get("sample_phi",None)
-        self.sample_theta = outdict.get("sample_theta",None)
-        self.sample_psi = outdict.get("sample_psi",None)
-        self.sample_orientations = outdict.get("sample_orientations",None)
+        self.sample_euler_angle_0 = outdict.get("euler_angle_0",None)
+        self.sample_euler_angle_1 = outdict.get("euler_angle_1",None)
+        self.sample_euler_angle_2 = outdict.get("euler_angle_2",None)
         self.sample_diameter = outdict.get("sample_diameter",None)        
         t_stop = time.time()
         logger.debug("Propagation finished (time = %f sec)",t_stop-t_start)

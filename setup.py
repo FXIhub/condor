@@ -62,16 +62,22 @@ os.chdir("%s/propagator/utils/nfft" % pdir)
 os.system("python setup.py build")
 os.chdir(pdir)
 
+print 'Wrapping ICOSAHEDRON'
+os.chdir("%s/propagator/utils/icosahedron" % pdir)
+os.system("python setup.py build")
+os.chdir(pdir)
+
 setup(name='propagator',
       description='Python tools for image analysis',
       version='0.0',
       author='Max Felix Hantke',
       author_email='maxhantke@gmail.com',
       url='github.com/mhantke/propagator',
-      packages=['propagator','propagator.utils','propagator.utils.nfft'],
-      package_data={'propagator':['data/*'],'propagator.utils.nfft':['nfft.so']},
+      packages=['propagator','propagator.utils','propagator.utils.nfft','propagator.utils.icosahedron'],
+      package_data={'propagator':['data/*'],'propagator.utils.nfft':['nfft.so'],'propagator.utils.icosahedron':['icosahedron.so']},
      )
 
+# test import
 import propagator
 
-print 'Done.'
+print 'Propagator installation successful.'
