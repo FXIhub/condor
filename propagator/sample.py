@@ -1,11 +1,12 @@
-import sys,numpy,pylab,time,multiprocessing
+import sys,numpy,time,multiprocessing
 import logging
 logger = logging.getLogger("Propagator")
 if "utils" not in sys.path: sys.path.append("utils")
-import config,imgutils,proptools,xcorepropagation
+import config,imgutils,proptools
+import utils.nfft
 
 # Pythontools
-import gentools,cxitools,imgtools
+from python_tools import gentools,cxitools,imgtools
 
 
 class Material:
@@ -33,6 +34,7 @@ class Material:
             self.cO = config.DICT_atomic_composition[self.material_type][3]
             self.cP = config.DICT_atomic_composition[self.material_type][4]
             self.cS = config.DICT_atomic_composition[self.material_type][5]
+            self.cAu = config.DICT_atomic_composition[self.material_type][6]
         else:
             logger.error("No valid arguments for Material initialization.")
             return
@@ -259,9 +261,9 @@ class SampleSphere(Sample):
         F0 = self._get_F0(source,detector)
         K = (F0*V*dn.real)**2
         q = detector.generate_absqmap()
-        F = proptools.F_sphere_diffraction(K,q,R)
+        F = [proptools.F_sphere_diffraction(K,q,R)]
 
-        return F
+        return {"amplitudes":F}
 
     def get_area(self):
         """ Calculates area of projected sphere """
@@ -307,9 +309,9 @@ class SampleSpheroid(Sample):
         q = detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
         qx = q[:,:,2]
         qy = q[:,:,1]
-        F = proptools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)
+        F = [proptools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)]
 
-        return F
+        return {"amplitudes":F}
 
     def get_area(self):
         """
@@ -386,27 +388,44 @@ class SampleMap(Sample):
 
         if "dX_fine" in kwargs:
             self.dX_fine = kwargs["dX_fine"]
-        elif "oversampling_fine":
-            self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
+        elif "oversampling_fine" in kwargs:
+            #self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
+            self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])/numpy.sqrt(2)
 
         # Map
         if "geometry" in kwargs:
-            if "geometry" in kwargs:
-                if kwargs["geometry"] == "icosahedron":
-                    if "diameter" not in kwargs:
-                        logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=icosahedron.") 
-                    self.put_icosahedron(kwargs["diameter"]/2.,**kwargs)
-                    self.radius = kwargs["diameter"]/2.
-                elif kwargs["geometry"] == "spheroid":
-                    if "diameter_a" not in kwargs or "diameter_c" not in kwargs:
-                        logger.error("Cannot initialize SampleMap instance. a_diameter and c_diameter are necessary keywords for geometry=spheroid.")
-                    self.put_spheroid(kwargs["diameter_a"]/2.,kwargs["diameter_c"]/2.,**kwargs)
-                    self.radius = (2*kwargs["diameter_a"]+kwargs["diameter_c"])/3./2.
-                elif kwargs["geometry"] == "sphere":
-                    if "diameter" not in kwargs:
-                        logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=sphere.")
-                    self.put_sphere(kwargs["diameter"]/2.,**kwargs)
-                    self.radius = kwargs["diameter"]/2.
+            if kwargs["geometry"] == "icosahedron":
+                if "diameter" not in kwargs:
+                    logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=icosahedron.") 
+                self.put_icosahedron(kwargs["diameter"]/2.,**kwargs)
+                self.radius = kwargs["diameter"]/2.
+            elif kwargs["geometry"] == "spheroid":
+                if "diameter_a" not in kwargs or "diameter_c" not in kwargs:
+                    logger.error("Cannot initialize SampleMap instance. a_diameter and c_diameter are necessary keywords for geometry=spheroid.")
+                self.put_spheroid(kwargs["diameter_a"]/2.,kwargs["diameter_c"]/2.,**kwargs)
+                self.radius = (2*kwargs["diameter_a"]+kwargs["diameter_c"])/3./2.
+            elif kwargs["geometry"] == "sphere":
+                if "diameter" not in kwargs:
+                    logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=sphere.")
+                self.put_sphere(kwargs["diameter"]/2.,**kwargs)
+                self.radius = kwargs["diameter"]/2.
+            elif kwargs["geometry"] == "custom":
+                import h5py
+                f = h5py.File(kwargs.get("filename","./sample.h5"),"r")
+                if len(f.items()) == 1:
+                    d = f.items()[0][1][:,:,:]
+                else:
+                    d = f["data"][:,:,:]
+                s = numpy.array(d.shape)
+                if not numpy.all(s==s[0]):
+                    logger.error("Propagator only accepts maps with equal dimensions.")
+                    return
+                self.map3d_fine = d
+                f.close()
+                if "dX_fine" in kwargs:
+                    self.dX_fine = kwargs["dX_fine"]
+                elif "diameter" in kwargs:
+                    self.dX_fine = kwargs["diameter"]/float(s[0])
         else:
             if "map3d_fine" in kwargs:
                 s = numpy.array(self.maprgs["map3d_fine"].shape)
@@ -419,6 +438,19 @@ class SampleMap(Sample):
                 N = kwargs.get("N_fine",1)
                 self.map3d_fine = numpy.zeros(shape=(N,N,N),dtype="float64")
 
+        if "alignment" in kwargs:
+            if kwargs["alignment"] not in ["random","euler_angles"]:
+                logger.error("Invalid argument for sample alignment specified.")
+                return
+            self.alignment = kwargs["alignment"]
+        else:
+            self.alignment = "first_axis"
+
+        if self.alignment == "random":
+            if "number_of_orientations" in kwargs:
+                self.number_of_orientations = int(kwargs["number_of_orientations"])
+            else:
+                self.number_of_orientations = 1
 
     def propagate(self,detector0=None,source0=None):
         # scattering amplitude from dn-map: F = F0 DFT{dn} dV
@@ -432,7 +464,8 @@ class SampleMap(Sample):
             detector = detector0
 
         map3d = None
-        dX = detector.get_real_space_resolution_element()
+        #dX = detector.get_real_space_resolution_element()
+        dX = detector.get_real_space_resolution_element() / numpy.sqrt(2)
 
         if self.dX_fine > dX:
             logger.error("Finer real space sampling required for chosen geometry.")
@@ -478,17 +511,62 @@ class SampleMap(Sample):
 
         dn_map3d = numpy.array(map3d,dtype="complex128") * self._get_dn()
 
-        # scattering vector grid
-        e0 = self.euler_angle_0
-        e1 = self.euler_angle_1
-        e2 = self.euler_angle_2
-        q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
-     
-        logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
-        F = self._get_F0(source,detector) * xcorepropagation.nfftSingleCore(dn_map3d,q_scaled) * dX**3
-        logger.debug("Got pattern of %i x %i pixels." % (F.shape[1],F.shape[0]))
+        if isinstance(self.euler_angle_0,list):
+            number_of_orientations = len(self.euler_angle_0)
+            e0 = self.euler_angle_0
+            e1 = self.euler_angle_1
+            e2 = self.euler_angle_2
+        else:
+            number_of_orientations = 1
+            e0 = [self.euler_angle_0]
+            e1 = [self.euler_angle_1]
+            e2 = [self.euler_angle_2]
+
+        if self.alignment == "random":
+            number_of_orientations = self.number_of_orientations
+            e0 = numpy.zeros(number_of_orientations)
+            e1 = numpy.zeros(number_of_orientations)
+            e2 = numpy.zeros(number_of_orientations)
+            for i in range(number_of_orientations):
+                (e0[i],e1[i],e2[i]) = proptools.random_euler_angles()
+            e0 = list(e0)
+            e1 = list(e1)
+            e2 = list(e2)
+
+        F = []
+        for i in range(number_of_orientations):
+            logger.info("Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1,number_of_orientations))
+
+            # scattering vector grid
+            q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0[i],euler_angle_1=e1[i],euler_angle_2=e2[i])
+            logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
+            q_reshaped = q_scaled.reshape(q_scaled.shape[0]*q_scaled.shape[1],3)
+            
+            # Check inputs
+            invalid_mask = (abs(q_reshaped)>0.5)
+            if (invalid_mask).sum() > 0:
+                q_reshaped[invalid_mask] = 0.
+            logger.debug("%i invalid pixel positions." % invalid_mask.sum())
+
+            logger.debug("Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn_map3d.shape[0],dn_map3d.shape[1],dn_map3d.shape[2],len(list(dn_map3d.shape)),abs(dn_map3d).sum()))
+            if (numpy.isfinite(dn_map3d)==False).sum() > 0:
+                logger.warning("There are infinite values in the map3d of the object.")
+            logger.debug("Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (q_reshaped.shape[0],q_reshaped.shape[1],len(list(q_reshaped.shape))))
+            if (numpy.isfinite(q_reshaped)==False).sum() > 0:
+                logger.warning("There are infinite values in the scattering vectors.")
+            # NFFT
+            fourierpattern = utils.nfft.nfft(dn_map3d,q_reshaped)
+            # Check output - masking in case of invalid values
+            if (invalid_mask).sum() > 0:
+                fourierpattern[numpy.any(invalid_mask)] = numpy.nan
+            # reshaping
+            fourierpattern = numpy.reshape(fourierpattern,(q_scaled.shape[0],q_scaled.shape[1]))
+
+            logger.debug("Got pattern of %i x %i pixels." % (fourierpattern.shape[1],fourierpattern.shape[0]))
+
+            F.append(self._get_F0(source,detector) * fourierpattern * dX**3)
     
-        return F
+        return {"amplitudes":F,"phi":e0,"theta":e1,"psi":e2}
         
     def put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")
@@ -516,7 +594,7 @@ class SampleMap(Sample):
         e0 = kwargs.get("geometry_euler_angle_0")
         e1 = kwargs.get("geometry_euler_angle_1")
         e2 = kwargs.get("geometry_euler_angle_2")
-        # mxaximum radius
+        # maximum radius
         Rmax = max([a,b])
         # maximum radius in pixel
         nRmax = Rmax/self.dX_fine

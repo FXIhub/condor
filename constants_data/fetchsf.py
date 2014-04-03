@@ -46,7 +46,3 @@ def generate_datafile(inpath,outpath):
 
     MASS_FILE.close()
     PICKLEFILE.close()
-
-if __name__ == "__main__":
-    generate_datafiles("sf","..")
-    

@@ -1,4 +1,4 @@
-import numpy, matplotlib, sys, numpy, types, pickle, time, math
+import numpy, sys, numpy, types, pickle, time, math
 
 def random_euler_angles():
     """
@@ -132,6 +132,7 @@ def get_sphere_diffraction_extrema_positions(N=1,xtol=1E-12,plot=False):
     s_maxs = numpy.array(s_maxs)
 
     if plot:
+        import matplotlib
         x = numpy.arange(0,s_mins.max()+1.,0.01)
         matplotlib.plot(x,f(x))
         matplotlib.plot(s_mins,numpy.zeros(len(s_mins)),".")
