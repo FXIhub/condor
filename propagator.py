@@ -8,7 +8,7 @@
 
 import pylab, sys, ConfigParser, numpy, types, pickle, time, math, os
 
-propdir = os.path.dirname(os.path.realpath(__file__)))
+propdir = os.path.dirname(os.path.realpath(__file__))
 
 import logging
 logger = logging.getLogger("Propagator")
