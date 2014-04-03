@@ -7,8 +7,7 @@ logger = logging.getLogger("Propagator")
 import proptools
 
 # Pythontools
-import gentools,cxitools,imgtools
-
+from python_tools import gentools,cxitools,imgtools
 
 class Detector:
     """
@@ -27,6 +26,7 @@ class Detector:
         - cx: Horizontal beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
         - cy: Vertical beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
         - binning: Number of binned pixels (binning x binning). [1]
+        - noise: Noise that is put on the intensities when read. Either \'none\' or \'poisson\'. [\'none\']
         - parent: Input object that includes detector object. This variable is optional. [None]
 
         EITHER (default):
@@ -60,6 +60,7 @@ class Detector:
         gx = kwargs.get('x_gap_size_in_pixel',0)
         gy = kwargs.get('y_gap_size_in_pixel',0)
         hd = kwargs.get('hole_diameter_in_pixel',0)
+        self.noise = kwargs.get('noise','none')
         self.binning = kwargs.get('binning',1)
         if 'mask' in kwargs or ('mask_filename' in kwargs.keys() and "mask_dataset" in kwargs.keys()):
             if "mask" in kwargs:
@@ -202,7 +203,12 @@ class Detector:
                 return cy/(1.0*self.binning)
         else:
             logger.error("No valid option chosen.")
-    
+    def get_minimum_center_edge_distance(self):
+        cx = self.get_cx()
+        icx = self.Nx-cx
+        cy = self.get_cy()
+        icy = self.Ny-cy
+        return min([cx,icx,cy,icy])*self.get_pixel_size()
     def get_pixel_size(self,option='unbinned'):
         if option == 'unbinned':
             return self.pixel_size
@@ -259,7 +265,8 @@ class Detector:
         qmap = proptools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
         nfft_scaled = kwargs.get("nfft_scaled",False)
         if nfft_scaled:
-            qmap /= self.get_absq_max()/0.5
+            #qmap /= self.get_absq_max()/0.5
+            qmap /= self.get_absq_max()/0.5*numpy.sqrt(2)
         return qmap
 
     def get_absqx_max(self,**kwargs):
@@ -305,3 +312,9 @@ class Detector:
         dx = 2 * numpy.pi / self.get_absqx_max(**kwargs)
         dy = 2 * numpy.pi / self.get_absqy_max(**kwargs)
         return [dx,dy]
+
+    def detect_photons(self,data):
+        if self.noise == "poisson":
+            return numpy.random.poisson(data)
+        else:
+            return data
