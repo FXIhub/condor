@@ -4,7 +4,9 @@ logger = logging.getLogger("Propagator")
 if "utils" not in sys.path: sys.path.append("utils")
 import config,imgutils,proptools
 import utils.nfft
+#import propagator.utils.nfft
 import utils.icosahedron
+#import icosahedron
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools

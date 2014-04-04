@@ -10,6 +10,8 @@ import sys, ConfigParser, numpy, types, pickle, time, math, os
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
+sys.path.append(os.path.join(this_dir, "utils/python_tools"))
+
 import logging
 logger = logging.getLogger("Propagator")
 

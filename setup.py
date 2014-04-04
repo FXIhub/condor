@@ -3,7 +3,8 @@
 # Installation of propagator
 import sys, os, fileinput
 import constants_data.fetchsf as sf
-from distutils.core import setup
+from distutils.core import setup, Extension
+import numpy.distutils.misc_util
 
 # Check if necessary packages are installed
 try:
@@ -34,16 +35,6 @@ except:
     quit(0)
 
 
-# Check if python_tools are installed
-# try:
-#     print "Checking if python_tools are installed..."
-#     import python_tools.imgtools, python_tools.gentools, python_tools.cxitools
-#     print "Necessary python tools are installed."
-# except:
-#     print "ERROR: Cannot import python_tools. Please install Max' python_tools and add them to your PYTHONPATH before you proceed. You can clone python_tools from git@bitbucket.org:maxhantke/python_tools.git. Execute 'cd ~/target/directory; git clone git@bitbucket.org:maxhantke/python_tools.git; cd python_tools; python setup.py install'."
-#     print "Installation of propagator failed."
-#     quit(0)
-
 # Create dir for data
 print 'Clean up data directory'
 os.system("mkdir -p ./propagator/data/")
@@ -57,28 +48,20 @@ print 'Loading scattering constants...'
 sf.generate_datafile("constants_data/sf","./propagator/data")
 print 'Done.'
 
-print 'Wrapping NFFT...'
-pdir = os.path.dirname(os.path.realpath(__file__))
-os.chdir("%s/propagator/utils/nfft" % pdir)
-os.system("python setup.py build")
-os.chdir(pdir)
-
-print 'Wrapping ICOSAHEDRON'
-os.chdir("%s/propagator/utils/icosahedron" % pdir)
-os.system("python setup.py build")
-os.chdir(pdir)
-
 setup(name='propagator',
       description='Python tools for image analysis',
       version='0.0',
       author='Max Felix Hantke',
       author_email='maxhantke@gmail.com',
       url='github.com/mhantke/propagator',
-      packages=['propagator','propagator.utils','propagator.utils.nfft','propagator.utils.icosahedron'],
-      package_data={'propagator':['data/*'],'propagator.utils.nfft':['nfft.so'],'propagator.utils.icosahedron':['icosahedron.so']},
+      #packages=['propagator','propagator.utils','propagator.utils.nfft','propagator.utils.icosahedron'],
+      packages=['propagator', 'propagator.utils', "propagator.utils.python_tools"],
+      #package_data={'propagator':['data/*'],'propagator.utils.nfft':['nfft.so'],'propagator.utils.icosahedron':['icosahedron.so']},
+      package_data={'propagator':['data/*']},
+      ext_modules=[Extension("propagator.utils.icosahedron", ["propagator/utils/icosahedron/icosahedronmodule.c"]),
+                   Extension("propagator.utils.nfft", sources=["propagator/utils/nfft/nfftmodule.c"], libraries=["nfft3"])],
+      include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs()
      )
 
-# test import
-import propagator
 
-print 'Propagator installation successful.'
+
