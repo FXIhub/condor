@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Installation of propagator
+# Installation of Penguin
 import sys, os, fileinput
 import constants_data.fetchsf as sf
 from distutils.core import setup
@@ -11,8 +11,8 @@ try:
     import numpy
     print "Necessary package numpy is installed."
 except:
-    print "ERROR: Cannot import numpy. Please install it and try to install propagator again."
-    print "Installation of propagator failed."
+    print "ERROR: Cannot import numpy. Please install it and try to install Penguin again."
+    print "Installation of Penguin failed."
     quit(0)
 
 try:
@@ -20,8 +20,8 @@ try:
     import scipy
     print "Necessary package scipy is installed."
 except:
-    print "ERROR: Cannot import scipy. Please install it and try to install propagator again."
-    print "Installation of propagator failed."
+    print "ERROR: Cannot import scipy. Please install it and try to install Penguin again."
+    print "Installation of Penguin failed."
     quit(0)
 
 try:
@@ -29,8 +29,8 @@ try:
     import h5py
     print "Necessary package h5py is installed."
 except:
-    print "ERROR: Cannot import h5py. Please install it and try to install propagator again."
-    print "Installation of propagator failed."
+    print "ERROR: Cannot import h5py. Please install it and try to install Penguin again."
+    print "Installation of Penguin failed."
     quit(0)
 
 try:
@@ -39,45 +39,45 @@ try:
     print "Necessary python tools are installed."
 except:
     print "ERROR: Cannot import python_tools. Please install Max' python_tools and add them to your PYTHONPATH before you proceed. You can clone python_tools from git@bitbucket.org:maxhantke/python_tools.git. Execute 'cd ~/target/directory; git clone git@bitbucket.org:maxhantke/python_tools.git; cd python_tools; python setup.py install'."
-    print "Installation of propagator failed."
+    print "Installation of Penguin failed."
     quit(0)
 
 
 # Create dir for data
 print 'Clean up data directory'
-os.system("mkdir -p ./propagator/data/")
+os.system("mkdir -p ./penguin/data/")
 
 # Copy default configuration file there
-print 'Copy default configuration file'
-os.system("cp ./conf/default.conf ./propagator/data/")
+print 'Link default configuration file'
+os.system("ln -s ./conf/default.conf ./penguin/data/default.conf")
 
 # Scattering factors from the Henke tables and atomic masses 
 print 'Loading scattering constants...'
-sf.generate_datafile("constants_data/sf","./propagator/data")
+sf.generate_datafile("constants_data/sf","./penguin/data")
 print 'Done.'
 
 print 'Wrapping NFFT...'
 pdir = os.path.dirname(os.path.realpath(__file__))
-os.chdir("%s/propagator/utils/nfft" % pdir)
+os.chdir("%s/penguin/utils/nfft" % pdir)
 os.system("python setup.py build")
 os.chdir(pdir)
 
 print 'Wrapping ICOSAHEDRON'
-os.chdir("%s/propagator/utils/icosahedron" % pdir)
+os.chdir("%s/penguin/utils/icosahedron" % pdir)
 os.system("python setup.py build")
 os.chdir(pdir)
 
-setup(name='propagator',
-      description='Python tools for image analysis',
-      version='0.0',
-      author='Max Felix Hantke',
-      author_email='maxhantke@gmail.com',
-      url='github.com/mhantke/propagator',
-      packages=['propagator','propagator.utils','propagator.utils.nfft','propagator.utils.icosahedron'],
-      package_data={'propagator':['data/*'],'propagator.utils.nfft':['nfft.so'],'propagator.utils.icosahedron':['icosahedron.so']},
+setup(name='penguin',
+      description='Simulator for diffractive single-particle imaging experiments with X-ray lasers',
+      version='1.0',
+      author='Max Felix Hantke, Filipe R.N.C. Maia, Tomas Ekeberg',
+      author_email='hantke@xray.bmc.uu.se',
+      url='http://xfel.icm.uu.se/penguin/',
+      packages=['penguin','penguin.utils','penguin.utils.nfft','penguin.utils.icosahedron'],
+      package_data={'penguin':['data/*'],'penguin.utils.nfft':['nfft.so'],'penguin.utils.icosahedron':['icosahedron.so']},
      )
 
 # test import
-import propagator
+import penguin
 
-print 'Propagator installation successful.'
+print 'Penguin installation was successful.'

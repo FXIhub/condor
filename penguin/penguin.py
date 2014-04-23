@@ -1,22 +1,29 @@
 # ----------------------------------------------------------------------------------------------------- 
-# PROPAGATOR: Scattering experiment simulator for spheres and customized object maps
-# Please type 'help propagator()' for further information.
+# PENGUIN 
+#  Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# ----------------------------------------------------------------------------------------------------- 
+# Web:
+#  http://xfel.icm.uu.se/penguin/
+# ----------------------------------------------------------------------------------------------------- 
+# Authors:
+#  Max Hantke         - hantke@xray.bmc.uu.se
+#  Filipe R.N.C. Maia - filipe@xray.bmc.uu.se
+#  Tomas Ekeberg      - ekeberg@xray.bmc.uu.se
 # -----------------------------------------------------------------------------------------------------
-# Author:  Max Hantke - maxhantke@gmail.com
-# -----------------------------------------------------------------------------------------------------
-# All variables in SI units by default. Exceptions only if expressed by variable name.
+# General note:
+#  All variables are in SI units by default. Exceptions explicit by variable name.
 
 import sys, ConfigParser, numpy, types, pickle, time, math, os
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
 import logging
-logger = logging.getLogger("Propagator")
+logger = logging.getLogger("Penguin")
 
-# Initial configuration and importing propagator files
+# Initial configuration and importing Penguin files
 import config
 config.init_configuration()
-import imgutils,proptools
+import imgutils,pengtools
 from source import Source
 from sample import SampleMap,SampleSphere,SampleSpheroid
 from detector import Detector
@@ -112,7 +119,7 @@ class Output:
         if self.input_object.sample.radius == None:
             return None
         else:
-            pN = proptools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),numpy.pi*self.input_object.sample.radius**2)
+            pN = pengtools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),numpy.pi*self.input_object.sample.radius**2)
             pD = self.input_object.detector.get_pixel_size("binned")
             return pN/pD
             
@@ -127,4 +134,4 @@ class Output:
         | :math:`D`: Detector distance
 
         """
-        return proptools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
+        return pengtools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)

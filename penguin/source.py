@@ -1,6 +1,6 @@
 import numpy
 import config,logging
-logger = logging.getLogger('Propagator')
+logger = logging.getLogger('Penguin')
 
 
 class Source:
