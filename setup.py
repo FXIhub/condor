@@ -49,7 +49,8 @@ os.system("mkdir -p ./penguin/data/")
 
 # Copy default configuration file there
 print 'Link default configuration file'
-os.system("ln -s ./default.conf ./penguin/data/default.conf")
+#os.system("ln -s ./default.conf ./penguin/data/default.conf")
+os.system("cp ./default.conf ./penguin/data/default.conf")
 
 # Scattering factors from the Henke tables and atomic masses 
 print 'Loading scattering constants...'
