@@ -236,28 +236,6 @@ F_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: (_qH_spheroid_diffraction
 _I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: abs(K)*(3.*(numpy.sin(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi))-_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)*numpy.cos(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)))/(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**3+numpy.finfo("float64").eps))**2
 I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < numpy.finfo("float64").resolution)*abs(K) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= numpy.finfo("float64").resolution)*_I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
 
-
-# scattering amplitude from homogeneous spheroid:
-# -----------------------------------------------
-# Sources:
-# Feigin 1987
-# Hamzeh,Bragg 1974
-#
-# a: radius perpendicular to the rotation axis of the ellipsoid (a)
-# c: radius along the rotation axis of the ellipsoid (c)
-# theta: rotation around x-axis (1st)
-# phi: rotation around z-axis (2nd)
-#
-# F = sqrt(I_0) rho_e p/D r_0 4/3 pi a^2 c [ 3 { sin(qH) - qH cos(qH) } / (qH)^3 ]
-#   = sqrt(I_0) rho_e p/D r_0 V f(a,c,theta,phi,qx,qy)
-# f = 3 { sin(qH) - qH cos(qH) } / (qH)^3
-# H = sqrt(asq sin^2(g)+csq cos^2(g))
-# g = arccos( ( -qX cos(theta) sin(phi) + qY cos(theta) cos(phi) ) / sqrt(qX^2+qY^2) 
-# K = I_0 (rho_e p/D r_0 V)^2
-# S = I_0 rho_e^2 = K / (p/D r_0 V)^2
-# ============================================================================================
-# I = K [ f(asq,csq,theta,phi,qx,qy) ]^2
-# ============================================================================================        
 def get_spheroid_diffraction_formula(p,D,wavelength,X=None,Y=None):
     if X != None and Y != None:
         qmap = generate_qmap(X,Y,p,D,wavelength)
@@ -270,21 +248,6 @@ def get_spheroid_diffraction_formula(p,D,wavelength,X=None,Y=None):
         I = lambda X,Y,K,a,c,theta,phi: I_sphere_diffraction(K,qmap(X,Y)[0],qmap(X,Y)[1],a,c,theta,phi)
     return I
 
-# scattering amplitude from homogeneous sphere:
-# -----------------------------------------------
-# Source:
-# Feigin 1987
-#
-# r: sphere radius
-#
-# F = sqrt(I_0) rho_e p/D r_0 4/3 pi r^3 [ 3 { sin(qr) - qr cos(qr) } / (qr)^3 ]
-#   = sqrt(I_0) rho_e p/D r_0 V f(r,qx,qy)
-# f = 3 { sin(qr) - qr cos(qr) } / (qr)^3
-# K = I_0 (rho_e p/D r_0 V)^2
-# S = I_0 rho_e^2 = K / (p/D r_0 V)^2
-# ============================================================================================
-# I = F^2 = K [ f(r,qx,qy) ]^2
-# ============================================================================================
 def get_sphere_diffraction_formula(p,D,wavelength,X=None,Y=None):
     if X != None and Y != None:
         q = generate_absqmap(X,Y,p,D,wavelength)

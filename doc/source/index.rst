@@ -12,15 +12,15 @@ Contents:
    :maxdepth: 2
    
    install
-   intro
    first_steps
    io
-
+   config
+   sample_types
+   
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 

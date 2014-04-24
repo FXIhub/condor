@@ -33,9 +33,9 @@ from python_tools import gentools,cxitools,imgtools
 
 class Input:
     """
-    The Input object that holds all necessary information for the experiment that shall be simulated. After initialization the configuration is saved to the variable Input.configuration.confDict.
+    The Input object that holds all necessary information for the experiment that shall be simulated. After initialization the configuration is saved to the variable configuration.confDict.
 
-    :param configuration: Either a dictionary or the location of a configuration file. Missing but necessary arguments will be set to default values.
+    :param configuration: Either a dictionary or the location of the configuration file. Missing but necessary arguments will be set to default values as specified in *default.conf*.
     
     """
     
@@ -97,6 +97,8 @@ class Output:
     def get_real_space_image(self,i=0):
         """
         Returns 2-dimensional array of back-propagated real space image from the diffraction amplitudes.
+
+        :param i: Index of the image that you want to obtain.
 
         """       
         A = self.amplitudes[i]
