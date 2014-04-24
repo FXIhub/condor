@@ -18,13 +18,7 @@ For initialization of an instance of the input object a configuration file is pa
 
 Missing values are set to the default values as specified in *default.conf*.
 
-The input object contains instances of a :py:class:`penguin.source.Source` called *source* and :py:class:`penguin.detector.Detector` called *detector*. Depending on the sample type the input object contains also an instance *sample* of
-
-* :py:class:`penguin.sample.SampleSphere`, 
-* :py:class:`penguin.sample.SampleSpheroid` or 
-* :py:class:`penguin.sample.SampleMap`.
-
-These instances can be used to read initialized objects, such as the refractive index map of the sample::
+To avoid unexpected behavior do NOT manipulate any variable within the input object. Only use it for retrieving information as shown in the following example::
 
   import penguin
   from matplotlib import pyplot
@@ -33,9 +27,7 @@ These instances can be used to read initialized objects, such as the refractive 
   map3d_proj = map3d.sum(0)
   pyplot.imshow(abs(map3d_proj)); pyplot.show()
 
-.. note:: To avoid unexpected behavior do NOT manipulate any variable within *source*, *sample* and *detector*.
-
-The configuration after initialization is saved in the dictionary *configuration.confDict*. Instead of a configuration file also a dictionary of that form can be used to instantiate a new input object::
+The configuration after initialization is saved in the dictionary *configuration.confDict*. A dictionary of that form can be used instead of a configruation file to instantiate a new input object::
 
   import penguin
   I = penguin.Input()

@@ -3,6 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. image:: img/bw_pengicosm.jpg
+
 Welcome to Penguin's documentation!
 ===================================
 
@@ -13,10 +15,12 @@ Contents:
    
    install
    first_steps
-   io
    config
    sample_types
-   
+   io   
+
+
+
 
 Indices and tables
 ==================

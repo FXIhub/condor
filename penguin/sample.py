@@ -339,7 +339,7 @@ class SampleMap(Sample):
         OR:
         - map3d_fine: Cubic 3d map.
           EITHER:
-          - dX_fine: Real space sampling distance.
+          - dx_fine: Real space sampling distance.
           OR:
           - oversampling_fine: Real space oversampling in relation to detector/source configuration. [1]
         
@@ -354,7 +354,7 @@ class SampleMap(Sample):
           - diameter in meter
           - oversampling_fine: Real space oversampling in relation to detector/source configuration.
           ADDITIONAL (spheroid):
-          - diameter_c: diameter along the singular axis (rotation axis of ellipsoid:
+          - diameter_c: diameter along the singular axis (rotation axis of ellipsoid)
           - diameter_a: diameter along orthogonal axis to singular axis
           - geometry_euler_angle_0, geometry_euler_angle_1: Euler angles defining orientation of singular axis in relation to z-axis in grid. [0.0,0.0]
 
@@ -387,8 +387,8 @@ class SampleMap(Sample):
         self._dX_fine = None
         self.radius = kwargs.get('radius',None)
 
-        if "dX_fine" in kwargs:
-            self.dX_fine = kwargs["dX_fine"]
+        if "dx_fine" in kwargs:
+            self.dX_fine = kwargs["dx_fine"]
         elif "oversampling_fine" in kwargs:
             #self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
             self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])/numpy.sqrt(2)
@@ -428,13 +428,13 @@ class SampleMap(Sample):
                     return
                 self.map3d_fine = d
                 f.close()
-                if "dX_fine" in kwargs:
-                    self.dX_fine = kwargs["dX_fine"]
+                if "dx_fine" in kwargs:
+                    self.dX_fine = kwargs["dx_fine"]
                 elif "diameter" in kwargs:
                     self.dX_fine = kwargs["diameter"]/float(s[0])
         else:
             if "map3d_fine" in kwargs:
-                s = numpy.array(self.maprgs["map3d_fine"].shape)
+                s = numpy.array(kwargs["map3d_fine"].shape)
                 if not numpy.all(s==s[0]):
                     logger.error("Penguin only accepts maps with equal dimensions.")
                     return
