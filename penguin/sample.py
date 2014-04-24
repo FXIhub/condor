@@ -483,6 +483,7 @@ class SampleMap(Sample):
             # ok, we'll take the fine map
             map3d = self.map3d_fine
             logger.debug("Using the fine map for propagtion.")
+            self._map3d = self.map3d_fine
 
         # do we have an interpolated map?
         if map3d == None and self._dX != None:

@@ -111,7 +111,7 @@ class Detector:
             self.binning = kwargs['binning']
         else:
             self.binning = 1
-        if 'mask' in kwargs: 
+        if kwargs.get('mask',None) != None: 
             self.mask = kwargs['mask']
             self.Nx = self.mask.shape[1]*self.binning
             self.Ny = self.mask.shape[0]*self.binning
