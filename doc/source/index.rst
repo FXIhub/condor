@@ -11,15 +11,16 @@ Contents:
 .. toctree::
    :maxdepth: 2
    
-   intro
+   install
    first_steps
    io
-
+   config
+   sample_types
+   
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 

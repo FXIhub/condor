@@ -1,7 +1,9 @@
 The input and the output object
 ===============================
 
-.. autoclass:: propagator.Input
+A simulation in Penguin is configured by initializing an instance of the penguin.Input object and the output object are the 
 
-.. autoclass:: propagator.Output
+.. autoclass:: penguin.Input
+
+.. autoclass:: penguin.Output
    :members:
