@@ -6,4 +6,4 @@
 	url = ssh://davinci.icm.uu.se/home/ekeberg/git-repos/pynfft.git
 [submodule "penguin/utils/python_tools_raw"]
 	path = penguin/utils/python_tools_raw
-	url = git@bitbucket.org:maxhantke/python_tools.git
+	url = https://maxhantke@bitbucket.org/maxhantke/python_tools.git

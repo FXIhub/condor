@@ -63,13 +63,7 @@ setup(name='penguin',
       url='http://xfel.icm.uu.se/penguin/',
       packages=['penguin', 'penguin.utils', "penguin.utils.python_tools"],
       package_data={'penguin':['data/*']},
-      ext_modules=[Extension("penguin.utils.icosahedron", ["penguin/utils/icosahedron/icosahedronmodule.c"]),
+      ext_modules=[Extension("penguin.utils.icosahedron", sources=["penguin/utils/icosahedron/icosahedronmodule.c"]),
                    Extension("penguin.utils.nfft", sources=["penguin/utils/nfft/nfftmodule.c"], libraries=["nfft3"])],
       include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs()
      )
-
-
-# test import
-import penguin
-
-print 'Penguin installation was successful.'
