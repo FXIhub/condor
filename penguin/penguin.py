@@ -1,17 +1,14 @@
 # ----------------------------------------------------------------------------------------------------- 
 # PENGUIN 
-#  Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# http://xfel.icm.uu.se/penguin/
 # ----------------------------------------------------------------------------------------------------- 
-# Web:
-#  http://xfel.icm.uu.se/penguin/
+# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+# Penguin is distributed under the terms of the GNU General Public License
 # ----------------------------------------------------------------------------------------------------- 
-# Authors:
-#  Max Hantke         - hantke@xray.bmc.uu.se
-#  Filipe R.N.C. Maia - filipe@xray.bmc.uu.se
-#  Tomas Ekeberg      - ekeberg@xray.bmc.uu.se
-# -----------------------------------------------------------------------------------------------------
 # General note:
 #  All variables are in SI units by default. Exceptions explicit by variable name.
+# ----------------------------------------------------------------------------------------------------- 
 
 import sys, ConfigParser, numpy, types, pickle, time, math, os
 

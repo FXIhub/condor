@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+#--------------------------------------------------------------------------
+# PENGUIN 
+# URL: xfel.icm.uu.se/penguin
+# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+# Penguin is distributed under the terms of the GNU General Public License
+#--------------------------------------------------------------------------
+
 # Installation of Penguin
 import sys, os, fileinput
 import constants_data.fetchsf as sf
