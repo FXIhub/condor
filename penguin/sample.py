@@ -1,8 +1,20 @@
+# ----------------------------------------------------------------------------------------------------- 
+# PENGUIN 
+# Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# http://xfel.icm.uu.se/penguin/
+# ----------------------------------------------------------------------------------------------------- 
+# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+# Penguin is distributed under the terms of the GNU General Public License
+# ----------------------------------------------------------------------------------------------------- 
+# General note:
+#  All variables are in SI units by default. Exceptions explicit by variable name.
+# ----------------------------------------------------------------------------------------------------- 
+
 import sys,numpy,time,multiprocessing
 import logging
-logger = logging.getLogger("Propagator")
+logger = logging.getLogger("Penguin")
 if "utils" not in sys.path: sys.path.append("utils")
-import config,imgutils,proptools
+import config,imgutils,pengtools
 import utils.nfft
 #import propagator.utils.nfft
 import utils.icosahedron
@@ -217,7 +229,7 @@ class Sample:
         return F0
 
     def set_random_orientation(self):
-        [e0,e1,e2] = proptools.random_euler_angles()
+        [e0,e1,e2] = pengtools.random_euler_angles()
         self.euler_angle_0 = e0
         self.euler_angle_1 = e1
         self.euler_angle_2 = e2
@@ -264,7 +276,7 @@ class SampleSphere(Sample):
         F0 = self._get_F0(source,detector)
         K = (F0*V*dn.real)**2
         q = detector.generate_absqmap()
-        F = [proptools.F_sphere_diffraction(K,q,R)]
+        F = [pengtools.F_sphere_diffraction(K,q,R)]
 
         return {"amplitudes":F}
 
@@ -312,7 +324,7 @@ class SampleSpheroid(Sample):
         q = detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
         qx = q[:,:,2]
         qy = q[:,:,1]
-        F = [proptools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)]
+        F = [pengtools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)]
 
         return {"amplitudes":F}
 
@@ -341,7 +353,7 @@ class SampleMap(Sample):
         OR:
         - map3d_fine: Cubic 3d map.
           EITHER:
-          - dX_fine: Real space sampling distance.
+          - dx_fine: Real space sampling distance.
           OR:
           - oversampling_fine: Real space oversampling in relation to detector/source configuration. [1]
         
@@ -356,7 +368,7 @@ class SampleMap(Sample):
           - diameter in meter
           - oversampling_fine: Real space oversampling in relation to detector/source configuration.
           ADDITIONAL (spheroid):
-          - diameter_c: diameter along the singular axis (rotation axis of ellipsoid:
+          - diameter_c: diameter along the singular axis (rotation axis of ellipsoid)
           - diameter_a: diameter along orthogonal axis to singular axis
           - geometry_euler_angle_0, geometry_euler_angle_1: Euler angles defining orientation of singular axis in relation to z-axis in grid. [0.0,0.0]
 
@@ -389,8 +401,8 @@ class SampleMap(Sample):
         self._dX_fine = None
         self.radius = kwargs.get('radius',None)
 
-        if "dX_fine" in kwargs:
-            self.dX_fine = kwargs["dX_fine"]
+        if "dx_fine" in kwargs:
+            self.dX_fine = kwargs["dx_fine"]
         elif "oversampling_fine" in kwargs:
             #self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
             self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])/numpy.sqrt(2)
@@ -426,19 +438,19 @@ class SampleMap(Sample):
                     d = f["data"][:,:,:]
                 s = numpy.array(d.shape)
                 if not numpy.all(s==s[0]):
-                    logger.error("Propagator only accepts maps with equal dimensions.")
+                    logger.error("Penguin only accepts maps with equal dimensions.")
                     return
                 self.map3d_fine = d
                 f.close()
-                if "dX_fine" in kwargs:
-                    self.dX_fine = kwargs["dX_fine"]
+                if "dx_fine" in kwargs:
+                    self.dX_fine = kwargs["dx_fine"]
                 elif "diameter" in kwargs:
                     self.dX_fine = kwargs["diameter"]/float(s[0])
         else:
             if "map3d_fine" in kwargs:
-                s = numpy.array(self.maprgs["map3d_fine"].shape)
+                s = numpy.array(kwargs["map3d_fine"].shape)
                 if not numpy.all(s==s[0]):
-                    logger.error("Propagator only accepts maps with equal dimensions.")
+                    logger.error("Penguin only accepts maps with equal dimensions.")
                     return
                 self.map3d_fine = kwargs['map3d_fine']
             else:
@@ -485,6 +497,7 @@ class SampleMap(Sample):
             # ok, we'll take the fine map
             map3d = self.map3d_fine
             logger.debug("Using the fine map for propagtion.")
+            self._map3d = self.map3d_fine
 
         # do we have an interpolated map?
         if map3d == None and self._dX != None:
@@ -538,7 +551,7 @@ class SampleMap(Sample):
             e1 = numpy.zeros(number_of_orientations)
             e2 = numpy.zeros(number_of_orientations)
             for i in range(number_of_orientations):
-                (e0[i],e1[i],e2[i]) = proptools.random_euler_angles()
+                (e0[i],e1[i],e2[i]) = pengtools.random_euler_angles()
             e0 = list(e0)
             e1 = list(e1)
             e2 = list(e2)
@@ -792,7 +805,7 @@ def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.):
     Y = Y-(N-1)/2.
     Z = Z-(N-1)/2.
     R_sq = X**2+Y**2+Z**2
-    e_c = proptools.rotation(numpy.array([0.0,0.0,1.0]),euler0,euler1,euler2)
+    e_c = pengtools.rotation(numpy.array([0.0,0.0,1.0]),euler0,euler1,euler2)
     d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
     r_sq_c = abs( R_sq * (1 - (d_sq_c/(R_sq+numpy.finfo("float32").eps))))
     spheroidmap = r_sq_c/nA**2+d_sq_c/nB**2

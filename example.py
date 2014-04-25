@@ -1,10 +1,24 @@
-import propagator as p
+#!/usr/bin/env python
+
+# ----------------------------------------------------------------------------------------------------- 
+# PENGUIN 
+# Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# http://xfel.icm.uu.se/penguin/
+# ----------------------------------------------------------------------------------------------------- 
+# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+# Penguin is distributed under the terms of the GNU General Public License
+# ----------------------------------------------------------------------------------------------------- 
+# General note:
+#  All variables are in SI units by default. Exceptions explicit by variable name.
+# ----------------------------------------------------------------------------------------------------- 
+
+import penguin as p
 import pylab,os,numpy,sys
 from python_tools import gentools
 
 pdir = os.path.abspath(os.path.dirname(__file__))
 odir = pdir+"/example_out/"
-os.system("mkdir %s/" % odir)
+os.system("mkdir -p %s" % odir)
 
 numpy.random.seed(0)
 
@@ -24,7 +38,7 @@ Cs = {}
 
 for s in samples:
     print s
-    C = gentools.read_configfile(pdir+"/conf/amo55912.conf")
+    C = gentools.read_configfile(pdir+"/default.conf")
     
     C["sample"] = {}
 
@@ -63,5 +77,5 @@ for s in samples:
     O = p.Output(I)
     
     for i in range(N):
-        pylab.imsave('%s/example_%s_%i_intensities.png' % (odir,s,i) ,numpy.log10(O.get_intensity_pattern(i)),vmin=numpy.log10(1.),vmax=numpy.log10(10000.))
+        pylab.imsave('%s/example_%s_%i_intensities.png' % (odir,s,i) ,numpy.log10(O.get_intensity_pattern(i)),vmin=0,vmax=8)
         pylab.imsave('%s/example_%s_%i_real_space.png' % (odir,s,i) ,abs(O.get_real_space_image(i)))

@@ -1,10 +1,22 @@
+# ----------------------------------------------------------------------------------------------------- 
+# PENGUIN 
+# Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# http://xfel.icm.uu.se/penguin/
+# ----------------------------------------------------------------------------------------------------- 
+# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+# Penguin is distributed under the terms of the GNU General Public License
+# ----------------------------------------------------------------------------------------------------- 
+# General note:
+#  All variables are in SI units by default. Exceptions explicit by variable name.
+# ----------------------------------------------------------------------------------------------------- 
+
 import sys
 sys.path.append("utils")
 import numpy
 import logging
-logger = logging.getLogger("Propagator")
+logger = logging.getLogger("Penguin")
 
-import proptools
+import pengtools
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools
@@ -111,7 +123,7 @@ class Detector:
             self.binning = kwargs['binning']
         else:
             self.binning = 1
-        if 'mask' in kwargs: 
+        if kwargs.get('mask',None) != None: 
             self.mask = kwargs['mask']
             self.Nx = self.mask.shape[1]*self.binning
             self.Ny = self.mask.shape[0]*self.binning
@@ -234,7 +246,7 @@ class Detector:
             w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
-        return proptools.generate_absqmap(X,Y,p,D,w)
+        return pengtools.generate_absqmap(X,Y,p,D,w)
 
     def generate_qmap(self,**kwargs):
         X,Y = numpy.meshgrid(numpy.arange(self.mask.shape[1]),
@@ -262,7 +274,7 @@ class Detector:
             E2 = kwargs["euler_angle_2"]
         else:
             E2 = self._parent.sample.euler_angle_2
-        qmap = proptools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
+        qmap = pengtools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
         nfft_scaled = kwargs.get("nfft_scaled",False)
         if nfft_scaled:
             #qmap /= self.get_absq_max()/0.5

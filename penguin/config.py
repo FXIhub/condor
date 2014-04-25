@@ -1,19 +1,34 @@
+# ----------------------------------------------------------------------------------------------------- 
+# PENGUIN 
+# Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# http://xfel.icm.uu.se/penguin/
+# ----------------------------------------------------------------------------------------------------- 
+# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+# Penguin is distributed under the terms of the GNU General Public License
+# ----------------------------------------------------------------------------------------------------- 
+# General note:
+#  All variables are in SI units by default. Exceptions explicit by variable name.
+# ----------------------------------------------------------------------------------------------------- 
+
 import sys, os, numpy, types, pickle, time, math, logging
 logging.basicConfig(format='%(levelname)s: %(message)s')
-logger = logging.getLogger('Propagator')
+logger = logging.getLogger('Penguin')
 
 def init_configuration():
     # Some global configuration variables
+    #=============
+    # are those really still needed?
     global PROPAGATION_MODE_PROJECTION
     PROPAGATION_MODE_PROJECTION = 0
     global PROPAGATION_MODE_3DSAMPLING
     PROPAGATION_MODE_3DSAMPLING = 1
-    global PROPAGATOR_DIR
-    PROPAGATOR_DIR = os.path.dirname(os.path.realpath(__file__))
+    global PENGUIN_DIR
+    PENGUIN_DIR = os.path.dirname(os.path.realpath(__file__))
+    #=============
     # Load global dictionaries
     init_global_dictionaries()
-    # Add path of propagator to sys.path
-    sys.path.append(PROPAGATOR_DIR+"/utils")
+    # Add path of Penguin to sys.path
+    sys.path.append(PENGUIN_DIR+"/utils")
     
 def init_global_dictionaries():
     # Load scattering factors and atomic masses from Henke tables

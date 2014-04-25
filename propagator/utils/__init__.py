@@ -1,2 +1,0 @@
-import nfft
-import icosahedron
