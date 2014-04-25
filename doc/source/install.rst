@@ -18,14 +18,22 @@ Installation
      python setup.py install
      cd ..
 
-3. Clone the `Penguin <https://github.com/mhantke/penguin>`_ repository and install it::
+3. Install the `NFFT library <https://www-user.tu-chemnitz.de/~potts/nfft/>`_::
+
+     wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz
+     cd nfft-3.2.3
+     ./configure
+     make
+     sudo make install
+
+4. Clone the `Penguin <https://github.com/mhantke/penguin>`_ repository and install it::
 
      git clone https://github.com/mhantke/penguin.git
      cd penguin
      python setup.py install
      cd ..
 
-4. Run the example script::
+5. Run the example script::
 
      python example.py
 
