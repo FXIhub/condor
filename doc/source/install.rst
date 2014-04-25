@@ -11,14 +11,7 @@ Installation
 
     pip install numpy scipy h5py
 
-2. Clone the `python_tools <https://bitbucket.org/maxhantke/python_tools>`_ repository and install it::
-
-     git clone https://maxhantke@bitbucket.org/maxhantke/python_tools.git
-     cd python_tools
-     python setup.py install
-     cd ..
-
-3. Install the `NFFT library <https://www-user.tu-chemnitz.de/~potts/nfft/>`_::
+2. Install the `NFFT library <https://www-user.tu-chemnitz.de/~potts/nfft/>`_::
 
      wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz
      cd nfft-3.2.3
@@ -26,14 +19,14 @@ Installation
      make
      sudo make install
 
-4. Clone the `Penguin <https://github.com/mhantke/penguin>`_ repository and install it::
+3. Clone the `Penguin <https://github.com/mhantke/penguin>`_ repository recursively and install it::
 
-     git clone https://github.com/mhantke/penguin.git
+     git clone --recursive https://github.com/mhantke/penguin.git
      cd penguin
      python setup.py install
      cd ..
 
-5. Run the example script::
+4. Run the example script::
 
      python example.py
 
