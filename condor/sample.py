@@ -227,7 +227,7 @@ class Sample:
         return F0
 
     def set_random_orientation(self):
-        [e0,e1,e2] = pengtools.random_euler_angles()
+        [e0,e1,e2] = condortools.random_euler_angles()
         self.euler_angle_0 = e0
         self.euler_angle_1 = e1
         self.euler_angle_2 = e2
@@ -274,7 +274,7 @@ class SampleSphere(Sample):
         F0 = self._get_F0(source,detector)
         K = (F0*V*dn.real)**2
         q = detector.generate_absqmap()
-        F = [pengtools.F_sphere_diffraction(K,q,R)]
+        F = [condortools.F_sphere_diffraction(K,q,R)]
 
         return {"amplitudes":F}
 
@@ -322,7 +322,7 @@ class SampleSpheroid(Sample):
         q = detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
         qx = q[:,:,2]
         qy = q[:,:,1]
-        F = [pengtools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)]
+        F = [condortools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)]
 
         return {"amplitudes":F}
 
@@ -549,7 +549,7 @@ class SampleMap(Sample):
             e1 = numpy.zeros(number_of_orientations)
             e2 = numpy.zeros(number_of_orientations)
             for i in range(number_of_orientations):
-                (e0[i],e1[i],e2[i]) = pengtools.random_euler_angles()
+                (e0[i],e1[i],e2[i]) = condortools.random_euler_angles()
             e0 = list(e0)
             e1 = list(e1)
             e2 = list(e2)
@@ -803,7 +803,7 @@ def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.):
     Y = Y-(N-1)/2.
     Z = Z-(N-1)/2.
     R_sq = X**2+Y**2+Z**2
-    e_c = pengtools.rotation(numpy.array([0.0,0.0,1.0]),euler0,euler1,euler2)
+    e_c = condortools.rotation(numpy.array([0.0,0.0,1.0]),euler0,euler1,euler2)
     d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
     r_sq_c = abs( R_sq * (1 - (d_sq_c/(R_sq+numpy.finfo("float32").eps))))
     spheroidmap = r_sq_c/nA**2+d_sq_c/nB**2
