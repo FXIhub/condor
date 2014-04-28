@@ -18,6 +18,7 @@ Installation
      ./configure
      make
      sudo make install
+     cd ..
 
 3. Clone the `Penguin <https://github.com/mhantke/penguin>`_ repository recursively and install it::
 
