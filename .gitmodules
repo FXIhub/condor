@@ -3,7 +3,7 @@
 	url = https://bitbucket.org/maxhantke/python_tools.git
 [submodule "penguin/utils/icosahedron"]
 	path = penguin/utils/icosahedron
-	url = ssh://davinci.icm.uu.se/home/ekeberg/git-repos/icosahedron.git
+	url = https://github.com/ekeberg/icosahedron.git
 [submodule "penguin/utils/nfft"]
 	path = penguin/utils/nfft
-	url = ssh://davinci.icm.uu.se/home/ekeberg/git-repos/pynfft.git
+	url = https://github.com/ekeberg/pynfft.git
