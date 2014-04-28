@@ -246,7 +246,7 @@ class Detector:
             w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
-        return pengtools.generate_absqmap(X,Y,p,D,w)
+        return condortools.generate_absqmap(X,Y,p,D,w)
 
     def generate_qmap(self,**kwargs):
         X,Y = numpy.meshgrid(numpy.arange(self.mask.shape[1]),
@@ -274,7 +274,7 @@ class Detector:
             E2 = kwargs["euler_angle_2"]
         else:
             E2 = self._parent.sample.euler_angle_2
-        qmap = pengtools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
+        qmap = condortools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
         nfft_scaled = kwargs.get("nfft_scaled",False)
         if nfft_scaled:
             #qmap /= self.get_absq_max()/0.5
