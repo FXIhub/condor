@@ -20,10 +20,10 @@ Installation
      sudo make install
      cd ..
 
-3. Clone the `Penguin <https://github.com/mhantke/penguin>`_ repository recursively and install it::
+3. Clone the `Condor <https://github.com/mhantke/condor>`_ repository recursively and install it::
 
-     git clone --recursive https://github.com/mhantke/penguin.git
-     cd penguin
+     git clone --recursive https://github.com/mhantke/condor.git
+     cd condor
      python setup.py install
      cd ..
 

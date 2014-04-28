@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Penguin documentation build configuration file, created by
+# Condor documentation build configuration file, created by
 # sphinx-quickstart on Tue Apr 22 16:00:53 2014.
 #
 # This file is execfile()d with the current directory set to its containing dir.
@@ -41,7 +41,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Penguin'
+project = u'Condor'
 copyright = u'2014, Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -168,7 +168,7 @@ html_static_path = ['.static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Penguindoc'
+htmlhelp_basename = 'Condordoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -187,7 +187,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Penguin.tex', u'Penguin Documentation',
+  ('index', 'Condor.tex', u'Condor Documentation',
    u'Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg', 'manual'),
 ]
 
@@ -217,7 +217,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'penguin', u'Penguin Documentation',
+    ('index', 'condor', u'Condor Documentation',
      [u'Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg'], 1)
 ]
 
@@ -231,8 +231,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Penguin', u'Penguin Documentation',
-   u'Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg', 'Penguin', 'One line description of project.',
+  ('index', 'Condor', u'Condor Documentation',
+   u'Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg', 'Condor', 'One line description of project.',
    'Miscellaneous'),
 ]
 

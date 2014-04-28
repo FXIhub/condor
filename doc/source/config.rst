@@ -3,7 +3,7 @@
 The configuration file
 ======================
 
-.. note:: Default configuration values are defined in the file *default.conf* located in the root directory of Penguin. To write your own configuration file use *default.conf* as a starting point.
+.. note:: Default configuration values are defined in the file *default.conf* located in the root directory of Condor. To write your own configuration file use *default.conf* as a starting point.
 
 The configuration file is subdivided into three sections: *source*, *sample* and *detector*.
 

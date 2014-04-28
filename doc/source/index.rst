@@ -1,12 +1,12 @@
-.. Penguin documentation master file, created by
+.. Condor documentation master file, created by
    sphinx-quickstart on Tue Apr 22 16:00:53 2014.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. image:: img/bw_pengicosm.jpg
+.. image:: img/bw_condoricosm.jpg
 
-Welcome to Penguin's documentation!
-===================================
+Welcome to the documentation of Condor!
+=======================================
 
 Contents:
 
