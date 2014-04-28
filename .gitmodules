@@ -1,6 +1,6 @@
 [submodule "condor/utils/python_tools_raw"]
 	path = condor/utils/python_tools_raw
-	url = https://bitbucket.org/maxhantke/python_tools.git
+	url = https://github.com/mhantke/python_tools.git
 [submodule "condor/utils/icosahedron"]
 	path = condor/utils/icosahedron
 	url = https://github.com/ekeberg/icosahedron.git
