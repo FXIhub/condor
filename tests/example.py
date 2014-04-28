@@ -16,8 +16,8 @@ import condor as p
 import pylab,os,numpy,sys
 from python_tools import gentools
 
-pdir = os.path.abspath(os.path.dirname(__file__))
-odir = pdir+"/example_out/"
+pdir = os.path.abspath(os.path.dirname(__file__))+"/../"
+odir = os.path.abspath(os.path.dirname(__file__))+"/example_out/"
 os.system("mkdir -p %s" % odir)
 
 numpy.random.seed(0)

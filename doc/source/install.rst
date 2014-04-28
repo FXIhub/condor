@@ -29,6 +29,7 @@ Installation
 
 4. Run the example script::
 
+     cd tests/
      python example.py
 
    A set of simulated images should appear in a folder called *example_out*.
