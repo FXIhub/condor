@@ -16,7 +16,7 @@ import numpy
 import logging
 logger = logging.getLogger("Condor")
 
-import pengtools
+import condortools
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools

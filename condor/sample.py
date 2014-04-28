@@ -14,11 +14,9 @@ import sys,numpy,time,multiprocessing
 import logging
 logger = logging.getLogger("Condor")
 if "utils" not in sys.path: sys.path.append("utils")
-import config,imgutils,pengtools
+import config,imgutils,condortools
 import utils.nfft
-#import propagator.utils.nfft
 import utils.icosahedron
-#import icosahedron
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools
