@@ -27,7 +27,7 @@ Installation
      python setup.py install
      cd ..
 
-   .. note:: When you update Condor to the latest commit including all submodules use the following commands:
+   .. note:: When you want to update Condor to the latest commit (including all submodules) use the following commands:
 
    .. code-block:: none
 
