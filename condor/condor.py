@@ -120,7 +120,7 @@ class Output:
         if self.input_object.sample.radius == None:
             return None
         else:
-            pN = pengtools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),numpy.pi*self.input_object.sample.radius**2)
+            pN = condortools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),numpy.pi*self.input_object.sample.radius**2)
             pD = self.input_object.detector.get_pixel_size("binned")
             return pN/pD
             
@@ -135,4 +135,4 @@ class Output:
         | :math:`D`: Detector distance
 
         """
-        return pengtools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
+        return condortools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
