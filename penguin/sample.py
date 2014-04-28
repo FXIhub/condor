@@ -1,10 +1,10 @@
 # ----------------------------------------------------------------------------------------------------- 
-# PENGUIN 
+# CONDOR 
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
-# http://xfel.icm.uu.se/penguin/
+# http://xfel.icm.uu.se/condor/
 # ----------------------------------------------------------------------------------------------------- 
 # Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
-# Penguin is distributed under the terms of the GNU General Public License
+# Condor is distributed under the terms of the GNU General Public License
 # ----------------------------------------------------------------------------------------------------- 
 # General note:
 #  All variables are in SI units by default. Exceptions explicit by variable name.
@@ -12,7 +12,7 @@
 
 import sys,numpy,time,multiprocessing
 import logging
-logger = logging.getLogger("Penguin")
+logger = logging.getLogger("Condor")
 if "utils" not in sys.path: sys.path.append("utils")
 import config,imgutils,pengtools
 import utils.nfft
@@ -438,7 +438,7 @@ class SampleMap(Sample):
                     d = f["data"][:,:,:]
                 s = numpy.array(d.shape)
                 if not numpy.all(s==s[0]):
-                    logger.error("Penguin only accepts maps with equal dimensions.")
+                    logger.error("Condor only accepts maps with equal dimensions.")
                     return
                 self.map3d_fine = d
                 f.close()
@@ -450,7 +450,7 @@ class SampleMap(Sample):
             if "map3d_fine" in kwargs:
                 s = numpy.array(kwargs["map3d_fine"].shape)
                 if not numpy.all(s==s[0]):
-                    logger.error("Penguin only accepts maps with equal dimensions.")
+                    logger.error("Condor only accepts maps with equal dimensions.")
                     return
                 self.map3d_fine = kwargs['map3d_fine']
             else:

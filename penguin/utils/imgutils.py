@@ -1,18 +1,18 @@
 # ----------------------------------------------------------------------------------------------------- 
-# PENGUIN 
+# CONDOR 
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
-# http://xfel.icm.uu.se/penguin/
+# http://xfel.icm.uu.se/condor/
 # ----------------------------------------------------------------------------------------------------- 
 # Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
-# Penguin is distributed under the terms of the GNU General Public License
+# Condor is distributed under the terms of the GNU General Public License
 # ----------------------------------------------------------------------------------------------------- 
 # General note:
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
 import os,re,sys,h5py,numpy,time
-import penguin.config
-import pengtools
+import condor.config
+import condortools
 
 def radial_pixel_average(image,**kargs):
     if 'cx' in kargs: cx = kargs['cx']

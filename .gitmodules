@@ -1,9 +1,0 @@
-[submodule "penguin/utils/python_tools_raw"]
-	path = penguin/utils/python_tools_raw
-	url = https://bitbucket.org/maxhantke/python_tools.git
-[submodule "penguin/utils/icosahedron"]
-	path = penguin/utils/icosahedron
-	url = https://github.com/ekeberg/icosahedron.git
-[submodule "penguin/utils/nfft"]
-	path = penguin/utils/nfft
-	url = https://github.com/ekeberg/pynfft.git

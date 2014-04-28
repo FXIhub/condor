@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 #--------------------------------------------------------------------------
-# PENGUIN 
-# URL: xfel.icm.uu.se/penguin
+# CONDOR
+# URL: xfel.icm.uu.se/condor
 # Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
-# Penguin is distributed under the terms of the GNU General Public License
+# Condor is distributed under the terms of the GNU General Public License
 #--------------------------------------------------------------------------
 
-# Installation of Penguin
+# Installation of Condor
 import sys, os, fileinput
 import constants_data.fetchsf as sf
 from distutils.core import setup, Extension
@@ -19,8 +19,8 @@ try:
     import numpy
     print "Necessary package numpy is installed."
 except:
-    print "ERROR: Cannot import numpy. Please install it and try to install Penguin again."
-    print "Installation of Penguin failed."
+    print "ERROR: Cannot import numpy. Please install it and try to install Condor again."
+    print "Installation of Condor failed."
     quit(0)
 
 try:
@@ -28,8 +28,8 @@ try:
     import scipy
     print "Necessary package scipy is installed."
 except:
-    print "ERROR: Cannot import scipy. Please install it and try to install Penguin again."
-    print "Installation of Penguin failed."
+    print "ERROR: Cannot import scipy. Please install it and try to install Condor again."
+    print "Installation of Condor failed."
     quit(0)
 
 try:
@@ -37,33 +37,33 @@ try:
     import h5py
     print "Necessary package h5py is installed."
 except:
-    print "ERROR: Cannot import h5py. Please install it and try to install Penguin again."
-    print "Installation of Penguin failed."
+    print "ERROR: Cannot import h5py. Please install it and try to install Condor again."
+    print "Installation of Condor failed."
     quit(0)
 
 # Create dir for data
 print 'Clean up data directory'
-os.system("mkdir -p ./penguin/data/")
+os.system("mkdir -p ./condor/data/")
 
 # Copy default configuration file there
 print 'Link default configuration file'
-#os.system("ln -s ./default.conf ./penguin/data/default.conf")
-os.system("cp ./default.conf ./penguin/data/default.conf")
+#os.system("ln -s ./default.conf ./condor/data/default.conf")
+os.system("cp ./default.conf ./condor/data/default.conf")
 
 # Scattering factors from the Henke tables and atomic masses 
 print 'Loading scattering constants...'
-sf.generate_datafile("constants_data/sf","./penguin/data")
+sf.generate_datafile("constants_data/sf","./condor/data")
 print 'Done.'
 
-setup(name='penguin',
+setup(name='condor',
       description='Simulator for diffractive single-particle imaging experiments with X-ray lasers',
       version='1.0',
       author='Max Felix Hantke, Filipe R.N.C. Maia, Tomas Ekeberg',
       author_email='hantke@xray.bmc.uu.se',
-      url='http://xfel.icm.uu.se/penguin/',
-      packages=['penguin', 'penguin.utils', "penguin.utils.python_tools"],
-      package_data={'penguin':['data/*']},
-      ext_modules=[Extension("penguin.utils.icosahedron", sources=["penguin/utils/icosahedron/icosahedronmodule.c"]),
-                   Extension("penguin.utils.nfft", sources=["penguin/utils/nfft/nfftmodule.c"], libraries=["nfft3"])],
+      url='http://xfel.icm.uu.se/condor/',
+      packages=['condor', 'condor.utils', "condor.utils.python_tools"],
+      package_data={'condor':['data/*']},
+      ext_modules=[Extension("condor.utils.icosahedron", sources=["condor/utils/icosahedron/icosahedronmodule.c"]),
+                   Extension("condor.utils.nfft", sources=["condor/utils/nfft/nfftmodule.c"], libraries=["nfft3"])],
       include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs()
      )
