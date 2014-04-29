@@ -52,7 +52,7 @@ os.system("cp ./default.conf ./condor/data/default.conf")
 
 # Scattering factors from the Henke tables and atomic masses 
 print 'Loading scattering constants...'
-sf.generate_datafile("constants_data/sf","./condor/data")
+sf.generate_datafile("constants_data/sf","./src/data")
 print 'Done.'
 
 setup(name='condor',
@@ -61,9 +61,10 @@ setup(name='condor',
       author='Max Felix Hantke, Filipe R.N.C. Maia, Tomas Ekeberg',
       author_email='hantke@xray.bmc.uu.se',
       url='http://xfel.icm.uu.se/condor/',
+      package_dir={"condor":"src"},
       packages=['condor', 'condor.utils', "condor.utils.python_tools"],
       package_data={'condor':['data/*']},
-      ext_modules=[Extension("condor.utils.icosahedron", sources=["condor/utils/icosahedron/icosahedronmodule.c"]),
-                   Extension("condor.utils.nfft", sources=["condor/utils/nfft/nfftmodule.c"], libraries=["nfft3"])],
+      ext_modules=[Extension("condor.utils.icosahedron", sources=["src/utils/icosahedron/icosahedronmodule.c"]),
+                   Extension("condor.utils.nfft", sources=["src/utils/nfft/nfftmodule.c"], libraries=["nfft3"])],
       include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs()
      )
