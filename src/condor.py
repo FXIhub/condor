@@ -10,25 +10,20 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
-import sys, ConfigParser, numpy, types, pickle, time, math, os
+import numpy, time, os
 
-this_dir = os.path.dirname(os.path.realpath(__file__))
-
-sys.path.append(os.path.join(this_dir, "utils/python_tools"))
-
+# Init logging
 import logging
 logger = logging.getLogger("Condor")
 
-# Initial configuration and importing Condor files
+# Initialize configuration
 import config
 config.init_configuration()
-import imgutils,condortools
-from source import Source
-from sample import SampleMap,SampleSphere,SampleSpheroid
-from detector import Detector
 
-# Pythontools
-from python_tools import gentools,cxitools,imgtools
+# Import Condor files
+from python_tools import gentools
+import imgutils,condortools,source,sample,detector
+
 
 class Input:
     """
@@ -37,9 +32,8 @@ class Input:
     :param configuration: Either a dictionary or the location of the configuration file. Missing but necessary arguments will be set to default values as specified in *default.conf*.
     
     """
-    
     def __init__(self,configuration={}):
-        self.default_configuration = this_dir+"/data/default.conf"
+        self.default_configuration = config.CONDOR_DIR+"/data/default.conf"
         self._reconfigure(configuration)
         self._photon_changed = False
         self._detector_changed = False
@@ -48,15 +42,15 @@ class Input:
         self.configuration = gentools.Configuration(configuration,self.default_configuration)
 
         C = self.configuration.confDict
-        self.detector = Detector(parent=self,**C["detector"])
-        self.source = Source(parent=self,**C["source"])
+        self.detector = detector.Detector(parent=self,**C["detector"])
+        self.source = source.Source(parent=self,**C["source"])
 
         if C["sample"]["sample_type"] == "uniform_sphere":
-            self.sample = SampleSphere(parent=self,**C["sample"])
+            self.sample = sample.SampleSphere(parent=self,**C["sample"])
         elif C["sample"]["sample_type"] == "uniform_spheroid":
-            self.sample = SampleSpheroid(parent=self,**C["sample"])
+            self.sample = sample.SampleSpheroid(parent=self,**C["sample"])
         elif C["sample"]["sample_type"] == "map3d":
-            self.sample = SampleMap(parent=self,**C["sample"])
+            self.sample = sample.SampleMap(parent=self,**C["sample"])
         else:
             logger.error("%s is not a valid sample type.")
             return
@@ -115,8 +109,7 @@ class Output:
         | :math:`\\lambda`: Photon wavelength 
         | :math:`d`: Sample diameter
 
-        """       
-        
+        """               
         if self.input_object.sample.radius == None:
             return None
         else:

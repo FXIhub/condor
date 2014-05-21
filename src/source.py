@@ -17,18 +17,35 @@ logger = logging.getLogger('Condor')
 
 class Source:
     """
-    A subclass of the input object.
-    Defines properties of the FEL x-ray pulse.
+    The Source object characterizes the illumination of the object.
 
+    Keyword arguments:
+
+    :param focus_diameter: focus diameter in meter.
+    :param pulse_energy: pulse energy in Joule.
+    :param wavelength: photon wavelength in meter.
+    :param photon_energy_eV: photon energy in electron volt.
+    :param photon_energy: in Joule.
+    :param parent: parent object. [`None`]
+    
     """
     def __init__(self,**kwargs):
         self._parent = kwargs.get('parent',None)
-        reqk = ["wavelength","focus_diameter","pulse_energy"]
+        # check arguments
+        reqk = ["focus_diameter","pulse_energy"]
         for k in reqk:
             if k not in kwargs.keys():
                 logger.error("Cannot initialize Source instance. %s is a necessary keyword." % k)
                 return
-        self.photon = Photon(wavelength=kwargs["wavelength"])
+        reqk = ["wavelength","photon_energy","photon_energy_eV"]
+        pk = list(set(kwargs.keys()).intersection(set(reqk)))
+        if len(pk) != 1:
+            logger.error("Cannot initialize Source instance. You have to give exactly one of the following keyword arguments: wavelength, photon_energy, photon_energy_eV.")
+            return
+        pk = pk[0]
+        if "photon_energy" in pk: pk = pk[len("photon_"):]
+        # set parameters
+        self.photon = Photon(**{pk:kwargs[pk]})
         self.focus_diameter = kwargs["focus_diameter"]
         self.pulse_energy = kwargs["pulse_energy"]
         logger.debug("Source configured")
@@ -48,6 +65,16 @@ class Source:
         return numpy.pi*(self.focus_diameter/2.0)**2
     
 class Photon:
+    """
+    Photon object defines the wavelength / photon energy of the photons.
+
+    Keyword arguments (specify only one of the following):
+
+    :param wavelength: photon wavelength in meter.
+    :param energy_eV: photon energy in electron volt.
+    :param energy: photon energy in Joule.
+    
+    """
     def __init__(self,**kwarg):
         if "wavelength" in kwarg.keys(): self.set_wavelength(kwarg["wavelength"])
         elif "energy" in kwarg.keys(): self.set_energy(kwarg["energy"],"J")

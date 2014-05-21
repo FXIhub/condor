@@ -34,7 +34,7 @@ class Material:
             self.materialtype = "custom"
             for key in kwargs:
                 if key[0] == 'c' or key == 'massdensity':
-                    exec "self." + key + " = args[key]"
+                    exec "self." + key + " = kwargs[key]"
                 else:
                     logger.error("%s is no valid argument for custom initialization of Material." % key)
                     return
@@ -91,8 +91,8 @@ class Material:
 
         return n
 
-    def get_dn(self,photon_energy=None):
-        return (1-self.get_n(photon_energy))
+    def get_dn(self,photon_energy_eV=None):
+        return (1-self.get_n(photon_energy_eV))
 
     # convenience functions
     # n = 1 - delta - i beta
@@ -186,7 +186,38 @@ class Material:
         
         return atomic_composition
 
+
 class Sample:
+    def __init__(self,**kwargs):
+        self._parent = kwargs.get('parent',None)
+        self.particles = []
+        self.particle_positions = []
+
+    def add_particle(particle,position_vector=None):
+        self.particles.append(particle)
+        if poisiton_vector==None:
+            self.particle_positions.append(numpy.array([0.,0.,0.]))
+        else:
+            self.particle_positions.append(position_vector)
+
+    def remove_particle(i):
+        self.particles.pop(i)
+        self.particle_positions.pop(i)
+
+    def propagate():
+        A_particles = []
+        P_particles = []
+        for particle,position in zip(self.particles,self.particle_positions):
+            D = paricle.propagate()
+            A_particles.append(D.pop("amplitudes"))
+            P_particles.append(D)
+            
+
+    def clear():
+        self.particles = []
+        self.particle_positions = []
+
+class AbstractParticle:
     def __init__(self,**kwargs):
         self._parent = kwargs.get('parent',None)
         # Material
@@ -232,7 +263,7 @@ class Sample:
         self.euler_angle_1 = e1
         self.euler_angle_2 = e2
 
-class SampleSphere(Sample):
+class ParticleSphere(AbstractParticle):
     """
     A class of the input-object.
     Sample is a homogeneous sphere defined by a radius and a material object.
@@ -240,11 +271,11 @@ class SampleSphere(Sample):
     """
 
     def __init__(self,**kwargs):
-        Sample.__init__(self,**kwargs)
+        AbstractParticle.__init__(self,**kwargs)
         reqk = ["diameter"]
         for k in reqk:
             if k not in kwargs.keys():
-                logger.error("Cannot initialize SampleSphere instance. %s is a necessary keyword." % k)
+                logger.error("Cannot initialize ParticleSphere instance. %s is a necessary keyword." % k)
                 return
         self.radius = kwargs['diameter']/2.
         self._parent = kwargs.get('parent',None)
@@ -282,14 +313,14 @@ class SampleSphere(Sample):
         """ Calculates area of projected sphere """
         return numpy.pi*self.radius**2
 
-class SampleSpheroid(Sample):
+class ParticleSpheroid(AbstractParticle):
 
     def __init__(self,**kwargs):
-        Sample.__init__(self,**kwargs)
+        AbstractParticle.__init__(self,**kwargs)
         reqk = ["diameter_a","diameter_c","theta","phi"]
         for k in reqk:
             if k not in kwargs.keys():
-                logger.error("Cannot initialize SampleSpheroid instance. %s is a necessary keyword." % k)
+                logger.error("Cannot initialize ParticleSpheroid instance. %s is a necessary keyword." % k)
                 return
         self.a = kwargs['diameter_a']/2.
         self.c = kwargs['diameter_c']/2.
@@ -334,11 +365,11 @@ class SampleSpheroid(Sample):
         return (4/3.*numpy.pi*self.a**2*self.c)**(2/3.)
 
 
-class SampleMap(Sample):
+class ParticleMap(AbstractParticle):
 
     def __init__(self,**kwargs):
         """
-        Function initializes SampleMap object:
+        Function initializes ParticleMap object:
         ======================================
 
         Arguments:
@@ -373,7 +404,7 @@ class SampleMap(Sample):
         ADDITIONAL:
         - euler_angle_0, euler_angle_1, euler_angle_2: Euler angles defining orientation of 3D grid in the experimental reference frame (beam axis). [0.0,0.0,0.0]
         - size: Characteristic size of the object in meters. [1]
-        - parent: Input object that this SampleMap object shall be linked to. [None]
+        - parent: Input object that this ParticleMap object shall be linked to. [None]
         - SAMPLING:
           EITHER:
           - dX_fine: Real space sampling distance.
@@ -388,7 +419,7 @@ class SampleMap(Sample):
 
         """
 
-        Sample.__init__(self,**kwargs)
+        AbstractParticle.__init__(self,**kwargs)
         self.euler_angle_0 = kwargs.get("euler_angle_0",0.)
         self.euler_angle_1 = kwargs.get("euler_angle_1",0.)
         self.euler_angle_2 = kwargs.get("euler_angle_2",0.)
@@ -409,22 +440,22 @@ class SampleMap(Sample):
         if "geometry" in kwargs:
             if kwargs["geometry"] == "icosahedron":
                 if "diameter" not in kwargs:
-                    logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=icosahedron.") 
+                    logger.error("Cannot initialize ParticleMap instance. diameter is a necessary keyword for geometry=icosahedron.") 
                 self.put_icosahedron(kwargs["diameter"]/2.,**kwargs)
                 self.radius = kwargs["diameter"]/2.
             elif kwargs["geometry"] == "spheroid":
                 if "diameter_a" not in kwargs or "diameter_c" not in kwargs:
-                    logger.error("Cannot initialize SampleMap instance. a_diameter and c_diameter are necessary keywords for geometry=spheroid.")
+                    logger.error("Cannot initialize ParticleMap instance. a_diameter and c_diameter are necessary keywords for geometry=spheroid.")
                 self.put_spheroid(kwargs["diameter_a"]/2.,kwargs["diameter_c"]/2.,**kwargs)
                 self.radius = (2*kwargs["diameter_a"]+kwargs["diameter_c"])/3./2.
             elif kwargs["geometry"] == "sphere":
                 if "diameter" not in kwargs:
-                    logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=sphere.")
+                    logger.error("Cannot initialize ParticleMap instance. diameter is a necessary keyword for geometry=sphere.")
                 self.put_sphere(kwargs["diameter"]/2.,**kwargs)
                 self.radius = kwargs["diameter"]/2.
             if kwargs["geometry"] == "cube":
                 if "edge_length" not in kwargs:
-                    logger.error("Cannot initialize SampleMap instance. edge_length is a necessary keyword for geometry=cube.") 
+                    logger.error("Cannot initialize ParticleMap instance. edge_length is a necessary keyword for geometry=cube.") 
                 self.put_cube(kwargs["edge_length"],**kwargs)
                 self.radius = (4/3/numpy.pi)**(1/3.)*kwargs["edge_length"] # volume equivalent radius
             elif kwargs["geometry"] == "custom":
@@ -598,12 +629,17 @@ class SampleMap(Sample):
             p = p/self.dX_fine
         origin = kwargs.get("origin","middle")
         mode = kwargs.get("mode","sum")
+        dn = kwargs.get("dn",None)
+        print map_add.shape,origin
+        if dn == None:
+            factor = 1.
+        else:
+            factor = abs(dn)/abs(self._get_dn())
         if self.map3d_fine == None:
             self.map3d_fine = numpy.array(map_add,dtype="float64")
             return
         else:
-            p = numpy.array([z/self.dX_fine,y/self.dX_fine,z/self.dX_fine])
-            self.map3d_fine = imgtools.array_to_array(self.map3d_fine,map_add,p,origin,mode)
+            self.map3d_fine = imgtools.array_to_array(map_add*factor,self.map3d_fine,p,origin,mode)
 
     def put_sphere(self,radius,**kwargs):
         nR = radius/self.dX_fine
@@ -823,7 +859,7 @@ def make_sphere_map(N,nR):
     return spheremap
 
 
-#def calculatePattern_SampleSpheres(input_obj):
+#def calculatePattern_ParticleSpheres(input_obj):
 #    wavelength = input_obj.source.photon.get_wavelength()
 #    I_0 = input_obj.source.get_intensity("ph/m2")
 #    Omega_p = input_obj.detector.get_pixel_solid_angle("binned")

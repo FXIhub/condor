@@ -1,5 +1,5 @@
-The input and the output object
-===============================
+Input and output object
+=======================
 
 A simulation in Condor is configured by initializing an instance of the condor.Input object and the output object are the 
 

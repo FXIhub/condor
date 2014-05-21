@@ -23,43 +23,31 @@ from python_tools import gentools,cxitools,imgtools
 
 class Detector:
     """
-    A subclass of the input object.
-    Defines area detector.
+    Defines the area detector. The detector object defines the detector geometry including masked out regions. It also provides some functions to generate scattering vector maps.
+
+    The mask can be specified in two ways:
+
+    - with the dimension parameters (`nx` and `ny`) and optionally with the size parameters of detector gap and and hole (`x_gap_size_in_pixel`, `y_gap_size_in_pixel` and `hole_diameter_in_pixel`).
+    - by a 2D mask array (`mask`) where 0 indicates an invalid pixel and a 1 a valid pixel.
+
+    Keyword arguments:
+
+    :param nx: Number of pixels in horizontal direction not including a potential gap.
+    :param ny: Number of pixels in vertical direction not including a potential gap.
+    :param distance: Distance between detector and interaction point in meter.
+    :param pixel_size: Edge length of square pixel without binning in meter.
+    :param cx: Horizontal beam position in pixel. If argument is None or not given center is set to the middle. [`None`]
+    :param cy: Vertical beam position in pixel. If argument is None or not given center is set to the middle. [`None`]
+    :param binning: Number of binned pixels (binning x binning). [`1`]
+    :param noise: Noise that is put on the intensities when read. Either \'none\' or \'poisson\'. [`\'none\'`]
+    :param parent: Input object that includes detector object. [`None`]
+    :param x_gap_size_in_pixel: Width of central horizontal gap in pixel. [`0`]
+    :param y_gap_size_in_pixel: Width of central vertical gap in pixel. [`0`]
+    :param hole_diameter_in_pixel: Diameter of central hole in pixel. [`0`]
+    :param mask: 2D mask array (0: invalid pixel / 1: valid pixel).
+
     """
     def __init__(self,**kwargs):
-        """
-        Function initializes Detector object.
-        =====================================
-        Arguments:
-        Keyword arguments (if not given variable is set to default value):
-
-        - distance: Distance between detector and interaction point.
-        - pixel_size: Edge length of square pixel (unbinned).
-        - cx: Horizontal beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
-        - cy: Vertical beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
-        - binning: Number of binned pixels (binning x binning). [1]
-        - noise: Noise that is put on the intensities when read. Either \'none\' or \'poisson\'. [\'none\']
-        - parent: Input object that includes detector object. This variable is optional. [None]
-
-        EITHER (default):
-        - nx: Number of pixels in horizontal direction not including a potential gap.
-        - Ny: Number of pixels in vertical direction not including a potential gap.
-        - x_gap_size_in_pixel: Width of central horizontal gap in pixel. [0]
-        - y_gap_size_in_pixel: Width of central vertical gap in pixel. [0]
-        - hole_diameter_in_pixel: Diameter of central hole in pixel. [0]
-        
-        OR:
-        - mask_CXI_bitmask: bool wheter or not data is stored as a CXI bitmask. [False]
-          + False: pixels with value 0 are invalid, pixels with value 1 are valid.
-          + True: (pixels & cxitools.PIXEL_IS_IN_MASK) == 0 are the valid pixels
-        
-          EITHER
-          - mask: 2d mask array. In the array 1 stands for valid pixel and 0 for an invalid pixel.
-          OR:
-          - mask_filename: path to HDF5 file where the mask is stored
-          - mask_dataset: dataset path in file
-        """
-
         reqk = ["distance","pixel_size"]
         for k in reqk:
             if k not in kwargs.keys():
@@ -74,15 +62,10 @@ class Detector:
         hd = kwargs.get('hole_diameter_in_pixel',0)
         self.noise = kwargs.get('noise','none')
         self.binning = kwargs.get('binning',1)
-        if 'mask' in kwargs or ('mask_filename' in kwargs.keys() and "mask_dataset" in kwargs.keys()):
-            if "mask" in kwargs:
-                M = kwargs["mask"]
-            else:
-                f = h5py.File(kwargs["mask_filename"],"r")
-                M = f["mask_dataset"][:]
-                f.close()
-            if kwargs.get("mask_CXI_bitmask",False): M = (M & cxitools.PIXEL_IS_IN_MASK) == 0
-            self.init_mask(mask=M)
+        if 'mask' in kwargs:
+            M = kwargs["mask"]
+            #if kwargs.get("mask_CXI_bitmask",False): M = (M & cxitools.PIXEL_IS_IN_MASK) == 0
+            self._init_mask(mask=M)
             self.cx = kwargs.get('cx',(self.mask.shape[1]-1)/(2.*self.binning))
             self.cy = kwargs.get('cy',(self.mask.shape[0]-1)/(2.*self.binning))              
         else:
@@ -95,29 +78,9 @@ class Detector:
             self.Ny = kwargs["ny"]
             self.cx = kwargs.get('cx',(self.Nx+gy-1)/2.)
             self.cy = kwargs.get('cy',(self.Ny+gx-1)/2.)   
-            self.init_mask(nx=kwargs["nx"],ny=kwargs["ny"],x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy,hole_diameter_in_pixel=hd,binning=self.binning)
+            self._init_mask(nx=kwargs["nx"],ny=kwargs["ny"],x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy,hole_diameter_in_pixel=hd,binning=self.binning)
 
-    def init_mask(self,**kwargs):
-        """        
-        Function initializes the detector mask.
-        =======================================
-
-        Arguments:
-        
-        Keyword arguments (if not given variable is set to default value):
-        
-        EITHER
-        - mask: array that defines the mask (0: masked out, 1: not masked out)
-        
-        OR:
-        - nx: horizontal dimension of the mask (inside the mask, without counting any gaps)
-        - ny: vertical dimension of the mask (inside the mask, without counting any gaps)
-        - x_gap_size_in_pixel: horizontal gap is generated with given width (in unit unbinned pixel)
-        - y_gap_size_in_pixel: vertical gap is generated with given width (in unit unbinned pixel)
-        - hole_diameter_in_pixel: holeis generated with given diameter (in unit unbinned pixel)
-
-        """
-
+    def _init_mask(self,**kwargs):
         # init mask array
         if 'binning' in kwargs:
             self.binning = kwargs['binning']
@@ -163,24 +126,12 @@ class Detector:
                 self.mask[R<=kwargs['hole_diameter_in_pixel']/(2.0*self.binning)] = 0
 
     def set_cy(self,cy=None):
-        """
-        Function sets vertical center position:
-        =======================================
-        Arguments:
-        cy : vertical center position in pixel. If argument is None or not given center is set to the middle.
-        """
         if cy == None:
             self.cy = (self.mask.shape[0]-1)/2.
         else:
             self.cy = cy
 
     def set_cx(self,cx=None):
-        """
-        Function sets horicontal center position:
-        =========================================
-        Arguments:
-        cx : horizontal center position in pixel. If argument is None or not given center is set to the middle.
-        """
         if cx == None:
             self.cx = (self.mask.shape[1]-1)/2.
         else:
