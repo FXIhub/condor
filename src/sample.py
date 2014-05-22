@@ -34,7 +34,7 @@ class Material:
             self.materialtype = "custom"
             for key in kwargs:
                 if key[0] == 'c' or key == 'massdensity':
-                    exec "self." + key + " = args[key]"
+                    exec "self." + key + " = kwargs[key]"
                 else:
                     logger.error("%s is no valid argument for custom initialization of Material." % key)
                     return
@@ -597,13 +597,18 @@ class SampleMap(Sample):
         else:
             p = p/self.dX_fine
         origin = kwargs.get("origin","middle")
-        mode = kwargs.get("mode","sum")
+        mode = kwargs.get("mode","factor")
+        dn = kwargs.get("dn",None)
+        print map_add.shape,origin
+        if dn == None:
+            factor = 1.
+        else:
+            factor = abs(dn)/abs(self._get_dn())
         if self.map3d_fine == None:
             self.map3d_fine = numpy.array(map_add,dtype="float64")
             return
         else:
-            p = numpy.array([z/self.dX_fine,y/self.dX_fine,z/self.dX_fine])
-            self.map3d_fine = imgtools.array_to_array(self.map3d_fine,map_add,p,origin,mode)
+            self.map3d_fine = imgtools.array_to_array(map_add,self.map3d_fine,p,origin,mode,0.,factor)
 
     def put_sphere(self,radius,**kwargs):
         nR = radius/self.dX_fine
