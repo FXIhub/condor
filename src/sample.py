@@ -351,6 +351,7 @@ class SampleMap(Sample):
         OR:
         - map3d_fine: Cubic 3d map.
           EITHER:
+
           - dx_fine: Real space sampling distance.
           OR:
           - oversampling_fine: Real space oversampling in relation to detector/source configuration. [1]
@@ -599,7 +600,7 @@ class SampleMap(Sample):
         origin = kwargs.get("origin","middle")
         mode = kwargs.get("mode","factor")
         dn = kwargs.get("dn",None)
-        print map_add.shape,origin
+        #print map_add.shape,origin
         if dn == None:
             factor = 1.
         else:
