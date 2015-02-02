@@ -280,6 +280,27 @@ class Detector:
             #qmap /= self.get_absq_max()/0.5
             qmap /= self.get_absq_max()/0.5*numpy.sqrt(2)
         return qmap
+    
+    
+    def generate_qmap_ori(self,**kwargs):
+        X,Y = numpy.meshgrid(numpy.arange(self.mask.shape[1]),
+                             numpy.arange(self.mask.shape[0]))
+        # THIS CAST IS VERY IMPORTANT, in python A += B is not the same as A = A + B
+        X = numpy.float64(X)
+        Y = numpy.float64(Y)
+        X -= self.get_cx('binned')
+        Y -= self.get_cy('binned')
+        p = self.get_pixel_size('binned')
+        D = self.distance
+        if "wavelength" in kwargs:
+            w = kwargs["wavelength"]
+        else:
+            w = self._parent.source.photon.get_wavelength()
+       
+        qmap = condortools.generate_qmap_ori(X,Y,p,D,w)
+        qmap /= self.get_absq_max()/0.5*numpy.sqrt(2)
+        return qmap
+
 
     def get_absqx_max(self,**kwargs):
         if "wavelength" in kwargs:

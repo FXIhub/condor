@@ -80,10 +80,14 @@ class Output:
         self.sample_euler_angle_0 = outdict.get("euler_angle_0",None)
         self.sample_euler_angle_1 = outdict.get("euler_angle_1",None)
         self.sample_euler_angle_2 = outdict.get("euler_angle_2",None)
-        self.sample_diameter = outdict.get("sample_diameter",None)        
+        self.sample_diameter = outdict.get("sample_diameter",None)
+        self.F0 = outdict.get("F0",None)
+        self.dX3 = outdict.get("dX3",None)
+        self.grid = outdict.get("grid",None)
+        self.qmap3d = outdict.get("qmap3d",None)
         t_stop = time.time()
         logger.debug("Propagation finished (time = %f sec)",t_stop-t_start)
-
+    
     def get_intensity_pattern(self,i=0):
         """
         Returns 2-dimensional array with intensity values in the unit photons per pixel (binned).

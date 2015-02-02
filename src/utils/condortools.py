@@ -1,4 +1,4 @@
-# ----------------------------------------------------------------------------------------------------- 
+#-----------------------------------------------------------------------------------------------------
 # CONDOR 
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
 # http://xfel.icm.uu.se/condor/
@@ -119,6 +119,20 @@ def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0=0.,e
             for ix in numpy.arange(0,qmap.shape[1]):
                 qmap[iy,ix,:] = numpy.dot(M,qmap[iy,ix,:])
     return qmap
+
+def generate_qmap_ori(X,Y,pixel_size,detector_distance,wavelength):
+    phi = numpy.arctan2(pixel_size*numpy.sqrt(X**2+Y**2),detector_distance)
+    R_Ewald = 2*numpy.pi/wavelength
+    qx = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*X,detector_distance)/2.)
+    qy = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*Y,detector_distance)/2.)
+    qz = R_Ewald*(1-numpy.cos(phi))
+    qmap = numpy.zeros(shape=(X.shape[0],Y.shape[1],3))
+    qmap[:,:,0] = qz[:,:]
+    qmap[:,:,1] = qy[:,:]
+    qmap[:,:,2] = qx[:,:]
+    return qmap
+
+
 
 x_to_q = lambda x,pixel_size,detector_distance,wavelength: 4*numpy.pi/wavelength*numpy.sin(numpy.arctan(x*pixel_size/detector_distance)/2.)
 

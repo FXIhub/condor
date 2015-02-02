@@ -585,10 +585,11 @@ class SampleMap(Sample):
             fourierpattern = numpy.reshape(fourierpattern,(q_scaled.shape[0],q_scaled.shape[1]))
 
             logger.debug("Got pattern of %i x %i pixels." % (fourierpattern.shape[1],fourierpattern.shape[0]))
-
+            qmap3d = detector.generate_qmap_ori(nfft_scaled=True)
             F.append(self._get_F0(source,detector) * fourierpattern * dX**3)
+            #F.append(fourierpattern)
     
-        return {"amplitudes":F,"euler_angle_0":e0,"euler_angle_1":e1,"euler_angle_2":e2}
+        return {"amplitudes":F,"euler_angle_0":e0,"euler_angle_1":e1,"euler_angle_2":e2, "F0":self._get_F0(source, detector) , "dX3":dX**3,"grid":q_reshaped,'qmap3d':qmap3d}
         
     def put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")
