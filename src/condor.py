@@ -78,6 +78,7 @@ class Output:
         t_start = time.time()
         outdict = self.input_object.sample.propagate()
         self.amplitudes = outdict["amplitudes"]
+        self._intensities = {}
         self.N = len(self.amplitudes)
         self.sample_euler_angle_0 = outdict.get("euler_angle_0",None)
         self.sample_euler_angle_1 = outdict.get("euler_angle_1",None)
@@ -97,7 +98,34 @@ class Output:
         :param i: Index of the image that you want to obtain.
 
         """
-        return self.input_object.detector.detect_photons(abs(self.amplitudes[i])**2)
+        if i not in self._intensities:
+            self._intensities[i] = self.input_object.detector.detect_photons(abs(self.amplitudes[i])**2)
+        return self._intensities[i]
+
+    def get_mask(self,i=0,output_bitmask=False):
+        """
+        Returns 2-dimensional array with bit mask values (binned).
+
+        :param i: Index of the image that you want to obtain.
+        :param output_bitmask: If True mask is written as CXI bit mask (16 bits, encoding see below).
+
+        Bit code (16 bit integers):
+        PIXEL_IS_PERFECT = 0
+        PIXEL_IS_INVALID = 1
+        PIXEL_IS_SATURATED = 2
+        PIXEL_IS_HOT = 4
+        PIXEL_IS_DEAD = 8
+        PIXEL_IS_SHADOWED = 16
+        PIXEL_IS_IN_PEAKMASK = 32
+        PIXEL_IS_TO_BE_IGNORED = 64
+        PIXEL_IS_BAD = 128
+        PIXEL_IS_OUT_OF_RESOLUTION_LIMITS = 256
+        PIXEL_IS_MISSING = 512
+        PIXEL_IS_IN_HALO = 1024
+        PIXEL_IS_ARTIFACT_CORRECTED = 2048
+
+        """
+        return self.input_object.detector.get_mask(self.get_intensity_pattern(i),output_bitmask)
 
     def get_real_space_image(self,i=0):
         """
@@ -143,17 +171,27 @@ class Output:
         """
         return condortools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
 
-    def write(self,filename="out.cxi",output_intensities=True,output_euler_angles=True,output_fourier_space=False,output_real_space=False,noise=lambda x: x):
+    def write(self,filename="out.cxi",output_intensities=True,output_bitmasks=False,output_masks=False,output_euler_angles=True,output_diameters=False,output_fourier_space=False,output_real_space=False):
         if filename[-len(".cxi"):] == ".cxi":
             W = cxitools.CXIWriter(filename,self.N,logger)
             for i in range(0,self.N):
                 O = {}
                 if output_intensities:
-                    O["/entry_1/data_1/intensities"] = noise(self.get_intensity_pattern(i))
+                    O["/entry_1/data_1/data"] = self.get_intensity_pattern(i)
+                if output_bitmasks:
+                    O["/entry_1/data_1/mask"] = self.get_mask(i,output_bitmask=True)
+                if output_masks:
+                    O["/entry_1/data_1/mask_binary"] = self.get_mask(i,output_bitmask=False)
                 if output_euler_angles:
-                    O["/entry_1/data_1/sample_euler_angle_0"] = self.sample_euler_angle_0[i]
-                    O["/entry_1/data_1/sample_euler_angle_1"] = self.sample_euler_angle_1[i]
-                    O["/entry_1/data_1/sample_euler_angle_2"] = self.sample_euler_angle_2[i]
+                    if self.sample_euler_angle_0 is not None:
+                        O["/entry_1/data_1/sample_euler_angle_0"] = self.sample_euler_angle_0[i]
+                    if self.sample_euler_angle_1 is not None:
+                        O["/entry_1/data_1/sample_euler_angle_1"] = self.sample_euler_angle_1[i]
+                    if self.sample_euler_angle_2 is not None:
+                        O["/entry_1/data_1/sample_euler_angle_2"] = self.sample_euler_angle_2[i]
+                if output_diameters:
+                    if self.sample_diameter is not None:
+                        O["/entry_1/data_1/diameter"] = self.sample_diameter[i]
                 if output_real_space:
                     O["/entry_1/data_1/real_space"] = self.get_real_space_image(i)
                 if output_fourier_space:

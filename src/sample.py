@@ -201,6 +201,13 @@ class Sample:
             self.material = Material(self,**materialargs)
         else:
             self.material = None
+        self.number_of_images = None
+        # depreciated
+        if "number_of_orientations" in kwargs:
+            self.number_of_images = kwargs["number_of_orientations"]
+        #
+        if "number_of_images" in kwargs:
+            self.number_of_images = kwargs["number_of_images"]
 
     def _get_dn(self):
         # refractive index from material
@@ -229,21 +236,21 @@ class Sample:
     def set_random_orientation(self):
         self.set_alignment("random")
 
-    def set_alignment(self,alignment="first_axis",euler_angle_0=None,euler_angle_1=None,euler_angle_2=None):
+    def set_alignment(self,alignment="first_axis",euler_angle_0=None,euler_angle_1=None,euler_angle_2=None,**kwargs):
         if alignment not in ["random","euler_angles","first_axis"]:
             logger.error("Invalid argument for sample alignment specified.")
             return
-        self._alignment = kwargs["alignment"]
+        self._alignment = alignment
         self._euler_angle_0 = euler_angle_0
         self._euler_angle_1 = euler_angle_1
         self._euler_angle_2 = euler_angle_2
 
-    def set_diameter_variation(self,variation="none",spread=0):
-        if variation not in ["none","uniform","normal"]:
+    def set_diameter_variation(self,diameter_variation="none",diameter_spread=0,**kwargs):
+        if diameter_variation not in ["none","uniform","normal"]:
             logger.error("Invalid argument for diameter variation specified.")
             return
-        self._diameter_variation = variation
-        self._diameter_spread = 0.
+        self._diameter_variation = diameter_variation
+        self._diameter_spread = diameter_spread
 
     def _get_diameters(self,N=None):
         if N is None:
@@ -332,7 +339,9 @@ class SampleSphere(Sample):
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
-    def propagate(self,detector0=None,source0=None,number_of_images=None):
+        self.set_diameter_variation(**kwargs)
+
+    def propagate(self,detector0=None,source0=None):
         # scattering amplitude from homogeneous sphere
         if source0 == None:
             source = self._parent.source
@@ -348,7 +357,7 @@ class SampleSphere(Sample):
         F0 = self._get_F0(source,detector)
         q = detector.generate_absqmap()
 
-        d = self.get_diameters(number_of_images)
+        d = self._get_diameters(self.number_of_images)
 
         for i in range(len(d)):
             R = d[i]/2.
@@ -384,7 +393,7 @@ class SampleSpheroid(Sample):
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
-    def propagate(self,detector0=None,source0=None,number_of_images=None):
+    def propagate(self,detector0=None,source0=None):
         # scattering amplitude from homogeneous sphere
         if source0 == None:
             source = self._parent.source
@@ -475,7 +484,7 @@ class SampleMap(Sample):
         self._dX = None
         self._map3d_fine = None
         self._dX_fine = None
-        self.radius = kwargs.get('radius',None)
+        self.radius = kwargs.get('diameter',None)/2.
 
         if "dx_fine" in kwargs:
             self.dX_fine = kwargs["dx_fine"]
@@ -536,7 +545,7 @@ class SampleMap(Sample):
 
         self.set_alignment(**kwargs)
 
-    def propagate(self,detector0=None,source0=None,number_of_images=None):
+    def propagate(self,detector0=None,source0=None):
         # scattering amplitude from dn-map: F = F0 DFT{dn} dV
         if source0 == None:
             source = self._parent.source
@@ -598,7 +607,7 @@ class SampleMap(Sample):
         dn_map3d = numpy.array(map3d,dtype="complex128") * self._get_dn()
         self.dn_map3d = dn_map3d
 
-        (e0,e1,e2) = self._get_euler_angles(number_of_images)
+        (e0,e1,e2) = self._get_euler_angles(self.number_of_images)
 
         F = []
         for i in range(len(e0)):
@@ -633,7 +642,7 @@ class SampleMap(Sample):
             qmap3d = detector.generate_qmap_ori(nfft_scaled=True)
             F.append(self._get_F0(source,detector) * fourierpattern * dX**3)
     
-        return {"amplitudes": F, "euler_angle_0": e0[i], "euler_angle_1": e1[i], "euler_angle_2": e2[i], "F0": self._get_F0(source, detector) , "dX3": dX**3, "grid": q_reshaped, 'qmap3d': qmap3d}
+        return {"amplitudes": F, "euler_angle_0": e0, "euler_angle_1": e1, "euler_angle_2": e2, "F0": self._get_F0(source, detector) , "dX3": dX**3, "grid": q_reshaped, 'qmap3d': qmap3d}
         
     def put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")

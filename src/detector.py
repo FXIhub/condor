@@ -38,8 +38,10 @@ class Detector:
         - cx: Horizontal beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
         - cy: Vertical beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
         - binning: Number of binned pixels (binning x binning). [1]
-        - noise: Noise that is put on the intensities when read. Either \'none\' or \'poisson\'. [\'none\']
+        - noise: Noise that is put on the intensities when read. Either \'none\', \'poisson\', \'normal\' or \'normal_poisson\'. [\'none\']
+        - noise_spread: If \'normal\' or \'normal_poisson\' noise is specified spread defines width of gaussian distribution. [1]
         - parent: Input object that includes detector object. This variable is optional. [None]
+        - saturation_level: Value at which detector pixels satutrate. [None]
 
         EITHER (default):
         - nx: Number of pixels in horizontal direction not including a potential gap.
@@ -73,6 +75,8 @@ class Detector:
         gy = kwargs.get('y_gap_size_in_pixel',0)
         hd = kwargs.get('hole_diameter_in_pixel',0)
         self.noise = kwargs.get('noise','none')
+        self.noise_spread = kwargs.get('noise_spread',1.)
+        self.saturation_level = kwargs.get('saturation_level',None)
         self.binning = kwargs.get('binning',1)
         if 'mask' in kwargs or ('mask_filename' in kwargs.keys() and "mask_dataset" in kwargs.keys()):
             if "mask" in kwargs:
@@ -161,6 +165,19 @@ class Detector:
                 Y = Y-cy
                 R = numpy.sqrt(X**2 + Y**2)
                 self.mask[R<=kwargs['hole_diameter_in_pixel']/(2.0*self.binning)] = 0
+
+    def get_mask(self,intensities,output_bitmask=False):
+        if output_bitmask:
+            return self.get_bitmask(intensities)
+        else:
+            return numpy.array(self.get_bitmask() == 0,dtype="bool")
+    
+    def get_bitmask(self,intensities):
+        M = numpy.zeros(shape=self.mask.shape,dtype="uint16")
+        M[self.mask == 0] |= cxitools.PIXEL_IS_MISSING
+        if self.saturation_level is not None:
+            M[intensities >= self.saturation_level] |= cxitools.PIXEL_IS_SATURATED
+        return M
 
     def set_cy(self,cy=None):
         """
@@ -346,8 +363,18 @@ class Detector:
         dy = 2 * numpy.pi / self.get_absqy_max(**kwargs)
         return [dx,dy]
 
-    def detect_photons(self,data):
+    def detect_photons(self,I):
         if self.noise == "poisson":
-            return numpy.random.poisson(data)
+            I_det = numpy.random.poisson(I)
+        elif self.noise == "normal":
+            I_det = numpy.random.normal(I,self.noise_spread)
+        elif self.noise == "normal_poisson":
+            I_det = numpy.random.normal(numpy.random.poisson(I),self.noise_spread)
         else:
-            return data
+            I_det = I.copy()
+        if self.saturation_level is not None:
+            temp = I_det > self.saturation_level
+            if temp.sum() > 0:
+                I_det[temp] = self.saturation_level
+        return I_det
+
