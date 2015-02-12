@@ -23,6 +23,7 @@ logger = logging.getLogger("Condor")
 import config
 config.init_configuration()
 import imgutils,condortools
+from python_tools import cxitools
 from source import Source
 from sample import SampleMap,SampleSphere,SampleSpheroid
 from detector import Detector
@@ -77,6 +78,7 @@ class Output:
         t_start = time.time()
         outdict = self.input_object.sample.propagate()
         self.amplitudes = outdict["amplitudes"]
+        self.N = len(self.amplitudes)
         self.sample_euler_angle_0 = outdict.get("euler_angle_0",None)
         self.sample_euler_angle_1 = outdict.get("euler_angle_1",None)
         self.sample_euler_angle_2 = outdict.get("euler_angle_2",None)
@@ -140,3 +142,24 @@ class Output:
 
         """
         return condortools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
+
+    def write(self,filename="out.cxi",output_intensities=True,output_euler_angles=True,output_fourier_space=False,output_real_space=False,noise=lambda x: x):
+        if filename[-len(".cxi"):] == ".cxi":
+            W = cxitools.CXIWriter(filename,self.N,logger)
+            for i in range(0,self.N):
+                O = {}
+                if output_intensities:
+                    O["/entry_1/data_1/intensities"] = noise(self.get_intensity_pattern(i))
+                if output_euler_angles:
+                    O["/entry_1/data_1/sample_euler_angle_0"] = self.sample_euler_angle_0[i]
+                    O["/entry_1/data_1/sample_euler_angle_1"] = self.sample_euler_angle_1[i]
+                    O["/entry_1/data_1/sample_euler_angle_2"] = self.sample_euler_angle_2[i]
+                if output_real_space:
+                    O["/entry_1/data_1/real_space"] = self.get_real_space_image(i)
+                if output_fourier_space:
+                    O["/entry_1/data_1/fourier_space"] = self.amplitudes[i,:,:]
+                W.write(O,i=i)
+            W.close()
+        else:
+            logger.error("Illegal file format chosen.")    
+        

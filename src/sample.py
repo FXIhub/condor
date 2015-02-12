@@ -227,10 +227,85 @@ class Sample:
         return F0
 
     def set_random_orientation(self):
-        [e0,e1,e2] = condortools.random_euler_angles()
-        self.euler_angle_0 = e0
-        self.euler_angle_1 = e1
-        self.euler_angle_2 = e2
+        self.set_alignment("random")
+
+    def set_alignment(self,alignment="first_axis",euler_angle_0=None,euler_angle_1=None,euler_angle_2=None):
+        if alignment not in ["random","euler_angles","first_axis"]:
+            logger.error("Invalid argument for sample alignment specified.")
+            return
+        self._alignment = kwargs["alignment"]
+        self._euler_angle_0 = euler_angle_0
+        self._euler_angle_1 = euler_angle_1
+        self._euler_angle_2 = euler_angle_2
+
+    def set_diameter_variation(self,variation="none",spread=0):
+        if variation not in ["none","uniform","normal"]:
+            logger.error("Invalid argument for diameter variation specified.")
+            return
+        self._diameter_variation = variation
+        self._diameter_spread = 0.
+
+    def _get_diameters(self,N=None):
+        if N is None:
+            _N = 1
+        else:
+            _N = N
+        if self._diameter_variation == "none":
+            d = list(numpy.ones(_N) * self.radius * 2)
+        elif self._diameter_variation == "uniform":
+            d = list(numpy.random.uniform(self.radius*2-self._diameter_spread/2.,self.radius*2+self._diameter_spread/2.,_N))
+        elif self._diameter_variation == "normal":
+            d = list(numpy.random.normal(self.radius*2,self._diameter_spread,_N))
+        return d
+
+    def _get_euler_angles(self,N=None):        
+        if self._alignment == "first_axis":
+            if N is None:
+                _N = 1
+            else:
+                _N = N
+            e0 = list(numpy.zeros(_N))
+            e1 = list(numpy.zeros(_N))
+            e2 = list(numpy.zeros(_N))
+        elif self._alignment == "random":
+            # Sanity check
+            if self._euler_angle_0 != 0. or self._euler_angle_1 != 0. or self._euler_angle_2 != 0.:
+                logger.error("Conflict of arguments: Specified random alignment and also specified set of euler angles. This does not make sense.")
+                return
+            if N is None:
+                _N = 1
+            else:
+                _N = N
+            e0 = numpy.zeros(_N)
+            e1 = numpy.zeros(_N)
+            e2 = numpy.zeros(_N)
+            for i in range(_N):
+                (e0[i],e1[i],e2[i]) = condortools.random_euler_angles()
+            e0 = list(e0)
+            e1 = list(e1)
+            e2 = list(e2)
+        elif self._alignment == "euler_angles":
+            # Many orientations (lists of euler angles)
+            if isinstance(euler_angle_0,list):
+                # Sanity check
+                if N is not None:
+                    if len(euler_angle_0) != N:
+                        logger.error("Conflict of arguments: N = %i and len(euler_angle_0) = %i." % (N,len(euler_angle_0)))
+                        return
+                _N = len(self._euler_angle_0)
+                e0 = self._euler_angle_0
+                e1 = self._euler_angle_1
+                e2 = self._euler_angle_2
+            # One orientation (euler angles are scalars)
+            else:
+                _N = 1
+                e0 = [self._euler_angle_0]
+                e1 = [self._euler_angle_1]
+                e2 = [self._euler_angle_2]
+        return (e0,e1,e2)
+
+        
+
 
 class SampleSphere(Sample):
     """
@@ -250,14 +325,14 @@ class SampleSphere(Sample):
         self._parent = kwargs.get('parent',None)
 
         material_kwargs = kwargs.copy()
-        non_material_arguments = ['parent','size']
+        non_material_arguments = ['parent','diameter','diameter_variation','diameter_spread']
         for non_material_argument in non_material_arguments:
-            try: material_kwargs.pop(non_material_argument)
-            except: pass
+            if non_material_argument in material_kwargs:
+                material_kwargs.pop(non_material_argument)
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
-    def propagate(self,detector0=None,source0=None):
+    def propagate(self,detector0=None,source0=None,number_of_images=None):
         # scattering amplitude from homogeneous sphere
         if source0 == None:
             source = self._parent.source
@@ -268,15 +343,20 @@ class SampleSphere(Sample):
         else:
             detector = detector0
 
-        R = self.radius
-        V = 4/3.*numpy.pi*R**3
+        F = []
         dn = self._get_dn()
         F0 = self._get_F0(source,detector)
-        K = (F0*V*dn.real)**2
         q = detector.generate_absqmap()
-        F = [condortools.F_sphere_diffraction(K,q,R)]
 
-        return {"amplitudes":F}
+        d = self.get_diameters(number_of_images)
+
+        for i in range(len(d)):
+            R = d[i]/2.
+            V = 4/3.*numpy.pi*R**3
+            K = (F0*V*dn.real)**2
+            F.append(condortools.F_sphere_diffraction(K,q,R))
+
+        return {"amplitudes":F,"diameters":d}
 
     def get_area(self):
         """ Calculates area of projected sphere """
@@ -304,7 +384,7 @@ class SampleSpheroid(Sample):
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
-    def propagate(self,detector0=None,source0=None):
+    def propagate(self,detector0=None,source0=None,number_of_images=None):
         # scattering amplitude from homogeneous sphere
         if source0 == None:
             source = self._parent.source
@@ -390,9 +470,6 @@ class SampleMap(Sample):
         """
 
         Sample.__init__(self,**kwargs)
-        self.euler_angle_0 = kwargs.get("euler_angle_0",0.)
-        self.euler_angle_1 = kwargs.get("euler_angle_1",0.)
-        self.euler_angle_2 = kwargs.get("euler_angle_2",0.)
         self.map3d_fine = None
         self._map3d = None
         self._dX = None
@@ -457,21 +534,9 @@ class SampleMap(Sample):
                 N = kwargs.get("N_fine",1)
                 self.map3d_fine = numpy.zeros(shape=(N,N,N),dtype="float64")
 
-        if "alignment" in kwargs:
-            if kwargs["alignment"] not in ["random","euler_angles"]:
-                logger.error("Invalid argument for sample alignment specified.")
-                return
-            self.alignment = kwargs["alignment"]
-        else:
-            self.alignment = "first_axis"
+        self.set_alignment(**kwargs)
 
-        if self.alignment == "random":
-            if "number_of_orientations" in kwargs:
-                self.number_of_orientations = int(kwargs["number_of_orientations"])
-            else:
-                self.number_of_orientations = 1
-
-    def propagate(self,detector0=None,source0=None):
+    def propagate(self,detector0=None,source0=None,number_of_images=None):
         # scattering amplitude from dn-map: F = F0 DFT{dn} dV
         if source0 == None:
             source = self._parent.source
@@ -533,31 +598,11 @@ class SampleMap(Sample):
         dn_map3d = numpy.array(map3d,dtype="complex128") * self._get_dn()
         self.dn_map3d = dn_map3d
 
-        if isinstance(self.euler_angle_0,list):
-            number_of_orientations = len(self.euler_angle_0)
-            e0 = self.euler_angle_0
-            e1 = self.euler_angle_1
-            e2 = self.euler_angle_2
-        else:
-            number_of_orientations = 1
-            e0 = [self.euler_angle_0]
-            e1 = [self.euler_angle_1]
-            e2 = [self.euler_angle_2]
-
-        if self.alignment == "random":
-            number_of_orientations = self.number_of_orientations
-            e0 = numpy.zeros(number_of_orientations)
-            e1 = numpy.zeros(number_of_orientations)
-            e2 = numpy.zeros(number_of_orientations)
-            for i in range(number_of_orientations):
-                (e0[i],e1[i],e2[i]) = condortools.random_euler_angles()
-            e0 = list(e0)
-            e1 = list(e1)
-            e2 = list(e2)
+        (e0,e1,e2) = self._get_euler_angles(number_of_images)
 
         F = []
-        for i in range(number_of_orientations):
-            logger.info("Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1,number_of_orientations))
+        for i in range(len(e0)):
+            logger.info("Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1,len(e0)))
 
             # scattering vector grid
             q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0[i],euler_angle_1=e1[i],euler_angle_2=e2[i])
@@ -587,9 +632,8 @@ class SampleMap(Sample):
             logger.debug("Got pattern of %i x %i pixels." % (fourierpattern.shape[1],fourierpattern.shape[0]))
             qmap3d = detector.generate_qmap_ori(nfft_scaled=True)
             F.append(self._get_F0(source,detector) * fourierpattern * dX**3)
-            #F.append(fourierpattern)
     
-        return {"amplitudes":F,"euler_angle_0":e0,"euler_angle_1":e1,"euler_angle_2":e2, "F0":self._get_F0(source, detector) , "dX3":dX**3,"grid":q_reshaped,'qmap3d':qmap3d}
+        return {"amplitudes": F, "euler_angle_0": e0[i], "euler_angle_1": e1[i], "euler_angle_2": e2[i], "F0": self._get_F0(source, detector) , "dX3": dX**3, "grid": q_reshaped, 'qmap3d': qmap3d}
         
     def put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")
