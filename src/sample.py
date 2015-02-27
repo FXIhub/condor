@@ -17,6 +17,7 @@ if "utils" not in sys.path: sys.path.append("utils")
 import config,imgutils,condortools
 import utils.nfft
 import utils.icosahedron
+from scipy import constants
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools
@@ -59,9 +60,9 @@ class Material:
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
         SF_X = config.DICT_scattering_factors[element]
-        e = config.DICT_physical_constants['e']
-        c = config.DICT_physical_constants['c']
-        h = config.DICT_physical_constants['h']
+        e = constants.e
+        c = constants.c
+        h = constants.h
         f1 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
         f2 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
         return complex(f1,f2) 
@@ -75,10 +76,10 @@ class Material:
         f_q(0): atomic scattering factor (forward scattering) of atom species q
         """
 
-        re = config.DICT_physical_constants['re']
-        h = config.DICT_physical_constants['h']
-        c = config.DICT_physical_constants['c']
-        qe = config.DICT_physical_constants['e']
+        r_0 = constants.value("classical electron radius")
+        h   =  constants.h
+        c   =  constants.c
+        qe   = constants.e
 
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
@@ -87,7 +88,7 @@ class Material:
         f = self.get_f(photon_energy_eV)
         atom_density = self.get_atom_density()
         
-        n = 1 - re/2/numpy.pi * photon_wavelength**2 * f * atom_density
+        n = 1 - r_0/2/numpy.pi * photon_wavelength**2 * f * atom_density
 
         return n
 
@@ -100,27 +101,34 @@ class Material:
         return (1-self.get_n(photon_energy_eV).real)
     def get_beta(self,photon_energy_eV=None):
         return (-self.get_n(photon_energy_eV).imag)
+
     def get_photoabsorption_cross_section(self,photon_energy_eV=None):
-        re = config.DICT_physical_constants['re']
-        h = config.DICT_physical_constants['h']
-        c = config.DICT_physical_constants['c']
-        qe = config.DICT_physical_constants['e']
+
+        r_0 = constants.value("classical electron radius")
+        h =  constants.h
+        c =  constants.c
+        qe = constants.e
+
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
         photon_wavelength = h*c/photon_energy_eV/qe
-        mu = 2*re*photon_wavelength*self.get_f(photon_energy_eV).imag
+        mu = 2*r_0*photon_wavelength*self.get_f(photon_energy_eV).imag
+
         return mu
+
     def get_transmission(self,thickness,photon_energy_eV=None):
+
         n = self.get_n(photon_energy_eV)
         mu = self.get_photoabsorption_cross_section(photon_energy_eV)
         rho = self.get_atom_density()
+
         return numpy.exp(-rho*mu*thickness)
 
     def get_f(self,photon_energy_eV=None):
 
-        h = config.DICT_physical_constants['h']
-        c = config.DICT_physical_constants['c']
-        qe = config.DICT_physical_constants['e']
+        h  = constants.h
+        c  = constants.c
+        qe = constants.e
 
         if not photon_energy_eV:
             photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
@@ -139,7 +147,7 @@ class Material:
 
     def get_atom_density(self):
                 
-        u = config.DICT_physical_constants['u']
+        u = constants.value("atomic mass constant")
 
         atomic_composition = self.get_atomic_composition_dict()
 
@@ -155,7 +163,7 @@ class Material:
 
     def get_electron_density(self):
 
-        u = config.DICT_physical_constants['u']
+        u = constants.value("atomic mass constant")
 
         atomic_composition = self.get_atomic_composition_dict()
 
@@ -186,7 +194,7 @@ class Material:
         
         return atomic_composition
 
-class Sample:
+class AbstractSample:
     def __init__(self,**kwargs):
         self._parent = kwargs.get('parent',None)
         # Material
@@ -201,13 +209,50 @@ class Sample:
             self.material = Material(self,**materialargs)
         else:
             self.material = None
-        self.number_of_images = None
-        # depreciated
-        if "number_of_orientations" in kwargs:
-            self.number_of_images = kwargs["number_of_orientations"]
-        #
         if "number_of_images" in kwargs:
             self.number_of_images = kwargs["number_of_images"]
+        else:
+            # Maintaining depreciated keyword
+            self.number_of_images = kwargs.get("number_of_orientations",1)
+
+    def propagate(self,detector0=None,source0=None,output=["amplitudes"]):
+        if source0 == None:
+            source = self._parent.source
+        else:
+            source = source0
+        if detector0 == None:
+            detector = self._parent.detector
+        else:
+            detector = detector0
+
+        O_all = {}
+        while self._i < self.number_of_images:
+            logger.info("Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (self._i+1,self.number_of_images))
+            O = self.propagate_single()
+            for k,d in O.items():
+                #if k in output:
+                if k not in O_all:
+                    O_all[k] = []
+                O_all[k].append(d)
+            self._next()
+            for k in ["cx","cy","cxXxX","cyXxX"]:
+                if k not in O_all:
+                    O_all[k] = []
+            O_all["cx"].append(detector.cx)
+            O_all["cy"].append(detector.cy)
+            O_all["cxXxX"].append(detector.get_cx("binned"))
+            O_all["cyXxX"].append(detector.get_cy("binned"))
+            detector._next()
+            for k in ["intensity"]:
+                if k not in O_all:
+                    O_all[k] = []
+            O_all["intensity"].append(source.get_intensity("ph/m2"))
+            source._next()
+        return O_all
+
+    # Overload this function!
+    def propagate_single(self,detector0=None,source0=None):
+        pass
 
     def _get_dn(self):
         # refractive index from material
@@ -245,76 +290,59 @@ class Sample:
         self._euler_angle_1 = euler_angle_1
         self._euler_angle_2 = euler_angle_2
 
-    def set_diameter_variation(self,diameter_variation="none",diameter_spread=0,**kwargs):
-        if diameter_variation not in ["none","uniform","normal"]:
+    def _after_init(self,**kwargs):
+        self.set_alignment(**kwargs)
+        self.set_diameter_variation(**kwargs)
+        self._i = -1
+        self._next()
+
+    def _next(self):
+        self._next_orientation()
+        self._next_diameter()
+        self._i += 1
+
+    def _next_orientation(self):
+        if self._alignment == "first_axis":
+            self.euler_angle_0 = 0.
+            self.euler_angle_1 = 0.
+            self.euler_angle_2 = 0.
+        elif self._alignment == "random":
+            # Sanity check
+            if self._euler_angle_0 is not None or self._euler_angle_1 is not None or self._euler_angle_2 is not None:
+                logger.error("Conflict of arguments: Specified random alignment and also specified set of euler angles. This does not make sense.")
+                return
+            (self.euler_angle_0,self.euler_angle_1,self.euler_angle_2) = condortools.random_euler_angles()
+        elif self._alignment == "euler_angles":
+            # Many orientations (lists of euler angles)
+            if isinstance(euler_angle_0,list):
+                self.euler_angle_0 = self._euler_angle_0[self._i]
+                self.euler_angle_1 = self._euler_angle_1[self._i]
+                self.euler_angle_2 = self._euler_angle_2[self._i]
+            # One orientation (euler angles are scalars)
+            else:
+                self.euler_angle_0 = self._euler_angle_0
+                self.euler_angle_1 = self._euler_angle_1
+                self.euler_angle_2 = self._euler_angle_2
+
+    def set_diameter_variation(self,diameter_variation=None,diameter_spread=0,**kwargs):
+        if diameter_variation is not None and diameter_variation not in ["uniform","normal"]:
             logger.error("Invalid argument for diameter variation specified.")
             return
         self._diameter_variation = diameter_variation
         self._diameter_spread = diameter_spread
 
-    def _get_diameters(self,N=None):
-        if N is None:
-            _N = 1
-        else:
-            _N = N
-        if self._diameter_variation == "none":
-            d = list(numpy.ones(_N) * self.radius * 2)
+    def _next_diameter(self):
+        if self._diameter_variation is None:
+            self.diameter = self._radius_mean
         elif self._diameter_variation == "uniform":
-            d = list(numpy.random.uniform(self.radius*2-self._diameter_spread/2.,self.radius*2+self._diameter_spread/2.,_N))
+            self.diameter = numpy.random.uniform(self._radius_mean*2-self._diameter_spread/2.,self._radius_mean*2+self._diameter_spread/2.)
         elif self._diameter_variation == "normal":
-            d = list(numpy.random.normal(self.radius*2,self._diameter_spread,_N))
-        return d
+            self.diameter = numpy.random.normal(self._radius_mean*2,self._diameter_spread)
+        if self.diameter <= 0.:
+            logger.debug("Diameter smaller-equals zero. Try again.")
+            self._next_diameter()
 
-    def _get_euler_angles(self,N=None):        
-        if self._alignment == "first_axis":
-            if N is None:
-                _N = 1
-            else:
-                _N = N
-            e0 = list(numpy.zeros(_N))
-            e1 = list(numpy.zeros(_N))
-            e2 = list(numpy.zeros(_N))
-        elif self._alignment == "random":
-            # Sanity check
-            if self._euler_angle_0 != 0. or self._euler_angle_1 != 0. or self._euler_angle_2 != 0.:
-                logger.error("Conflict of arguments: Specified random alignment and also specified set of euler angles. This does not make sense.")
-                return
-            if N is None:
-                _N = 1
-            else:
-                _N = N
-            e0 = numpy.zeros(_N)
-            e1 = numpy.zeros(_N)
-            e2 = numpy.zeros(_N)
-            for i in range(_N):
-                (e0[i],e1[i],e2[i]) = condortools.random_euler_angles()
-            e0 = list(e0)
-            e1 = list(e1)
-            e2 = list(e2)
-        elif self._alignment == "euler_angles":
-            # Many orientations (lists of euler angles)
-            if isinstance(euler_angle_0,list):
-                # Sanity check
-                if N is not None:
-                    if len(euler_angle_0) != N:
-                        logger.error("Conflict of arguments: N = %i and len(euler_angle_0) = %i." % (N,len(euler_angle_0)))
-                        return
-                _N = len(self._euler_angle_0)
-                e0 = self._euler_angle_0
-                e1 = self._euler_angle_1
-                e2 = self._euler_angle_2
-            # One orientation (euler angles are scalars)
-            else:
-                _N = 1
-                e0 = [self._euler_angle_0]
-                e1 = [self._euler_angle_1]
-                e2 = [self._euler_angle_2]
-        return (e0,e1,e2)
-
-        
-
-
-class SampleSphere(Sample):
+class SampleSphere(AbstractSample):
     """
     A class of the input-object.
     Sample is a homogeneous sphere defined by a radius and a material object.
@@ -322,13 +350,13 @@ class SampleSphere(Sample):
     """
 
     def __init__(self,**kwargs):
-        Sample.__init__(self,**kwargs)
+        AbstractSample.__init__(self,**kwargs)
         reqk = ["diameter"]
         for k in reqk:
             if k not in kwargs.keys():
                 logger.error("Cannot initialize SampleSphere instance. %s is a necessary keyword." % k)
                 return
-        self.radius = kwargs['diameter']/2.
+        self._radius_mean = kwargs['diameter']/2.
         self._parent = kwargs.get('parent',None)
 
         material_kwargs = kwargs.copy()
@@ -339,9 +367,9 @@ class SampleSphere(Sample):
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
-        self.set_diameter_variation(**kwargs)
+        self._after_init(**kwargs)
 
-    def propagate(self,detector0=None,source0=None):
+    def propagate_single(self,detector0=None,source0=None):
         # scattering amplitude from homogeneous sphere
         if source0 == None:
             source = self._parent.source
@@ -352,29 +380,26 @@ class SampleSphere(Sample):
         else:
             detector = detector0
 
-        F = []
         dn = self._get_dn()
         F0 = self._get_F0(source,detector)
         q = detector.generate_absqmap()
+        
+        R = self.diameter/2.
+        V = 4/3.*numpy.pi*R**3
+        K = (F0*V*dn.real)**2
+        #K = source.get_intensity()*(self.material.get_electron_density()*detector.get_pixel_size("binned")/detector.distance*constants.value("classical electron radius")*V)**2
+        F = condortools.F_sphere_diffraction(K,q,R)
 
-        d = self._get_diameters(self.number_of_images)
-
-        for i in range(len(d)):
-            R = d[i]/2.
-            V = 4/3.*numpy.pi*R**3
-            K = (F0*V*dn.real)**2
-            F.append(condortools.F_sphere_diffraction(K,q,R))
-
-        return {"amplitudes":F,"diameters":d}
+        return {"amplitudes":F,"sample_diameter":self.diameter}
 
     def get_area(self):
         """ Calculates area of projected sphere """
-        return numpy.pi*self.radius**2
+        return numpy.pi*(self.diameter/2.)**2
 
-class SampleSpheroid(Sample):
+class SampleSpheroid(AbstractSample):
 
     def __init__(self,**kwargs):
-        Sample.__init__(self,**kwargs)
+        AbstractSample.__init__(self,**kwargs)
         reqk = ["diameter_a","diameter_c","theta","phi"]
         for k in reqk:
             if k not in kwargs.keys():
@@ -393,7 +418,9 @@ class SampleSpheroid(Sample):
         material_kwargs['parent'] = self
         self.material = Material(**material_kwargs)
 
-    def propagate(self,detector0=None,source0=None):
+        self._after_init(**kwargs)
+
+    def propagate_single(self,detector0=None,source0=None):
         # scattering amplitude from homogeneous sphere
         if source0 == None:
             source = self._parent.source
@@ -408,22 +435,23 @@ class SampleSpheroid(Sample):
         dn = self._get_dn()
         F0 = self._get_F0(source,detector)
         K = (F0*V*dn.real)**2
-        q = detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
+        
+        q = detector.generate_qmap(euler_angle_0=self.euler_angle_0,euler_angle_1=self.euler_angle_1,euler_angle_2=self.euler_angle_2)
         qx = q[:,:,2]
         qy = q[:,:,1]
-        F = [condortools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)]
+        F = condortools.F_spheroid_diffraction(K,qx,qy,self.a,self.c,self.theta,self.phi)
 
-        return {"amplitudes":F}
+        return {"amplitudes":F,"euler_angle_0":self.euler_angle_0,"euler_angle_1":self.euler_angle_1,"euler_angle_2":euler_angle_2}
 
     def get_area(self):
         """
         Calculates area of projected spheroid
         """
         logger.warning("Calculates area of WRONGLY projected spheroid, fix when there is time.")
-        return (4/3.*numpy.pi*self.a**2*self.c)**(2/3.)
+        return ((4/3.*numpy.pi*self.a**2*self.c)**(2/3.))
 
 
-class SampleMap(Sample):
+class SampleMap(AbstractSample):
 
     def __init__(self,**kwargs):
         """
@@ -478,13 +506,13 @@ class SampleMap(Sample):
 
         """
 
-        Sample.__init__(self,**kwargs)
+        AbstractSample.__init__(self,**kwargs)
         self.map3d_fine = None
         self._map3d = None
         self._dX = None
         self._map3d_fine = None
         self._dX_fine = None
-        self.radius = kwargs.get('diameter',None)/2.
+        self._radius_mean = kwargs.get('diameter',None)/2.
 
         if "dx_fine" in kwargs:
             self.dX_fine = kwargs["dx_fine"]
@@ -498,22 +526,22 @@ class SampleMap(Sample):
                 if "diameter" not in kwargs:
                     logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=icosahedron.") 
                 self.put_icosahedron(kwargs["diameter"]/2.,**kwargs)
-                self.radius = kwargs["diameter"]/2.
+                self._radius_mean = kwargs["diameter"]/2.
             elif kwargs["geometry"] == "spheroid":
                 if "diameter_a" not in kwargs or "diameter_c" not in kwargs:
                     logger.error("Cannot initialize SampleMap instance. a_diameter and c_diameter are necessary keywords for geometry=spheroid.")
                 self.put_spheroid(kwargs["diameter_a"]/2.,kwargs["diameter_c"]/2.,**kwargs)
-                self.radius = (2*kwargs["diameter_a"]+kwargs["diameter_c"])/3./2.
+                self._radius_mean = (2*kwargs["diameter_a"]+kwargs["diameter_c"])/3./2.
             elif kwargs["geometry"] == "sphere":
                 if "diameter" not in kwargs:
                     logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=sphere.")
                 self.put_sphere(kwargs["diameter"]/2.,**kwargs)
-                self.radius = kwargs["diameter"]/2.
+                self._radius_mean = kwargs["diameter"]/2.
             if kwargs["geometry"] == "cube":
                 if "edge_length" not in kwargs:
                     logger.error("Cannot initialize SampleMap instance. edge_length is a necessary keyword for geometry=cube.") 
                 self.put_cube(kwargs["edge_length"],**kwargs)
-                self.radius = (4/3/numpy.pi)**(1/3.)*kwargs["edge_length"] # volume equivalent radius
+                self._radius_mean = (4/3/numpy.pi)**(1/3.)*kwargs["edge_length"] # volume equivalent radius
             elif kwargs["geometry"] == "custom":
                 import h5py
                 f = h5py.File(kwargs.get("filename","./sample.h5"),"r")
@@ -543,9 +571,9 @@ class SampleMap(Sample):
                 N = kwargs.get("N_fine",1)
                 self.map3d_fine = numpy.zeros(shape=(N,N,N),dtype="float64")
 
-        self.set_alignment(**kwargs)
+        self._after_init(**kwargs)
 
-    def propagate(self,detector0=None,source0=None):
+    def propagate_single(self,detector0=None,source0=None):
         # scattering amplitude from dn-map: F = F0 DFT{dn} dV
         if source0 == None:
             source = self._parent.source
@@ -556,26 +584,61 @@ class SampleMap(Sample):
         else:
             detector = detector0
 
-        map3d = None
-        #dX = detector.get_real_space_resolution_element()
-        dX = detector.get_real_space_resolution_element() / numpy.sqrt(2)
-        self.dX = dX
+        self.dX = detector.get_real_space_resolution_element() / numpy.sqrt(2)
+        map3d = self._get_map3d()
+            
+        dn_map3d = numpy.array(map3d,dtype="complex128") * self._get_dn()
+        self.dn_map3d = dn_map3d
 
-        if self.dX_fine > dX:
+        # scattering vector grid
+        q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=self.euler_angle_0,euler_angle_1=self.euler_angle_1,euler_angle_2=self.euler_angle_2)
+        logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
+        q_reshaped = q_scaled.reshape(q_scaled.shape[0]*q_scaled.shape[1],3)
+                
+        # Check inputs
+        invalid_mask = (abs(q_reshaped)>0.5)
+        if (invalid_mask).sum() > 0:
+            q_reshaped[invalid_mask] = 0.
+            logger.debug("%i invalid pixel positions." % invalid_mask.sum())
+            
+        logger.debug("Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn_map3d.shape[0],dn_map3d.shape[1],dn_map3d.shape[2],len(list(dn_map3d.shape)),abs(dn_map3d).sum()))
+        if (numpy.isfinite(dn_map3d)==False).sum() > 0:
+            logger.warning("There are infinite values in the map3d of the object.")
+        logger.debug("Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (q_reshaped.shape[0],q_reshaped.shape[1],len(list(q_reshaped.shape))))
+        if (numpy.isfinite(q_reshaped)==False).sum() > 0:
+            logger.warning("There are infinite values in the scattering vectors.")
+        # NFFT
+        fourierpattern = utils.nfft.nfft(dn_map3d,q_reshaped)
+        # Check output - masking in case of invalid values
+        if (invalid_mask).sum() > 0:
+            fourierpattern[numpy.any(invalid_mask)] = numpy.nan
+        # reshaping
+        fourierpattern = numpy.reshape(fourierpattern,(q_scaled.shape[0],q_scaled.shape[1]))
+
+        logger.debug("Got pattern of %i x %i pixels." % (fourierpattern.shape[1],fourierpattern.shape[0]))
+        qmap3d = detector.generate_qmap_ori(nfft_scaled=True)
+
+        F = self._get_F0(source,detector) * fourierpattern * self.dX**3
+    
+        return {"amplitudes": F, "F0": self._get_F0(source, detector),
+                "euler_angle_0":self.euler_angle_0,"euler_angle_1":self.euler_angle_1,"euler_angle_2":self.euler_angle_2,
+                "dX3": self.dX**3, "grid": q_reshaped, 'qmap3d': qmap3d}
+        
+    def _get_map3d(self):
+        map3d = None
+        if self.dX_fine > self.dX:
             logger.error("Finer real space sampling required for chosen geometry.")
             return
-
         # has map3d_fine the required real space grid?
-        if map3d == None and abs(self.dX_fine/dX-1) < 0.001:
+        if map3d == None and abs(self.dX_fine/self.dX-1) < 0.001:
             # ok, we'll take the fine map
             map3d = self.map3d_fine
             logger.debug("Using the fine map for propagtion.")
             self._map3d = self.map3d_fine
-
         # do we have an interpolated map?
         if map3d == None and self._dX != None:
             # does it have the right spacing?
-            if abs(self._dX/dX-1) < 0.001:
+            if abs(self._dX/self.dX-1) < 0.001:
                 # are the shapes of the original fine map and our current fine map the same?
                 if numpy.all(numpy.array(self.map3d_fine.shape)==numpy.array(self._map3d_fine.shape)):
                     # is the grid of the original fine map and the current fine map the same?
@@ -585,15 +648,14 @@ class SampleMap(Sample):
                             # ok, we take the cached map!
                             map3d = self._map3d
                             logger.debug("Using the cached interpolated map for propagtion.")
-                
         # do we have to do interpolation?
-        if map3d == None and self.dX_fine < dX:
+        if map3d == None and self.dX_fine < self.dX:
             from scipy import ndimage
-            f = self.dX_fine/dX
+            f = self.dX_fine/self.dX
             N_mapfine = self.map3d_fine.shape[0]
             L_mapfine = (N_mapfine-1)*self.dX_fine
             N_map = int(numpy.floor((N_mapfine-1)*f))+1
-            L_map = (N_map-1)*dX
+            L_map = (N_map-1)*self.dX
             gt = numpy.float64(numpy.indices((N_map,N_map,N_map)))/float(N_map-1)*(N_mapfine-1)*L_map/L_mapfine
             map3d = ndimage.map_coordinates(self.map3d_fine, gt, order=3)
             # Cache interpolated data 
@@ -603,47 +665,9 @@ class SampleMap(Sample):
             self._map3d_fine = self.map3d_fine
             self._dX_fine = self.dX_fine
             logger.debug("Using a newly interpolated map for propagtion.")
+        return map3d
 
-        dn_map3d = numpy.array(map3d,dtype="complex128") * self._get_dn()
-        self.dn_map3d = dn_map3d
 
-        (e0,e1,e2) = self._get_euler_angles(self.number_of_images)
-
-        F = []
-        for i in range(len(e0)):
-            logger.info("Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1,len(e0)))
-
-            # scattering vector grid
-            q_scaled = detector.generate_qmap(nfft_scaled=True,euler_angle_0=e0[i],euler_angle_1=e1[i],euler_angle_2=e2[i])
-            logger.debug("Propagate pattern of %i x %i pixels." % (q_scaled.shape[1],q_scaled.shape[0]))
-            q_reshaped = q_scaled.reshape(q_scaled.shape[0]*q_scaled.shape[1],3)
-            
-            # Check inputs
-            invalid_mask = (abs(q_reshaped)>0.5)
-            if (invalid_mask).sum() > 0:
-                q_reshaped[invalid_mask] = 0.
-            logger.debug("%i invalid pixel positions." % invalid_mask.sum())
-
-            logger.debug("Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn_map3d.shape[0],dn_map3d.shape[1],dn_map3d.shape[2],len(list(dn_map3d.shape)),abs(dn_map3d).sum()))
-            if (numpy.isfinite(dn_map3d)==False).sum() > 0:
-                logger.warning("There are infinite values in the map3d of the object.")
-            logger.debug("Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (q_reshaped.shape[0],q_reshaped.shape[1],len(list(q_reshaped.shape))))
-            if (numpy.isfinite(q_reshaped)==False).sum() > 0:
-                logger.warning("There are infinite values in the scattering vectors.")
-            # NFFT
-            fourierpattern = utils.nfft.nfft(dn_map3d,q_reshaped)
-            # Check output - masking in case of invalid values
-            if (invalid_mask).sum() > 0:
-                fourierpattern[numpy.any(invalid_mask)] = numpy.nan
-            # reshaping
-            fourierpattern = numpy.reshape(fourierpattern,(q_scaled.shape[0],q_scaled.shape[1]))
-
-            logger.debug("Got pattern of %i x %i pixels." % (fourierpattern.shape[1],fourierpattern.shape[0]))
-            qmap3d = detector.generate_qmap_ori(nfft_scaled=True)
-            F.append(self._get_F0(source,detector) * fourierpattern * dX**3)
-    
-        return {"amplitudes": F, "euler_angle_0": e0, "euler_angle_1": e1, "euler_angle_2": e2, "F0": self._get_F0(source, detector) , "dX3": dX**3, "grid": q_reshaped, 'qmap3d': qmap3d}
-        
     def put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")
         p = numpy.array([kwargs.get("z",0.),kwargs.get("y",0.),kwargs.get("x",0.)])
@@ -654,7 +678,6 @@ class SampleMap(Sample):
         origin = kwargs.get("origin","middle")
         mode = kwargs.get("mode","factor")
         dn = kwargs.get("dn",None)
-        #print map_add.shape,origin
         if dn == None:
             factor = 1.
         else:
@@ -822,7 +845,8 @@ class SampleMap(Sample):
         ======================================================================
 
         """
-        if self.radius != None: return numpy.pi*self.radius**2
+        if self.diameter is not None: return numpy.pi*(self.diameter/2.)**2
+        else: return None
 
 def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
     logger.debug("Building icosahedral geometry")

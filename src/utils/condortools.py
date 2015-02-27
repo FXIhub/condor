@@ -40,10 +40,10 @@ def get_nyquist_pixel_size(detector_distance,wavelength,particle_area):
     return detector_distance * wavelength / (2*particle_radius)
 
 def print_material_xray_properties(wavelength,thickness=1.0E-06,**margs):
-    re = DICT_physical_constants['re']
-    h = phy.DICT_physical_constants['h']
-    c = phy.DICT_physical_constants['c']
-    qe = phy.DICT_physical_constants['e']
+    #r_0 = constants.value("classical electron radius")
+    h =  constants.h
+    c =  constants.c
+    qe = constants.e
 
     photon_energy_eV = h*c/wavelength/qe
     M = Material(photon_energy_eV,**margs)

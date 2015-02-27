@@ -13,6 +13,7 @@
 import sys, os, numpy, types, pickle, time, math, logging
 logging.basicConfig(format='%(levelname)s: %(message)s')
 logger = logging.getLogger('Condor')
+from scipy import constants
 
 def init_configuration():
     # Some global configuration variables
@@ -186,15 +187,14 @@ def init_global_dictionaries():
                           'Uuo':118}
 
 
-
     # Physical constants [SI-units]
     global DICT_physical_constants
-    DICT_physical_constants = {'e':1.60217657E-19,
-                               'c':299792458.,
-                               'h':6.62606957E-34,
-                               're':2.8179403267E-15,
-                               'barn':1E-28,
-                               'u':1.66053886E-27}
+    DICT_physical_constants = {'e'    : constants.e,
+                               'c'    : constants.c,
+                               'h'    : constants.h,
+                               're'   : constants.value("classical electron radius"),
+                               'barn' : 1E-28,
+                               'u'    : constants.value("atomic mass constant") }
 
 
 def unpickle_scattering_factors():

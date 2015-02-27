@@ -37,9 +37,11 @@ class Detector:
         - pixel_size: Edge length of square pixel (unbinned).
         - cx: Horizontal beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
         - cy: Vertical beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
+        - center_variation: Variation of the center position. Either None, \'normal\' or \'uniform\'. [None]
+        - center_variation_spread: If \'normal\' or \'uniform\' center variation is specified spread defines width of gaussian/uniform distribution. [1]
         - binning: Number of binned pixels (binning x binning). [1]
-        - noise: Noise that is put on the intensities when read. Either \'none\', \'poisson\', \'normal\' or \'normal_poisson\'. [\'none\']
-        - noise_spread: If \'normal\' or \'normal_poisson\' noise is specified spread defines width of gaussian distribution. [1]
+        - noise: Noise that is put on the intensities when read. Either None, \'poisson\', \'normal\', \'uniform\' or \'normal_poisson\'. [None]
+        - noise_spread: If \'normal\', \'uniform\' or \'normal_poisson\' noise is specified spread defines width of gaussian/uniform distribution. [1]
         - parent: Input object that includes detector object. This variable is optional. [None]
         - saturation_level: Value at which detector pixels satutrate. [None]
 
@@ -74,8 +76,10 @@ class Detector:
         gx = kwargs.get('x_gap_size_in_pixel',0)
         gy = kwargs.get('y_gap_size_in_pixel',0)
         hd = kwargs.get('hole_diameter_in_pixel',0)
-        self.noise = kwargs.get('noise','none')
+        self.noise = kwargs.get('noise',None)
         self.noise_spread = kwargs.get('noise_spread',1.)
+        self.center_variation = kwargs.get('center_variation',None)
+        self.center_variation_spread = kwargs.get('center_variation_spread',None)
         self.saturation_level = kwargs.get('saturation_level',None)
         self.binning = kwargs.get('binning',1)
         if 'mask' in kwargs or ('mask_filename' in kwargs.keys() and "mask_dataset" in kwargs.keys()):
@@ -87,8 +91,9 @@ class Detector:
                 f.close()
             if kwargs.get("mask_CXI_bitmask",False): M = (M & cxitools.PIXEL_IS_IN_MASK) == 0
             self.init_mask(mask=M)
-            self.cx = kwargs.get('cx',(self.mask.shape[1]-1)/(2.*self.binning))
-            self.cy = kwargs.get('cy',(self.mask.shape[0]-1)/(2.*self.binning))              
+            self._cx_mean = kwargs.get('cx',(self.mask.shape[1]-1)/(2.*self.binning))
+            self._cy_mean = kwargs.get('cy',(self.mask.shape[0]-1)/(2.*self.binning))              
+            self._next()
         else:
             reqk = ["nx","ny"]
             for k in reqk:
@@ -97,8 +102,9 @@ class Detector:
                     return
             self.Nx = kwargs["nx"]
             self.Ny = kwargs["ny"]
-            self.cx = kwargs.get('cx',(self.Nx+gy-1)/2.)
-            self.cy = kwargs.get('cy',(self.Ny+gx-1)/2.)   
+            self._cx_mean = kwargs.get('cx',(self.Nx+gy-1)/2.)
+            self._cy_mean = kwargs.get('cy',(self.Ny+gx-1)/2.)
+            self._next()
             self.init_mask(nx=kwargs["nx"],ny=kwargs["ny"],x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy,hole_diameter_in_pixel=hd,binning=self.binning)
 
     def init_mask(self,**kwargs):
@@ -165,12 +171,13 @@ class Detector:
                 Y = Y-cy
                 R = numpy.sqrt(X**2 + Y**2)
                 self.mask[R<=kwargs['hole_diameter_in_pixel']/(2.0*self.binning)] = 0
+        
 
     def get_mask(self,intensities,output_bitmask=False):
         if output_bitmask:
             return self.get_bitmask(intensities)
         else:
-            return numpy.array(self.get_bitmask() == 0,dtype="bool")
+            return numpy.array(self.get_bitmask(intensities) == 0,dtype="bool")
     
     def get_bitmask(self,intensities):
         M = numpy.zeros(shape=self.mask.shape,dtype="uint16")
@@ -199,45 +206,66 @@ class Detector:
         cx : horizontal center position in pixel. If argument is None or not given center is set to the middle.
         """
         if cx == None:
-            self.cx = (self.mask.shape[1]-1)/2.
+            self._cx_mean = (self.mask.shape[1]-1)/2.
         else:
-            self.cx = cx
+            self._cx_mean = cx
 
-    def get_cx(self,option='unbinned'):
-        if self.cx == "middle":
+    def _next(self):
+        # Resolve relative center
+        if self._cx_mean == "middle":
             cx = (self.Nx-1)/2.
         else:
-            cx = self.cx
-        if option == 'unbinned':
-            return cx
-        elif option == 'binned':
-            if (cx % 1) == 0.5:
-                return (cx-(self.binning-1)/2.)/(1.0*self.binning)
-            else:
-                return cx/(1.0*self.binning)
-        else:
-            logger.error("No valid option chosen.")
-
-    def get_cy(self,option='unbinned'):
-        if self.cy == "middle":
+            cx = self._cx_mean
+        if self._cy_mean == "middle":
             cy = (self.Ny-1)/2.
         else:
-            cy = self.cy
+            cy = self._cy_mean
+        # Center variation
+        if self.center_variation is None:
+            self.cx = cx
+            self.cy = cy
+        elif self.center_variation == "normal":
+            self.cx = numpy.random.normal(cx,self.center_variation_spread)
+            self.cy = numpy.random.normal(cy,self.center_variation_spread)
+        elif self.center_variation == "uniform":
+            self.cx = numpy.random.uniform(cx-self.center_variation_spread/2.,cx+self.center_variation_spread/2.)
+            self.cy = numpy.random.uniform(cy-self.center_variation_spread/2.,cy+self.center_variation_spread/2.)
+        else:
+            logger.error("Not a valid center variation chosen.")
+            
+    def get_cx(self,option="unbinned"):
+        return self._get_c("x",option)
+
+    def get_cy(self,option="unbinned"):
+        return self._get_c("y",option)
+
+    def _get_c(self,coord,option):
+        # Choose coordinate
+        if coord == "x":
+            c = self.cx
+        elif coord == "y":
+            c = self.cy
+        else:
+            logger.error("No valid coordinate chosen.")
+        # Take into account binning if required
         if option == 'unbinned':
-            return cy
+            pass
         elif option == 'binned':
-            if (cy % 1) == 0.5:
-                return (cy-(self.binning-1)/2.)/(1.0*self.binning)
+            if (c % 1) == 0.5:
+                c = (c-(self.binning-1)/2.)/(1.0*self.binning)
             else:
-                return cy/(1.0*self.binning)
+                c = c/(1.0*self.binning)
         else:
             logger.error("No valid option chosen.")
+        return c
+
     def get_minimum_center_edge_distance(self):
         cx = self.get_cx()
         icx = self.Nx-cx
         cy = self.get_cy()
         icy = self.Ny-cy
         return min([cx,icx,cy,icy])*self.get_pixel_size()
+
     def get_pixel_size(self,option='unbinned'):
         if option == 'unbinned':
             return self.pixel_size

@@ -84,7 +84,12 @@ class Output:
         self.sample_euler_angle_1 = outdict.get("euler_angle_1",None)
         self.sample_euler_angle_2 = outdict.get("euler_angle_2",None)
         self.sample_diameter = outdict.get("sample_diameter",None)
+        self.cx = outdict.get("cx")
+        self.cy = outdict.get("cy")
+        self.cxXxX = outdict.get("cxXxX")
+        self.cyXxX = outdict.get("cyXxX")
         self.F0 = outdict.get("F0",None)
+        self.intensity = outdict.get("intensity",None)
         self.dX3 = outdict.get("dX3",None)
         self.grid = outdict.get("grid",None)
         self.qmap3d = outdict.get("qmap3d",None)
@@ -171,31 +176,46 @@ class Output:
         """
         return condortools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
 
-    def write(self,filename="out.cxi",output_intensities=True,output_bitmasks=False,output_masks=False,output_euler_angles=True,output_diameters=False,output_fourier_space=False,output_real_space=False):
+    def write(self,filename="out.cxi",output=["intensity_pattern","fourier_space_image"]):
         if filename[-len(".cxi"):] == ".cxi":
             W = cxitools.CXIWriter(filename,self.N,logger)
             for i in range(0,self.N):
                 O = {}
-                if output_intensities:
+                if "intensity_pattern" in output:
                     O["/entry_1/data_1/data"] = self.get_intensity_pattern(i)
-                if output_bitmasks:
+                if "real_space_image" in output:
+                    O["/entry_1/data_1/real_space_image"] = self.get_real_space_image(i)
+                if "fourier_space_image" in output:
+                    O["/entry_1/data_1/fourier_space_image"] = self.amplitudes[i][:,:]
+                if "bitmask_image" in output:
                     O["/entry_1/data_1/mask"] = self.get_mask(i,output_bitmask=True)
-                if output_masks:
+                if "mask_image" in output:
                     O["/entry_1/data_1/mask_binary"] = self.get_mask(i,output_bitmask=False)
-                if output_euler_angles:
+                if "sample_euler_angles" in output:
                     if self.sample_euler_angle_0 is not None:
                         O["/entry_1/data_1/sample_euler_angle_0"] = self.sample_euler_angle_0[i]
+                    else:
+                        logger.warning("Cannot find output: sample_euler_angle_0")
                     if self.sample_euler_angle_1 is not None:
                         O["/entry_1/data_1/sample_euler_angle_1"] = self.sample_euler_angle_1[i]
+                    else:
+                        logger.warning("Cannot find output: sample_euler_angle_1")
                     if self.sample_euler_angle_2 is not None:
                         O["/entry_1/data_1/sample_euler_angle_2"] = self.sample_euler_angle_2[i]
-                if output_diameters:
+                    else:
+                        logger.warning("Cannot find output: sample_euler_angle_2")
+                if "sample_diameter" in output:
                     if self.sample_diameter is not None:
-                        O["/entry_1/data_1/diameter"] = self.sample_diameter[i]
-                if output_real_space:
-                    O["/entry_1/data_1/real_space"] = self.get_real_space_image(i)
-                if output_fourier_space:
-                    O["/entry_1/data_1/fourier_space"] = self.amplitudes[i,:,:]
+                        O["/entry_1/data_1/sample_diameter"] = self.sample_diameter[i]
+                    else:
+                        logger.warning("Cannot find output: sample_diameter")
+                if "intensity" in output:
+                    O["/entry_1/data_1/intensity"] = self.intensity[i]
+                if "intensity_pattern_center" in output:
+                    O["entry_1/data_1/intensity_pattern_center_x"] = self.cx[i] 
+                    O["entry_1/data_1/intensity_pattern_center_y"] = self.cy[i]
+                    O["entry_1/data_1/intensity_pattern_center_x_binned"] = self.cxXxX[i] 
+                    O["entry_1/data_1/intensity_pattern_center_y_binned"] = self.cyXxX[i]
                 W.write(O,i=i)
             W.close()
         else:
