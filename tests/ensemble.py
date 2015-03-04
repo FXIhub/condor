@@ -28,6 +28,11 @@ if len(sys.argv) < 2:
     print "Usage: ./ensemble.py ensemble.conf"
     exit(1)
 
-I = p.Input(sys.argv[1])
+conf_fn = sys.argv[1]
+out_fn = conf_fn[:-4] + "cxi"
+
+I = p.Input(conf_fn)
+
 O = p.Output(I)
-O.write("ensemble.cxi",output=["intensity_pattern","fourier_space_image","real_space_image","sample_diameter","bitmask_image","mask_image","intensity_pattern_center","intensity"])
+
+O.write(out_fn,output=["intensity_pattern","fourier_space_image","real_space_image","sample_diameter","bitmask_image","mask_image","intensity_pattern_center","intensity"])

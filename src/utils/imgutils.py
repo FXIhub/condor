@@ -421,7 +421,7 @@ def rotate_3d_grid(X,Y,Z,eul_ang0,eul_ang1,eul_ang2):
             config.OUT.write("%i/%i\n" % (xi+1,sizeX))
             for yi in numpy.arange(0,sizeY,1.0):
                 for zi in numpy.arange(0,sizeZ,1.0):
-                    new_vector = pengtools.rotation(numpy.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]]),eul_ang0,eul_ang1,eul_ang2)
+                    new_vector = condortools.rotation(numpy.array([Z[zi,yi,xi],Y[zi,yi,xi],X[zi,yi,xi]]),eul_ang0,eul_ang1,eul_ang2)
                     X[zi,yi,xi] = new_vector[2]
                     Y[zi,yi,xi] = new_vector[1]
                     Z[zi,yi,xi] = new_vector[0]
@@ -472,7 +472,7 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
                 
     if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
         for i in range(0,len(n_list)):
-            n_list[i] = pengtools.rotation(n_list[i],euler_1,euler_2,euler_3)
+            n_list[i] = condortools.rotation(n_list[i],euler_1,euler_2,euler_3)
 
 
     return n_list

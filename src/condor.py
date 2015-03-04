@@ -114,7 +114,7 @@ class Output:
         :param i: Index of the image that you want to obtain.
         :param output_bitmask: If True mask is written as CXI bit mask (16 bits, encoding see below).
 
-        Bit code (16 bit integers):
+        Bit code (16 bit integers) from spimage.PixelMask:
         PIXEL_IS_PERFECT = 0
         PIXEL_IS_INVALID = 1
         PIXEL_IS_SATURATED = 2
@@ -126,8 +126,11 @@ class Output:
         PIXEL_IS_BAD = 128
         PIXEL_IS_OUT_OF_RESOLUTION_LIMITS = 256
         PIXEL_IS_MISSING = 512
-        PIXEL_IS_IN_HALO = 1024
+        PIXEL_IS_NOISY = 1024
         PIXEL_IS_ARTIFACT_CORRECTED = 2048
+        PIXEL_FAILED_ARTIFACT_CORRECTION = 4096
+        PIXEL_IS_PEAK_FOR_HITFINDER = 8192
+        PIXEL_IS_PHOTON_BACKGROUND_CORRECTED = 16384
 
         """
         return self.input_object.detector.get_mask(self.get_intensity_pattern(i),output_bitmask)

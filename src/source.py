@@ -15,19 +15,32 @@ import config,logging
 logger = logging.getLogger('Condor')
 from scipy import constants
 
+from variation import Variation
+
 class Source:
     """
     A subclass of the input object.
     Defines properties of the FEL x-ray pulse.
 
     """
-    def __init__(self,**kwargs):
-        self._parent = kwargs.get('parent',None)
+    def __init__(self,**kwargs):       
+        # Check for required keyword arguments
         reqk = ["wavelength","focus_diameter","pulse_energy"]
         for k in reqk:
             if k not in kwargs.keys():
                 logger.error("Cannot initialize Source instance. %s is a necessary keyword." % k)
                 return
+        # Check for valid keyword arguments
+        allk = ["parent",
+                "wavelength","focus_diameter","pulse_energy","pulse_energy_mean",
+                "pulse_energy_variation","pulse_energy_spread","pulse_energy_variation_n"]
+        self._unproc_kws = [k for k in kwargs.keys() if k not in allk]
+        if len(self._unproc_kws) > 0:
+            print self._unproc_kws
+            logger.error("Source object initialisation failed due to illegal keyword arguments.")
+            return
+        # Start initialisation
+        self._parent = kwargs.get('parent',None)
         self.photon = Photon(wavelength=kwargs["wavelength"])
         self.focus_diameter = kwargs["focus_diameter"]
         if "pulse_energy" in kwargs:
@@ -35,16 +48,20 @@ class Source:
             self.pulse_energy_mean = kwargs["pulse_energy"]
         else:
             self.pulse_energy_mean = kwargs["pulse_energy_mean"]
-        self.pulse_energy_variation = kwargs.get("pulse_energy_variation",None)
-        self.pulse_energy_spread = kwargs.get("pulse_energy_spread",0.)
+        self.set_pulse_energy_variation(variation=kwargs.get("pulse_energy_variation",None),
+                                        spread=kwargs.get("pulse_energy_spread",None),
+                                        n=kwargs.get("pulse_energy_variation_n",None))
         self._next()
         logger.debug("Source configured")
+
+    def set_pulse_energy_variation(self,variation=None, spread=None, n=None):
+        self._pulse_energy_variation = Variation(variation,spread,n,number_of_dimensions=1,name="pulse energy")
 
     def get_intensity(self,unit="ph/m2"):
         I = self.pulse_energy / self.get_area()
         if unit == "J/m2":
             pass
-        if unit == "ph/m2":
+        elif unit == "ph/m2":
             I /= self.photon.get_energy("J") 
         elif unit == "J/um2":
             I *= 1.E-12
@@ -59,17 +76,24 @@ class Source:
         return numpy.pi*(self.focus_diameter/2.0)**2
 
     def _next(self):
-        if self.pulse_energy_variation is None:
-            self.pulse_energy = self.pulse_energy_mean
-        else:
-            if self.pulse_energy_variation == "normal":
-                self.pulse_energy = numpy.random.normal(self.pulse_energy_mean,self.pulse_energy_spread)
-            elif self.pulse_energy_variation == "uniform":
-                self.pulse_energy = numpy.random.uniform(self.pulse_energy_mean-self.pulse_energy_spread/2.,self.pulse_energy_mean+self.pulse_energy_spread/2.)
+        self._next_pulse_energy()
+    
+    def _next_pulse_energy(self):
+        p = self._pulse_energy_variation.get(self.pulse_energy_mean)
+        # Non-random
+        if self._pulse_energy_variation._mode in [None,"range"]:
+            if p <= 0:
+                logger.error("Pulse energy smaller-equals zero. Change your configuration.")
             else:
-                logger.error("%s is an illegal variation for the pulse energy.",self.pulse_energy_variation)
-            if self.pulse_energy <= 0.:
-                self._next()
+                self.pulse_energy = p
+        # Random
+        else:
+            if p <= 0.:
+                logger.warning("Pulse energy smaller-equals zero. Try again.")
+                self._next_pulse_energy()
+            else:
+                self.pulse_energy = p
+
 
     
 class Photon:

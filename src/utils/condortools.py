@@ -73,14 +73,20 @@ def print_material_xray_properties(wavelength,thickness=1.0E-06,**margs):
     print "Transmission after %.2f um sample: T = %.1f percent " % (thickness/1.0E-06,T*100)
     #atomic photoabsorption cross section
 
-def rotation(vector,phi,theta,psi):
+def rotation(vector_or_matrix,E0,E1,E2):
     cos = numpy.cos
     sin = numpy.sin
     #Lsq = vector[0]**2+vector[1]**2+vector[2]**2
-    M = numpy.array([[cos(theta)*cos(psi),-cos(phi)*sin(psi)+sin(phi)*sin(theta)*cos(psi),sin(phi)*sin(psi)+cos(phi)*sin(theta)*cos(psi)],
-                     [cos(theta)*sin(psi),cos(phi)*cos(psi)+sin(phi)*sin(theta)*sin(psi),-sin(phi)*cos(psi)+cos(phi)*sin(theta)*sin(psi)],
-                     [-sin(theta),sin(phi)*cos(theta),cos(phi)*cos(theta)]])
-    rotated_vector = numpy.dot(M,vector)
+    M = numpy.array([[cos(E1)*cos(E2),
+                      -cos(E0)*sin(E2)+sin(E0)*sin(E1)*cos(E2),
+                      sin(E0)*sin(E2)+cos(E0)*sin(E1)*cos(E2)],
+                     [cos(E1)*sin(E2),
+                      cos(E0)*cos(E2)+sin(E0)*sin(E1)*sin(E2),
+                      -sin(E0)*cos(E2)+cos(E0)*sin(E1)*sin(E2)],
+                     [-sin(E1),
+                      sin(E0)*cos(E1),
+                      cos(E0)*cos(E1)]])
+    rotated = numpy.dot(M,vector_or_matrix)
     #Lsq_rotated = rotated_vector[0]**2+rotated_vector[1]**2+rotated_vector[2]**2
     #if abs((Lsq - Lsq_rotated)/Lsq) > 0.001:
     #    print "ERROR: Rotation changes length!"
@@ -93,31 +99,19 @@ def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
     return qmap
 
 def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.):
-    phi = numpy.arctan2(pixel_size*numpy.sqrt(X**2+Y**2),detector_distance)
     R_Ewald = 2*numpy.pi/wavelength
     qx = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*X,detector_distance)/2.)
     qy = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*Y,detector_distance)/2.)
+    phi = numpy.arctan2(pixel_size*numpy.sqrt(X**2+Y**2),detector_distance)
     qz = R_Ewald*(1-numpy.cos(phi))
     qmap = numpy.zeros(shape=(X.shape[0],Y.shape[1],3))
     qmap[:,:,0] = qz[:,:]
     qmap[:,:,1] = qy[:,:]
     qmap[:,:,2] = qx[:,:]
     if euler_angle_0 != 0. or euler_angle_1 != 0. or euler_angle_2 != 0.:
-        E0 = euler_angle_0
-        E1 = euler_angle_1
-        E2 = euler_angle_2
-        M = numpy.array([[numpy.cos(E1)*numpy.cos(E2),
-                          -numpy.cos(E0)*numpy.sin(E2)+numpy.sin(E0)*numpy.sin(E1)*numpy.cos(E2),
-                          numpy.sin(E0)*numpy.sin(E2)+numpy.cos(E0)*numpy.sin(E1)*numpy.cos(E2)],
-                         [numpy.cos(E1)*numpy.sin(E2),
-                          numpy.cos(E0)*numpy.cos(E2)+numpy.sin(E0)*numpy.sin(E1)*numpy.sin(E2),
-                          -numpy.sin(E0)*numpy.cos(E2)+numpy.cos(E0)*numpy.sin(E1)*numpy.sin(E2)],
-                         [-numpy.sin(E1),
-                          numpy.sin(E0)*numpy.cos(E1),
-                          numpy.cos(E0)*numpy.cos(E1)]])
         for iy in numpy.arange(0,qmap.shape[0]):
             for ix in numpy.arange(0,qmap.shape[1]):
-                qmap[iy,ix,:] = numpy.dot(M,qmap[iy,ix,:])
+                qmap[iy,ix,:] = rotation(qmap[iy,ix,:],euler_angle_0,euler_angle_1,euler_angle_2)
     return qmap
 
 def generate_qmap_ori(X,Y,pixel_size,detector_distance,wavelength):
@@ -282,3 +276,10 @@ def get_sphere_diffraction_formula(p,D,wavelength,X=None,Y=None):
         q = lambda X,Y: generate_absqmap(X,Y,p,D,wavelength)
         I = lambda X,Y,K,r: I_sphere_diffraction(K,q(X,Y),r)
     return I
+
+
+
+to_spheroid_semi_diameter_a = lambda diameter,flattening: flattening**(1/3.)*diameter/2.
+to_spheroid_semi_diameter_c = lambda diameter,flattening: flattening**(-2/3.)*diameter/2.
+to_spheroid_diameter = lambda a,c: (a**2*c)**(1/3.)
+to_spheroid_flattening = lambda a,c: a/c
