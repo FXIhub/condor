@@ -341,10 +341,8 @@ class Detector:
         qmap = condortools.generate_qmap(X,Y,p,D,w,E0,E1,E2)
         nfft_scaled = kwargs.get("nfft_scaled",False)
         if nfft_scaled:
-            #qmap /= self.get_absq_max()/0.5
             qmap /= self.get_absq_max()/0.5*numpy.sqrt(2)
         return qmap
-    
     
     def generate_qmap_ori(self,**kwargs):
         X,Y = numpy.meshgrid(numpy.arange(self._mask.shape[1]),
@@ -360,11 +358,9 @@ class Detector:
             w = kwargs["wavelength"]
         else:
             w = self._parent.source.photon.get_wavelength()
-       
         qmap = condortools.generate_qmap_ori(X,Y,p,D,w)
         qmap /= self.get_absq_max()/0.5*numpy.sqrt(2)
         return qmap
-
 
     def get_absqx_max(self,**kwargs):
         if "wavelength" in kwargs:

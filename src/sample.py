@@ -16,6 +16,7 @@ logger = logging.getLogger("Condor")
 if "utils" not in sys.path: sys.path.append("utils")
 import condortools
 from variation import Variation
+from material import Material
 
 class AbstractSample:
     def __init__(self,**kwargs):
@@ -45,8 +46,21 @@ class AbstractSample:
         else:
             # Maintaining depreciated keyword
             self.number_of_images = kwargs.get("number_of_orientations",1)
+        self._after_init_called = False
+
+    # This has to be called by every inheriting class after init!
+    def _after_init(self,**kwargs):
+        self.set_alignment(**kwargs)
+        self.set_diameter_variation(**kwargs)
+        self._i = -1
+        self._next()
+        self._after_init_called = True
 
     def propagate(self,detector0=None,source0=None,output=["amplitudes"]):
+        if not self._after_init_called:
+            logger.error("Sample class was not successfully initialised. Cannot perform propagation.")
+            exit(1)
+
         if source0 is None:
             source = self._parent.source
         else:
@@ -75,20 +89,22 @@ class AbstractSample:
             O_all["cxXxX"].append(detector.get_cx("binned"))
             O_all["cyXxX"].append(detector.get_cy("binned"))
             # Collect values of source variables
-            for k in ["intensity","intensity_ph_per_um2"]:
+            for k in ["beam_intensity","beam_intensity_ph_per_um2"]:
                 if k not in O_all:
                     O_all[k] = []
-            O_all["intensity_ph_per_um2"].append(source.get_intensity("ph/m2"))
-            O_all["intensity"].append(source.get_intensity("J/m2"))
+            O_all["beam_intensity_ph_per_um2"].append(source.get_intensity("ph/m2"))
+            O_all["beam_intensity"].append(source.get_intensity("J/m2"))
             # Iteration step
             self._next()
             detector._next()
             source._next()
+        for k,i in O_all.items():
+            O_all[k] = numpy.array(O_all[k])
         return O_all
 
     # Overload this function!
-    def propagate_single(self,detector0=None,source0=None):
-        pass
+    #def propagate_single(self,detector0=None,source0=None):
+    #    pass
 
     def _get_dn(self):
         # refractive index from material
@@ -117,21 +133,19 @@ class AbstractSample:
     def set_random_orientation(self):
         self.set_alignment("random")
 
-    def set_alignment(self,alignment="first_axis",euler_angle_0=None,euler_angle_1=None,euler_angle_2=None,**kwargs):
-        if alignment not in ["random","euler_angles","first_axis"]:
+    def set_alignment(self,alignment=None,**kwargs):
+        if alignment not in [None,"random","euler_angles","first_axis"]:
             logger.error("Invalid argument for sample alignment specified.")
             return
-        self._alignment = alignment
-        self._euler_angle_0 = euler_angle_0
-        self._euler_angle_1 = euler_angle_1
-        self._euler_angle_2 = euler_angle_2
-
-    def _after_init(self,**kwargs):
-        self.set_alignment(**kwargs)
-        self.set_diameter_variation(**kwargs)
-        self._i = -1
-        self._next()
-
+        self._euler_angle_0 = kwargs.get("euler_angle_0",None)
+        self._euler_angle_1 = kwargs.get("euler_angle_1",None)
+        self._euler_angle_2 = kwargs.get("euler_angle_2",None)
+        if alignment is None and (self._euler_angle_0 is not None and self._euler_angle_1 is not None and self._euler_angle_2 is not None):
+            print "bla"
+            self._alignment = "euler_angles"
+        else:
+            self._alignment = alignment
+        
     # Overload this function if needed
     def _next(self):
         self._next0()
@@ -143,6 +157,10 @@ class AbstractSample:
 
     def _next_orientation(self):
         if self._alignment == "first_axis":
+            # Sanity check
+            if self._euler_angle_0 is not None or self._euler_angle_1 is not None or self._euler_angle_2 is not None:
+                logger.error("Conflict of arguments: Specified first_axis alignment and also specified set of euler angles. This does not make sense.")
+                return
             self.euler_angle_0 = 0.
             self.euler_angle_1 = 0.
             self.euler_angle_2 = 0.
@@ -154,7 +172,7 @@ class AbstractSample:
             (self.euler_angle_0,self.euler_angle_1,self.euler_angle_2) = condortools.random_euler_angles()
         elif self._alignment == "euler_angles":
             # Many orientations (lists of euler angles)
-            if isinstance(euler_angle_0,list):
+            if isinstance(self._euler_angle_0,list):
                 self.euler_angle_0 = self._euler_angle_0[self._i]
                 self.euler_angle_1 = self._euler_angle_1[self._i]
                 self.euler_angle_2 = self._euler_angle_2[self._i]

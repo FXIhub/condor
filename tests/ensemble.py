@@ -12,14 +12,12 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
-import condor as p
+import condor
 import configobj
 import matplotlib,os,numpy,sys
 from python_tools import gentools
 
-#pdir = os.path.abspath(os.path.dirname(__file__))+"/../"
-#odir = os.path.abspath(os.path.dirname(__file__))+"/ensemble_out/"
-#os.system("mkdir -p %s" % odir)
+#condor.logger.setLevel("DEBUG")
 
 numpy.random.seed(0)
 
@@ -27,12 +25,14 @@ if len(sys.argv) < 2:
     print "ERROR: Please specify a configuration file."
     print "Usage: ./ensemble.py ensemble.conf"
     exit(1)
-
 conf_fn = sys.argv[1]
-out_fn = conf_fn[:-4] + "cxi"
 
-I = p.Input(conf_fn)
+out_dir = os.path.abspath(os.path.dirname(__file__))+"/ensemble_out"
+os.system("mkdir -p %s" % out_dir)
+out_fn = out_dir + "/" + conf_fn[:-4] + "cxi"
 
-O = p.Output(I)
+I = condor.Input(conf_fn)
 
-O.write(out_fn,output=["intensity_pattern","fourier_space_image","real_space_image","sample_diameter","bitmask_image","mask_image","intensity_pattern_center","intensity"])
+O = condor.Output(I)
+
+O.write(out_fn,output="all")#["intensity_pattern","fourier_space_image","real_space_image","sample_diameter","bitmask_image","mask_image","intensity_pattern_center","intensity"])

@@ -39,36 +39,31 @@ Cs = {}
 for s in samples:
     print s
     C = gentools.read_configfile(pdir+"/default.conf")
-    
-    C["sample"] = {}
 
-    if s in ["icosahedron","sphere","spheroid"]:
+    N = 1         
+    C["sample"] = {}
+    C["sample"]["diameter"] = 450E-09
+    C["sample"]["material_type"] = "virus"
+
+    if s in ["icosahedron","sphere","spheroid","cube"]:
         C["sample"]["sample_type"] = "map3d"
         C["sample"]["geometry"] = s
-        C["sample"]["material_type"] = "virus"
-        C["sample"]["alignment"] = "random"
-        N = 3      
-        C["sample"]["number_of_orientations"] = N
+        if s == "icosahedron":
+            N = 3
+            C["sample"]["alignment"] = "random"
+            C["sample"]["euler_angle_0"] = None
+            C["sample"]["euler_angle_1"] = None
+            C["sample"]["euler_angle_2"] = None
+        C["sample"]["number_of_images"] = N
         if s == "spheroid":
-            C["sample"]["diameter_c"] = 450E-09
-            C["sample"]["diameter_a"] = 250E-09
-        else:
-            C["sample"]["diameter"] = 450E-09
-    
+            C["sample"]["flattening"] = 0.5
+
     elif s == "uniform_sphere":
-        N = 1
         C["sample"]["sample_type"] = s
-        C["sample"]["diameter"] = 450E-09
-        C["sample"]["material_type"] = "virus"
         
     elif s == "uniform_spheroid":
-        N = 1
         C["sample"]["sample_type"] = s
-        C["sample"]["diameter_c"] = 450E-09
-        C["sample"]["diameter_a"] = 250E-09
-        C["sample"]["theta"] = 1.
-        C["sample"]["phi"] = 1.
-        C["sample"]["material_type"] = "virus"
+        C["sample"]["flattening"] = 0.5
 
     else:
         print "ERROR: INVALID SAMPLE: %s" % s

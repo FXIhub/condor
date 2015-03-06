@@ -1,0 +1,12 @@
+.DS_Store
+**/*.pyc
+**/#*
+**/.#*
+**/.ipynb_checkpoints
+src/data
+tests/example_out
+tests/example_out/*
+tests/ensemble_out
+tests/ensemble_out/*
+build
+build/**

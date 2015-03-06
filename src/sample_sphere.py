@@ -42,8 +42,12 @@ class SampleSphere(AbstractSample):
 
         dn = self._get_dn()
         F0 = self._get_F0(source,detector)
-        q = detector.generate_absqmap()
-        
+        #q = detector.generate_absqmap()
+        qmap = detector.generate_qmap(euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.)
+        qx = qmap[:,:,2]
+        qy = qmap[:,:,1]
+        q = numpy.sqrt(qx**2+qy**2)
+
         R = self.diameter/2.
         V = 4/3.*numpy.pi*R**3
         K = (F0*V*dn.real)**2

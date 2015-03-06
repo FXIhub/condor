@@ -91,7 +91,7 @@ def rotation(vector_or_matrix,E0,E1,E2):
     #if abs((Lsq - Lsq_rotated)/Lsq) > 0.001:
     #    print "ERROR: Rotation changes length!"
     #    print Lsq,Lsq_rotated
-    return rotated_vector
+    return rotated
 
 def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
     qmap = generate_qmap(X,Y,pixel_size,detector_distance,wavelength)
@@ -281,5 +281,5 @@ def get_sphere_diffraction_formula(p,D,wavelength,X=None,Y=None):
 
 to_spheroid_semi_diameter_a = lambda diameter,flattening: flattening**(1/3.)*diameter/2.
 to_spheroid_semi_diameter_c = lambda diameter,flattening: flattening**(-2/3.)*diameter/2.
-to_spheroid_diameter = lambda a,c: (a**2*c)**(1/3.)
+to_spheroid_diameter = lambda a,c: 2*(a**2*c)**(1/3.)
 to_spheroid_flattening = lambda a,c: a/c

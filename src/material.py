@@ -1,5 +1,21 @@
+# ----------------------------------------------------------------------------------------------------- 
+# CONDOR 
+# Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# http://xfel.icm.uu.se/condor/
+# ----------------------------------------------------------------------------------------------------- 
+# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+# Condor is distributed under the terms of the GNU General Public License
+# ----------------------------------------------------------------------------------------------------- 
+# General note:
+#  All variables are in SI units by default. Exceptions explicit by variable name.
+# ----------------------------------------------------------------------------------------------------- 
 
-
+import sys,numpy
+import logging
+logger = logging.getLogger("Condor")
+if "utils" not in sys.path: sys.path.append("utils")
+from scipy import constants
+import config
 
 class Material:
     """

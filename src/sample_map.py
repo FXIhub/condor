@@ -45,18 +45,12 @@ class SampleMap(AbstractSample):
           - oversampling_fine: Real space oversampling in relation to detector/source configuration. [1]
         
         OR:
-        - geometry: Geometry that shall be generated (icosahedron, sphere, spheroid)
+        - geometry: Geometry that shall be generated (icosahedron, sphere, spheroid, cube)
           - oversampling_fine: Additional oversampling for the initial map self.map3d_fine [1.]
           ADDITIONAL (icosahedron):
-          - diameter in meter (sphere-volume equivalent diameter)
           - geometry_euler_angle_0, geometry_euler_angle_1, geometry_euler_angle_2: Euler angles defining orientation of 5-fold axis in relation to z-axis in grid. [0.0,0.0,0.0]
-          - oversampling_fine: Real space oversampling in relation to detector/source configuration.
-          ADDITIONAL (sphere):
-          - diameter in meter
-          - oversampling_fine: Real space oversampling in relation to detector/source configuration.
           ADDITIONAL (spheroid):
-          - diameter_c: diameter along the singular axis (rotation axis of ellipsoid)
-          - diameter_a: diameter along orthogonal axis to singular axis
+          - flattening
           - geometry_euler_angle_0, geometry_euler_angle_1: Euler angles defining orientation of singular axis in relation to z-axis in grid. [0.0,0.0]
 
         ADDITIONAL:
@@ -87,7 +81,6 @@ class SampleMap(AbstractSample):
         if "dx_fine" in kwargs:
             self.dX_fine = kwargs["dx_fine"]
         elif "oversampling_fine" in kwargs:
-            #self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])
             self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])/numpy.sqrt(2)
 
         # Map
@@ -95,15 +88,15 @@ class SampleMap(AbstractSample):
             if kwargs["geometry"] == "icosahedron":
                 if "diameter" not in kwargs:
                     logger.error("Cannot initialize SampleMap instance. diameter is a necessary keyword for geometry=icosahedron.") 
-                self.put_icosahedron(kwargs["diameter"]/2.,**kwargs)
+                self.put_icosahedron(self._diameter_mean/2.,**kwargs)
             elif kwargs["geometry"] == "spheroid":
                 if "flattening" not in kwargs:
                     logger.error("Cannot initialize SampleMap instance. flattening is a necessary keyword for geometry=spheroid.")
                 a = condortools.to_spheroid_semi_diameter_a(self._diameter_mean,kwargs["flattening"])
                 c = condortools.to_spheroid_semi_diameter_c(self._diameter_mean,kwargs["flattening"])
-                self.put_spheroid(c/2.,a/2.,**kwargs)
+                self.put_spheroid(a,c,**kwargs)
             elif kwargs["geometry"] == "sphere":
-                self.put_sphere(self._diameter_mean,**kwargs)
+                self.put_sphere(self._diameter_mean/2.,**kwargs)
             if kwargs["geometry"] == "cube":
                 if "edge_length" in kwargs:
                     logger.error("edge_length is a depreciated keyword for geometry=cube. Please replace it by diameter.") 
@@ -260,20 +253,20 @@ class SampleMap(AbstractSample):
         spheremap = make_sphere_map(N,nR)
         self.put_custom_map(spheremap,**kwargs)
  
-    def put_spheroid(self,a,b,**kwargs):
+    def put_spheroid(self,a,c,**kwargs):
         e0 = kwargs.get("geometry_euler_angle_0")
         e1 = kwargs.get("geometry_euler_angle_1")
         e2 = kwargs.get("geometry_euler_angle_2")
         # maximum radius
-        Rmax = max([a,b])
+        Rmax = max([a,c])
         # maximum radius in pixel
         nRmax = Rmax/self.dX_fine
         # dimensions in pixel
         nA = a/self.dX_fine
-        nB = b/self.dX_fine
+        nC = c/self.dX_fine
         # leaving a bit of free space around spheroid
         N = int(round((nRmax*1.2)*2))
-        spheromap = make_spheroid_map(N,nA,nB,e0,e1,e2)
+        spheromap = make_spheroid_map(N,nA,nC,e0,e1,e2)
         self.put_custom_map(spheromap,**kwargs)
 
     def put_icosahedron(self,radius,**kwargs):
@@ -446,14 +439,13 @@ def make_icosahedron_map_old(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
     icomap = icomap.min(0)
     return icomap
 
-
 def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.):
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     X = X-(N-1)/2.
     Y = Y-(N-1)/2.
     Z = Z-(N-1)/2.
     R_sq = X**2+Y**2+Z**2
-    e_c = condortools.rotation(numpy.array([0.0,0.0,1.0]),euler0,euler1,euler2)
+    e_c = condortools.rotation(numpy.array([0.0,1.0,0.0]),euler0,euler1,euler2)
     d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
     r_sq_c = abs( R_sq * (1 - (d_sq_c/(R_sq+numpy.finfo("float32").eps))))
     spheroidmap = r_sq_c/nA**2+d_sq_c/nB**2
