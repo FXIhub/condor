@@ -16,9 +16,9 @@ logger = logging.getLogger("Condor")
 if "utils" not in sys.path: sys.path.append("utils")
 import condortools
 
-from sample import AbstractSample
+from sample_single import AbstractSampleSingle
 
-class SampleSphere(AbstractSample):
+class SampleSphere(AbstractSampleSingle):
     """
     A class of the input-object.
     Sample is a homogeneous sphere defined by its diameter and a material object.
@@ -26,7 +26,7 @@ class SampleSphere(AbstractSample):
     """
 
     def __init__(self,**kwargs):
-        AbstractSample.__init__(self,**kwargs)
+        AbstractSampleSingle.__init__(self,**kwargs)
         self._after_init(**kwargs)
 
     def propagate_single(self,detector0=None,source0=None):

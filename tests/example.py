@@ -12,9 +12,11 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
-import condor as p
+import condor as condor
 import pylab,os,numpy,sys
 from python_tools import gentools
+
+condor.logger.setLevel("INFO")
 
 pdir = os.path.abspath(os.path.dirname(__file__))+"/../"
 odir = os.path.abspath(os.path.dirname(__file__))+"/example_out/"
@@ -65,11 +67,21 @@ for s in samples:
         C["sample"]["sample_type"] = s
         C["sample"]["flattening"] = 0.5
 
+    elif s == "multiple":
+        C["sample"]["sample_type"] = "map3d"
+        C["sample"]["geometry"] = "icosahedron"
+        C["sample"]["alignment"] = "random"
+
+        C["sample_2"] = {}
+        for k,v in C["sample"].items():
+            C["sample_2"][k] = v 
+        C["sample_2"]["diameter"] = 350E-09
+
     else:
         print "ERROR: INVALID SAMPLE: %s" % s
 
-    I = p.Input(C)
-    O = p.Output(I)
+    I = condor.Input(C)
+    O = condor.Output(I)
     
     for i in range(N):
         pylab.imsave('%s/example_%s_%i_intensities.png' % (odir,s,i) ,numpy.log10(O.get_intensity_pattern(i)),vmin=0,vmax=8)

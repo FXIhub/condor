@@ -20,9 +20,9 @@ import utils.icosahedron
 from scipy import constants
 from python_tools.imgtools import array_to_array      
 
-from sample import AbstractSample
+from sample_single import AbstractSampleSingle
 
-class SampleMap(AbstractSample):
+class SampleMap(AbstractSampleSingle):
 
     def __init__(self,**kwargs):
         """
@@ -70,18 +70,19 @@ class SampleMap(AbstractSample):
           - cX, cY, ... : atomic composition
 
         """
-
-        AbstractSample.__init__(self,**kwargs)
+        AbstractSampleSingle.__init__(self,**kwargs)
         self.map3d_fine = None
         self._map3d = None
         self._dX = None
         self._map3d_fine = None
         self._dX_fine = None
 
+        print "parent",self._parent
+        print "kwargs",kwargs
         if "dx_fine" in kwargs:
             self.dX_fine = kwargs["dx_fine"]
-        elif "oversampling_fine" in kwargs:
-            self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs["oversampling_fine"])/numpy.sqrt(2)
+        else:
+            self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs.get("oversampling_fine",1.))/numpy.sqrt(2)
 
         # Map
         if "geometry" in kwargs:

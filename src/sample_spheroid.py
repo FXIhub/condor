@@ -19,12 +19,12 @@ from scipy import constants
 from python_tools.imgtools import array_to_array      
 
 from variation import Variation
-from sample import AbstractSample
+from sample_single import AbstractSampleSingle
 
-class SampleSpheroid(AbstractSample):
+class SampleSpheroid(AbstractSampleSingle):
 
     def __init__(self,**kwargs):
-        AbstractSample.__init__(self,**kwargs)
+        AbstractSampleSingle.__init__(self,**kwargs)
         reqk = ["flattening"]
         for k in reqk:
             if k not in kwargs.keys():
@@ -39,7 +39,7 @@ class SampleSpheroid(AbstractSample):
     # Overload
     def _next(self):
         self._next_flattening()
-        self._next0()
+        AbstractSampleSingle._next(self)
 
     def set_flattening_variation(self,flattening_variation=None,flattening_spread=None,flattening_variation_n=None,**kwargs):
         self._flattening_variation = Variation(flattening_variation,flattening_spread,flattening_variation_n,name="spheroid flattening")       

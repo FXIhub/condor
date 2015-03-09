@@ -25,6 +25,7 @@ config.init_configuration()
 import imgutils,condortools
 from python_tools import cxitools
 from source import Source
+from sample_multiple import SampleMultiple
 from sample_sphere import SampleSphere
 from sample_spheroid import SampleSpheroid
 from sample_map import SampleMap
@@ -53,16 +54,21 @@ class Input:
         C = self.configuration.confDict
         self.detector = Detector(parent=self,**C["detector"])
         self.source = Source(parent=self,**C["source"])
-
-        if C["sample"]["sample_type"] == "uniform_sphere":
-            self.sample = SampleSphere(parent=self,**C["sample"])
-        elif C["sample"]["sample_type"] == "uniform_spheroid":
-            self.sample = SampleSpheroid(parent=self,**C["sample"])
-        elif C["sample"]["sample_type"] == "map3d":
-            self.sample = SampleMap(parent=self,**C["sample"])
-        else:
-            logger.error("%s is not a valid sample type.")
-            return
+        
+        samples = [s for s in C.keys() if "sample" in s]
+        self.sample = SampleMultiple(parent=self,**C[samples[0]])
+        for s in samples:
+            Cs = C[s]
+            if Cs["sample_type"] == "uniform_sphere":
+                S = SampleSphere(parent=self,**Cs)
+            elif Cs["sample_type"] == "uniform_spheroid":
+                S = SampleSpheroid(parent=self,**Cs)
+            elif Cs["sample_type"] == "map3d":
+                S = SampleMap(parent=self,**Cs)
+            else:
+                logger.error("%s is not a valid sample type.")
+                return
+            self.sample.add(S,Cs.get("translation_vector",None))
 
 class Output:
     """
@@ -82,7 +88,7 @@ class Output:
         # General variables
         self.amplitudes = outdict["amplitudes"]
         self.N = len(self.amplitudes)
-        self.sample_diameter = outdict.get("sample_diameter")
+        self.sample_diameter = outdict.get("sample_diameter",None)
         self.cx = outdict.get("cx")
         self.cy = outdict.get("cy")
         self.cxXxX = outdict.get("cxXxX")
