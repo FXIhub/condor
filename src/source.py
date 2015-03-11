@@ -51,7 +51,6 @@ class Source:
         self.set_pulse_energy_variation(variation=kwargs.get("pulse_energy_variation",None),
                                         spread=kwargs.get("pulse_energy_spread",None),
                                         n=kwargs.get("pulse_energy_variation_n",None))
-        self._next()
         logger.debug("Source configured")
 
     def set_pulse_energy_variation(self,variation=None, spread=None, n=None):
@@ -75,9 +74,13 @@ class Source:
     def get_area(self):
         return numpy.pi*(self.focus_diameter/2.0)**2
 
-    def _next(self):
+    def get_next(self):
         self._next_pulse_energy()
-    
+        return {"pulse_energy":self.pulse_energy,
+                "wavelength":self.photon.get_wavelength(),
+                "intensity":self.get_intensity(),
+                "intensity_ph_m2":self.get_intensity("ph/m2")}
+
     def _next_pulse_energy(self):
         p = self._pulse_energy_variation.get(self.pulse_energy_mean)
         # Non-random

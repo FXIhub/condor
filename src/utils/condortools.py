@@ -11,6 +11,10 @@
 # ----------------------------------------------------------------------------------------------------- 
 
 import numpy, sys, numpy, types, pickle, time, math
+import icosahedron,imgutils
+ 
+import logging
+logger = logging.getLogger("Condor")
 
 def random_euler_angles():
     """
@@ -283,3 +287,79 @@ to_spheroid_semi_diameter_a = lambda diameter,flattening: flattening**(1/3.)*dia
 to_spheroid_semi_diameter_c = lambda diameter,flattening: flattening**(-2/3.)*diameter/2.
 to_spheroid_diameter = lambda a,c: 2*(a**2*c)**(1/3.)
 to_spheroid_flattening = lambda a,c: a/c
+
+def to_spheroid_theta(euler_angle_0,euler_angle_1,euler_angle_2):
+    v_z = numpy.array([1.0,0.0,0.0])
+    v_y = numpy.array([0.0,1.0,0.0])
+    v_rot = rotation(v_y,euler_angle_0,euler_angle_1,euler_angle_2)
+    theta = numpy.arcsin(numpy.dot(v_rot,v_z))
+    return theta
+
+def to_spheroid_phi(euler_angle_0,euler_angle_1,euler_angle_2):
+    v_y = numpy.array([0.0,1.0,0.0])
+    v_rot = rotation(v_y,euler_angle_0,euler_angle_1,euler_angle_2)
+    v_rot[0] = 0.0
+    v_rot = v_rot / numpy.sqrt(v_rot[0]**2+v_rot[1]**2+v_rot[2]**2)       
+    phi = numpy.arccos(numpy.dot(v_rot,v_y))
+    return phi
+
+
+
+def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
+    logger.debug("Building icosahedral geometry")
+    logger.debug("Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
+    t0 = time.time()
+    icomap = icosahedron.icosahedron(N,nRmax,(euler1,euler2,euler3))
+    t1 = time.time()
+    logger.debug("Built map within %f seconds." % (t1-t0))
+    return icomap
+
+def make_icosahedron_map_old(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
+    na = nRmax/numpy.sqrt(10.0+2*numpy.sqrt(5))*4.
+    nRmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*na # radius at faces
+    logger.debug("Building icosahedral geometry")
+    n_list = imgutils.get_icosahedron_normal_vectors(euler1,euler2,euler3)
+    X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
+    X = X - (N-1)/2.
+    Y = Y - (N-1)/2.
+    Z = Z - (N-1)/2.
+    logger.debug("Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
+    icomap = numpy.zeros((len(n_list),N,N,N))
+    # calculate distance of all voxels to all faces (negative inside, positive outside icosahedron)
+    for i in range(len(n_list)):
+        icomap[i,:,:,:] = (X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0])+nRmin
+    s = 1.
+    M = icomap.copy()
+    temp = abs(M)<0.5*s
+    icomap[temp] = 0.5+icomap[temp]/s
+    icomap[M<(-0.5)*s] = 0
+    icomap[M>0.5*s] = 1
+    icomap = icomap.min(0)
+    return icomap
+
+def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.):
+    X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
+    X = X-(N-1)/2.
+    Y = Y-(N-1)/2.
+    Z = Z-(N-1)/2.
+    R_sq = X**2+Y**2+Z**2
+    e_c = rotation(numpy.array([0.0,1.0,0.0]),euler0,euler1,euler2)
+    d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
+    r_sq_c = abs( R_sq * (1 - (d_sq_c/(R_sq+numpy.finfo("float32").eps))))
+    spheroidmap = r_sq_c/nA**2+d_sq_c/nB**2
+    spheroidmap[spheroidmap<=1] = 1
+    spheroidmap[spheroidmap>1] = 0
+    return spheroidmap
+
+def make_sphere_map(N,nR):
+    X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
+    X = X-(N-1)/2.
+    Y = Y-(N-1)/2.
+    Z = Z-(N-1)/2.
+    R = numpy.sqrt(X**2+Y**2+Z**2)
+    spheremap = numpy.zeros(shape=R.shape,dtype="float64")
+    spheremap[R<=nR] = 1
+    spheremap[abs(nR-R)<0.5] = 0.5+0.5*(nR-R[abs(nR-R)<0.5])
+    return spheremap
+
+

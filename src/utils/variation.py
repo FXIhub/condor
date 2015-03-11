@@ -54,7 +54,7 @@ class Variation:
             v1 = numpy.array(v1)
         self._i += 1        
         return v1
-
+        
     def _get_values_for_one_dim(self,v0,dim):
         if self._mode is None:
             v1 = v0

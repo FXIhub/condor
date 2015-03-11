@@ -23,7 +23,7 @@ class Material:
     Sample material.
 
     """
-    def __init__(self,parent=None,**kwargs):
+    def __init__(self,**kwargs):
         # Check for valid keyword arguments
         allk = ["massdensity","material_type"]
         self._unproc_kws = [k for k in kwargs.keys() if (k not in allk and k[0] != "c" and len(k) > 3)]
@@ -32,7 +32,6 @@ class Material:
             logger.error("Material object initialisation failed due to illegal keyword arguments.")
             return
         # Start intialisation
-        self._parent = parent
         if "massdensity" in kwargs:
             self.materialtype = "custom"
             for key in kwargs:
@@ -55,12 +54,18 @@ class Material:
             logger.error("No valid arguments for Material initialization.")
             return
 
-    def get_fX(self,element,photon_energy_eV=None):
+    def get_fX(self,element,photon_wavelength):
         """
         Get the scattering factor for an element through linear interpolation.
         """
-        if not photon_energy_eV:
-            photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
+
+        r_0 = constants.value("classical electron radius")
+        h   =  constants.h
+        c   =  constants.c
+        qe   = constants.e
+
+        photon_energy_eV = h*c/photon_wavelength/qe
+
         SF_X = config.DICT_scattering_factors[element]
         e = constants.e
         c = constants.c
@@ -69,7 +74,7 @@ class Material:
         f2 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
         return complex(f1,f2) 
  
-    def get_n(self,photon_energy_eV=None):
+    def get_n(self,photon_wavelength):
         """
         Obtains complex refractive index.
         Henke (1994): n = 1 - r_0/(2pi) lambda^2 sum_q rho_q f_q(0)
@@ -78,18 +83,11 @@ class Material:
         f_q(0): atomic scattering factor (forward scattering) of atom species q
         """
 
-        r_0 = constants.value("classical electron radius")
-        h   =  constants.h
-        c   =  constants.c
-        qe   = constants.e
-
-        if not photon_energy_eV:
-            photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
-        photon_wavelength = h*c/photon_energy_eV/qe
-
-        f = self.get_f(photon_energy_eV)
+        f = self.get_f(photon_wavelength)
         atom_density = self.get_atom_density()
         
+        r_0 = constants.value("classical electron radius")
+
         n = 1 - r_0/2/numpy.pi * photon_wavelength**2 * f * atom_density
 
         return n
@@ -99,49 +97,38 @@ class Material:
 
     # convenience functions
     # n = 1 - delta - i beta
-    def get_delta(self,photon_energy_eV=None):
-        return (1-self.get_n(photon_energy_eV).real)
-    def get_beta(self,photon_energy_eV=None):
-        return (-self.get_n(photon_energy_eV).imag)
+    def get_delta(self,photon_wavelength):
+        return (1-self.get_n(photon_wavelength).real)
+    def get_beta(self,photon_wavelength):
+        return (-self.get_n(photon_wavelength).imag)
 
-    def get_photoabsorption_cross_section(self,photon_energy_eV=None):
+    def get_photoabsorption_cross_section(self,photon_wavelength):
 
         r_0 = constants.value("classical electron radius")
         h =  constants.h
         c =  constants.c
         qe = constants.e
 
-        if not photon_energy_eV:
-            photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
-        photon_wavelength = h*c/photon_energy_eV/qe
-        mu = 2*r_0*photon_wavelength*self.get_f(photon_energy_eV).imag
+        mu = 2*r_0*photon_wavelength*self.get_f(photon_wavelength).imag
 
         return mu
 
-    def get_transmission(self,thickness,photon_energy_eV=None):
+    def get_transmission(self,thickness,photon_wavelength):
 
-        n = self.get_n(photon_energy_eV)
-        mu = self.get_photoabsorption_cross_section(photon_energy_eV)
+        n = self.get_n(photon_wavelength)
+        mu = self.get_photoabsorption_cross_section(photon_wavelength)
         rho = self.get_atom_density()
 
         return numpy.exp(-rho*mu*thickness)
 
-    def get_f(self,photon_energy_eV=None):
-
-        h  = constants.h
-        c  = constants.c
-        qe = constants.e
-
-        if not photon_energy_eV:
-            photon_energy_eV = self._parent._parent.source.photon.get_energy("eV")
-        photon_wavelength = h*c/photon_energy_eV/qe
-
+    def get_f(self,photon_wavelength):
+    
         atomic_composition = self.get_atomic_composition_dict()
 
         f_sum = 0
         for element in atomic_composition.keys():
             # sum up average atom factor
-            f = self.get_fX(element,photon_energy_eV)
+            f = self.get_fX(element,photon_wavelength)
             f_sum += atomic_composition[element] * f
         
         return f_sum
