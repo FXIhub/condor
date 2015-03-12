@@ -19,8 +19,8 @@ from python_tools import gentools
 
 import python_tools
 
-python_tools.gentools.logger.setLevel("DEBUG")
-condor.logger.setLevel("DEBUG")
+#python_tools.gentools.logger.setLevel("DEBUG")
+#condor.logger.setLevel("DEBUG")
 
 pdir = os.path.abspath(os.path.dirname(__file__))+"/../"
 odir = os.path.abspath(os.path.dirname(__file__))+"/example_out/"
