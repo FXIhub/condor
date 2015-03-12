@@ -15,6 +15,7 @@ import icosahedron,imgutils
  
 import logging
 logger = logging.getLogger("Condor")
+from log import log
 
 def random_euler_angles():
     """
@@ -103,6 +104,7 @@ def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
     return qmap
 
 def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.):
+    log(logger.debug,"Allocating qmap.")
     R_Ewald = 2*numpy.pi/wavelength
     qx = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*X,detector_distance)/2.)
     qy = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*Y,detector_distance)/2.)
@@ -113,9 +115,31 @@ def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0=0.,e
     qmap[:,:,1] = qy[:,:]
     qmap[:,:,2] = qx[:,:]
     if euler_angle_0 != 0. or euler_angle_1 != 0. or euler_angle_2 != 0.:
-        for iy in numpy.arange(0,qmap.shape[0]):
-            for ix in numpy.arange(0,qmap.shape[1]):
-                qmap[iy,ix,:] = rotation(qmap[iy,ix,:],euler_angle_0,euler_angle_1,euler_angle_2)
+        log(logger.debug,"Applying qmap rotation with angles %f, %f, %f." % (euler_angle_0,euler_angle_1,euler_angle_2))
+        # Old and slow
+        #for iy in numpy.arange(0,qmap.shape[0]):
+        #    for ix in numpy.arange(0,qmap.shape[1]):
+        #        qmap[iy,ix,:] = rotation(qmap[iy,ix,:],euler_angle_0,euler_angle_1,euler_angle_2)
+        cos = numpy.cos
+        sin = numpy.sin
+        E0 = euler_angle_0
+        E1 = euler_angle_1
+        E2 = euler_angle_2
+        M = numpy.array([[cos(E1)*cos(E2),
+                          -cos(E0)*sin(E2)+sin(E0)*sin(E1)*cos(E2),
+                          sin(E0)*sin(E2)+cos(E0)*sin(E1)*cos(E2)],
+                         [cos(E1)*sin(E2),
+                          cos(E0)*cos(E2)+sin(E0)*sin(E1)*sin(E2),
+                          -sin(E0)*cos(E2)+cos(E0)*sin(E1)*sin(E2)],
+                         [-sin(E1),
+                          sin(E0)*cos(E1),
+                          cos(E0)*cos(E1)]])
+        Y,X = numpy.mgrid[:qmap.shape[0],:qmap.shape[1]]
+        Y = Y.flatten()
+        X = X.flatten()
+        s = qmap.shape
+        qmap = numpy.array([numpy.dot(M,qmap[iy,ix,:]) for ix,iy in zip(X,Y)])
+        qmap = qmap.reshape(s)
     return qmap
 
 def generate_qmap_ori(X,Y,pixel_size,detector_distance,wavelength):
@@ -363,3 +387,21 @@ def make_sphere_map(N,nR):
     return spheremap
 
 
+# Position conversion for a downsampled / upsampled array:
+# downsample_pos
+# pos: position in current binsize units 
+# size: current array size
+# binning: downsampled binsize / current binsize
+downsample_pos = lambda pos,size,binning: (pos-(binning-1)/2.)*(size/(1.*binning)-1)/(1.*(size-binning))
+# upsample_pos
+# pos: position in current binsize units
+# size: current array size
+# binning: current binsize / upsampled binsize
+upsample_pos   = lambda pos,size,binning: pos*(size*binning-binning)/(1.*(size-1))+(binning-1)/2.
+
+
+def check_input(keys,req_keys,opt_keys):
+    missing_keys = [k for k in req_keys if k not in keys]
+    all_keys = req_keys + opt_keys
+    illegal_keys = [k for k in keys if k not in all_keys]
+    return missing_keys,illegal_keys

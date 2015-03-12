@@ -16,9 +16,11 @@ import condor as condor
 import pylab,os,numpy,sys
 from python_tools import gentools
 
-condor.logger.setLevel("INFO")
+
 import python_tools
-python_tools.gentools.logger.setLevel("INFO")
+
+python_tools.gentools.logger.setLevel("DEBUG")
+condor.logger.setLevel("DEBUG")
 
 pdir = os.path.abspath(os.path.dirname(__file__))+"/../"
 odir = os.path.abspath(os.path.dirname(__file__))+"/example_out/"
@@ -43,6 +45,9 @@ Cs = {}
 for s in samples:
     print s
     C = gentools.read_configfile(pdir+"/default.conf")
+
+    C["detector"]["noise"] = "normal_poisson"
+    C["detector"]["noise_spread"] = 0.5
 
     N = 1         
     C["sample_species"] = {}

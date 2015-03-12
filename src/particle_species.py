@@ -10,17 +10,44 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
-import sys,numpy
+import sys,os
+import numpy
 import scipy.stats
-import logging
-logger = logging.getLogger("Condor")
+
 if "utils" not in sys.path: sys.path.append("utils")
 import condortools
 from variation import Variation
 from material import Material
+import config
 
-class AbstractSampleSpecies:
+import logging
+logger = logging.getLogger("Condor")
+import utils.log
+from utils.log import log 
+
+class AbstractParticleSpecies:
     def __init__(self,**kwargs):
+
+        # Check for valid set of keyword arguments
+        self.req_keys += ["particle_species","alignment","euler_angle_0","euler_angle_1","euler_angle_2","diameter","position","concentration"]
+        cel_keys = ["c"+k for k in config.DICT_atomic_number.keys()]
+        self.opt_keys += ["diameter_variation","diameter_spread","diameter_variation_n",
+                          "position_variation","position_spread","position_variation_n",
+                          "geometry_euler_angle_0","geometry_euler_angle_1","geometry_euler_angle_2",
+                          "massdensity","material_type"] + cel_keys
+        
+        # Check input
+        miss_keys,ill_keys = condortools.check_input(kwargs.keys(),self.req_keys,self.opt_keys)
+        if len(miss_keys) > 0: 
+            for k in miss_keys:
+                log(logger.error,"Cannot initialize ParticleSpeciesSphere instance. %s is a necessary keyword." % k)
+            exit(1)
+        if len(ill_keys) > 0:
+            for k in ill_keys:
+                log(logger.error,"Cannot initialize ParticleSpeciesSphere instance. %s is an illegal keyword." % k)
+            exit(1)
+
+        # Start initialisation
         self.set_alignment(alignment=kwargs["alignment"],euler_angle_0=kwargs["euler_angle_0"],euler_angle_1=kwargs["euler_angle_1"],euler_angle_2=kwargs["euler_angle_2"])
         self.set_diameter_variation(diameter_variation=kwargs["diameter_variation"],diameter_spread=kwargs.get("diameter_spread",None),diameter_variation_n=kwargs.get("diameter_variation_n",None))
         self.diameter_mean = kwargs["diameter"]
@@ -34,11 +61,11 @@ class AbstractSampleSpecies:
         if 'massdensity' in kwargs:
             materialargs['massdensity'] = kwargs['massdensity']
             for key in kwargs.keys():
-                if key[0] == 'c' and len(key) <= 3: materialargs[key] = kwargs[key]
+                if key in cel_keys: materialargs[key] = kwargs[key]
         elif "material_type" in kwargs:
             materialargs['material_type'] = kwargs['material_type']
         else:
-            logger.error("Illegal material configuration for sample species.")
+            log(logger.error,"Illegal material configuration for sample species.")
             exit(0)
         self.set_material(**materialargs)
 
@@ -61,7 +88,7 @@ class AbstractSampleSpecies:
 
     def set_alignment(self,alignment=None,euler_angle_0=None,euler_angle_1=None,euler_angle_2=None):
         if alignment not in [None,"random","euler_angles","first_axis","random_euler_angle_0"]:
-            logger.error("Invalid argument for sample alignment specified.")
+            log(logger.error,"Invalid argument for sample alignment specified.")
             return
         self._euler_angle_0 = euler_angle_0
         self._euler_angle_1 = euler_angle_1
@@ -75,7 +102,7 @@ class AbstractSampleSpecies:
         if self._alignment == "first_axis":
             # Sanity check
             if self._euler_angle_0 is not None or self._euler_angle_1 is not None or self._euler_angle_2 is not None:
-                logger.error("Conflict of arguments: Specified first_axis alignment and also specified set of euler angles. This does not make sense.")
+                log(logger.error,"Conflict of arguments: Specified first_axis alignment and also specified set of euler angles. This does not make sense.")
                 exit(1)
             euler_angle_0 = 0.
             euler_angle_1 = 0.
@@ -83,7 +110,7 @@ class AbstractSampleSpecies:
         elif self._alignment == "random":
             # Sanity check
             if self._euler_angle_0 is not None or self._euler_angle_1 is not None or self._euler_angle_2 is not None:
-                logger.error("Conflict of arguments: Specified random alignment and also specified set of euler angles. This does not make sense.")
+                log(logger.error,"Conflict of arguments: Specified random alignment and also specified set of euler angles. This does not make sense.")
                 exit(1)
             (euler_angle_0,euler_angle_1,euler_angle_2) = condortools.random_euler_angles()
         elif self._alignment == "euler_angles":
@@ -99,7 +126,7 @@ class AbstractSampleSpecies:
                 euler_angle_2 = self._euler_angle_2
         elif self._alignment == "random_euler_angle_0":
             if self._euler_angle_0 is not None:
-                logger.error("Conflict of arguments: Specified random_euler_angle_0 alignment and also specified a specific euler_angle_0 = %f. This does not make sense." % self._euler_angle_0)
+                log(logger.error,"Conflict of arguments: Specified random_euler_angle_0 alignment and also specified a specific euler_angle_0 = %f. This does not make sense." % self._euler_angle_0)
                 exit(1)
             euler_angle_0 = numpy.random.uniform(0,2*numpy.pi)
             euler_angle_1 = self._euler_angle_1
@@ -114,13 +141,13 @@ class AbstractSampleSpecies:
         # Non-random diameter
         if self._diameter_variation._mode in [None,"range"]:
             if d <= 0:
-                logger.error("Sample diameter smaller-equals zero. Change your configuration.")
+                log(logger.error,"Sample diameter smaller-equals zero. Change your configuration.")
             else:
                 return d
         # Random diameter
         else:
             if d <= 0.:
-                logger.warning("Sample diameter smaller-equals zero. Try again.")
+                log(logger.warning,"Sample diameter smaller-equals zero. Try again.")
                 return self._get_next_diameter()
             else:
                 return d
@@ -134,19 +161,24 @@ class AbstractSampleSpecies:
     def _get_next_position(self):
         return self._position_variation.get(self.position_mean)
 
-class SampleSpeciesSphere(AbstractSampleSpecies):
+class ParticleSpeciesSphere(AbstractParticleSpecies):
     def __init__(self,**kwargs):
-        AbstractSampleSpecies.__init__(self,**kwargs)
+        self.req_keys = []
+        self.opt_keys = []
+        AbstractParticleSpecies.__init__(self,**kwargs)
 
-
-class SampleSpeciesSpheroid(AbstractSampleSpecies):
+class ParticleSpeciesSpheroid(AbstractParticleSpecies):
     def __init__(self,**kwargs):
-        AbstractSampleSpecies.__init__(self,**kwargs)
+        # Check for valid set of keyword arguments
+        self.req_keys = ["flattening"]
+        self.opt_keys = ["flattening_variation","flattening_spread","flattening_variation_n"]
+        # Start initialisation
+        AbstractParticleSpecies.__init__(self,**kwargs)
         self.flattening_mean = kwargs["flattening"]
-        self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n"))
+        self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
 
     def get_next(self):
-        O = AbstractSampleSpecies.get_next(self)
+        O = AbstractParticleSpecies.get_next(self)
         O["flattening"] = self._get_next_flattening()
         return O
         
@@ -158,21 +190,21 @@ class SampleSpeciesSpheroid(AbstractSampleSpecies):
         # Non-random 
         if self._flattening_variation._mode in [None,"range"]:
             if f <= 0:
-                logger.error("Spheroid flattening smaller-equals zero. Change your configuration.")
+                log(logger.error,"Spheroid flattening smaller-equals zero. Change your configuration.")
             else:
                 return f
         # Random 
         else:
             if f <= 0.:
-                logger.warning("Spheroid flattening smaller-equals zero. Try again.")
+                log(logger.warning,"Spheroid flattening smaller-equals zero. Try again.")
                 return self._get_next_flattening()
             else:
                 return f
 
-class SampleSpeciesMap(AbstractSampleSpecies):
+class ParticleSpeciesMap(AbstractParticleSpecies):
     def __init__(self,**kwargs):
         """
-        Function initializes SampleSpeciesMap object:
+        Function initializes ParticleSpeciesMap object:
         =============================================
 
         Arguments:
@@ -216,12 +248,17 @@ class SampleSpeciesMap(AbstractSampleSpecies):
           - cX, cY, ... : atomic composition
 
         """
-        AbstractSampleSpecies.__init__(self,**kwargs)
-        #self.dX_fine = self._parent.detector.get_real_space_resolution_element()/float(kwargs.get("oversampling_fine",1.))/numpy.sqrt(2)
-        #self.dx = kwargs["dx"]
-        self.set_geometry_variation(geometry=kwargs["geometry"],geometry_concentrations=kwargs["geometry_concentrations"])
+        # Check for valid set of keyword arguments
+        self.req_keys = ["geometry","geometry_concentrations"]
+        self.opt_keys = ["flattening","flattening_variation","flattening_spread","flattening_variation_n"]
 
-        # Chache
+        # Start initialisation
+        AbstractParticleSpecies.__init__(self,**kwargs)
+        self.set_geometry_variation(geometry=kwargs["geometry"],geometry_concentrations=kwargs["geometry_concentrations"])
+        self.flattening_mean = kwargs.get("flattening",1.)
+        self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
+
+        # Init chache
         self._old_map3d_diameter               = None
         self._old_map3d_geometry               = None
         self._old_map3d_geometry_euler_angle_0 = None
@@ -231,8 +268,9 @@ class SampleSpeciesMap(AbstractSampleSpecies):
         self._old_map3d                        = None
 
     def get_next(self):
-        O = AbstractSampleSpecies.get_next(self)
+        O = AbstractParticleSpecies.get_next(self)
         O["geometry"] = self._get_next_geometry()
+        O["flattening"] = self._get_next_flattening()
         return O
 
     def set_geometry_variation(self, geometry, geometry_concentrations):
@@ -245,6 +283,25 @@ class SampleSpeciesMap(AbstractSampleSpecies):
         else:
             dist = scipy.stats.rv_discrete(name='geometry distribution', values=(range(len(self._geometry)), self._geometry_concentrations))
             return self._geometry[dist.rvs()]
+
+    def set_flattening_variation(self,flattening_variation=None,flattening_spread=None,flattening_variation_n=None,**kwargs):
+        self._flattening_variation = Variation(flattening_variation,flattening_spread,flattening_variation_n,name="spheroid flattening")       
+
+    def _get_next_flattening(self):
+        f = self._flattening_variation.get(self.flattening_mean)
+        # Non-random 
+        if self._flattening_variation._mode in [None,"range"]:
+            if f <= 0:
+                log(logger.error,"Spheroid flattening smaller-equals zero. Change your configuration.")
+            else:
+                return f
+        # Random 
+        else:
+            if f <= 0.:
+                log(logger.warning,"Spheroid flattening smaller-equals zero. Try again.")
+                return self._get_next_flattening()
+            else:
+                return f
 
     def get_map3d(self,O,dx_required,dx_suggested):
         self._build_map(O,dx_required,dx_suggested)
@@ -300,7 +357,7 @@ class SampleSpeciesMap(AbstractSampleSpecies):
             if "map3d" in O:
                 s = numpy.array(O["map3d"].shape)
                 if not numpy.all(s==s[0]):
-                    logger.error("Condor only accepts maps with equal dimensions.")
+                    log(logger.error,"Condor only accepts maps with equal dimensions.")
                     return
                 self._old_map3d = O['map3d']
             elif "filename" in O:
@@ -312,7 +369,7 @@ class SampleSpeciesMap(AbstractSampleSpecies):
                         d = f["data"][:,:,:]
                     s = numpy.array(d.shape)
                     if not numpy.all(s==s[0]):
-                        logger.error("Condor only accepts maps with equal dimensions.")
+                        log(logger.error,"Condor only accepts maps with equal dimensions.")
                         exit(0)
                     self._old_map3d = d
             else:
@@ -370,7 +427,7 @@ class SampleSpeciesMap(AbstractSampleSpecies):
         nRmax = Rmax/self._old_map3d_dx 
         # leaving a bit of free space around icosahedron 
         N = int(numpy.ceil(2.3*(nRmax)))
-        logger.info("Building icosahedron with radius %e (%i pixel) in %i x %i x %i voxel cube.",radius,nRmax,N,N,N)
+        log(logger.info,"Building icosahedron with radius %e (%i pixel) in %i x %i x %i voxel cube." % (radius,nRmax,N,N,N))
         icomap = condortools.make_icosahedron_map(N,nRmax,e0,e1,e2)
         self._put_custom_map(icomap,**kwargs)
 
@@ -414,7 +471,7 @@ class SampleSpeciesMap(AbstractSampleSpecies):
         elif mode=='surface':
             mlab.contour3d(abs(self._old_map3d))
         else:
-            logger.error("No valid mode given.")
+            log(logger.error,"No valid mode given.")
             
     def plot_fmap3d(self):
         from enthought.mayavi import mlab
@@ -454,7 +511,7 @@ class SampleSpeciesMap(AbstractSampleSpecies):
             f['voxel_dimensions_in_m'] = self._old_map3d_dx
             f.close()
         else:
-            logger.error("Invalid filename extension, has to be \'.h5\'.")
+            log(logger.error,"Invalid filename extension, has to be \'.h5\'.")
 
     #def load_map3d(self,filename):
     #    """

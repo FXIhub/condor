@@ -11,13 +11,15 @@
 # ----------------------------------------------------------------------------------------------------- 
 
 import numpy
-
+    
 import logging
 logger = logging.getLogger("Condor")
+import utils.log
+from utils.log import log 
 
 import utils
 import condortools
-from sample_species import SampleSpeciesSphere,SampleSpeciesSpheroid,SampleSpeciesMap
+from particle_species import ParticleSpeciesSphere,ParticleSpeciesSpheroid,ParticleSpeciesMap
 
 class Propagator:
     def __init__(self,source,sample,detector):
@@ -34,30 +36,33 @@ class Propagator:
         N_particles_max = 0
 
         for i in range(N):
-            logger.info("Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1,N))
+            log(logger.info,"Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1,N))
+
             Os = self._propagate_single(**kwargs)
+
+            N_particles = len(Os["sample"]["particles"])
+            print "%i/%i (%i particles)" % (i+1,N,N_particles)
+
             for k in [k for k in Os.keys() if k not in ["source","sample","detector"]]:
                 if k not in O:
-                    O[k] = [None] * N
+                    O[k] = [None for _ in range(N)]
                 O[k][i] = Os[k]
             # Source
             for k,v in Os["source"].items():
                 if k not in O["source"]:
-                    O["source"][k] = [None] * N
+                    O["source"][k] = [None for _ in range(N)]
                 O["source"][k][i] = Os["source"][k]
             # Sample
             for k in [k for k in Os["sample"].keys() if k != "particles"]:
                 if k not in O["sample"]:
-                    O["sample"][k] = [None] * N
+                    O["sample"][k] = [None for _ in range(N)]
                 O["sample"][k][i] = Os["sample"][k]
             for j,p in zip(range(len(Os["sample"]["particles"])),Os["sample"]["particles"]):
                 for k,v in p.items():
                     if k not in O_particles:
-                        O_particles[k] = [None] * N
-                    if O_particles[k][i] is None:
-                        O_particles[k][i] = []
+                        O_particles[k] = [[] for _ in range(N)]
                     O_particles[k][i].append(v)
-            N_particles_max = max([N_particles_max,len(Os["sample"]["particles"])])
+            N_particles_max = max([N_particles_max,N_particles])
             # Detector
             for k,v in Os["detector"].items():
                 if k not in O["detector"]:
@@ -66,14 +71,20 @@ class Propagator:
         # Make arrays for particle parameters
         for k,v in O_particles.items():
             s = [N,N_particles_max]
-            d = len(list(numpy.array(v).shape))
-            for id in range(2,d):
-                s.append(numpy.array(v).shape[id])
-            s = tuple(s)
-            A = numpy.zeros(shape=s,dtype=numpy.array(v[0]).dtype)
+            v0 = numpy.array(v[0])
+            s_item = list(v0.shape)
+            s_item.pop(0)
+            s = s + s_item
+            A = numpy.zeros(shape=s,dtype=v0.dtype)
             for i in range(len(v)):
-
-                A[i,:len(v[i])] = numpy.array(v[i])[:]
+                vi = numpy.array(v[i])
+                d = len(vi.shape)
+                if d == 1:
+                    A[i,:vi.shape[0]] = vi[:]
+                elif d == 2:
+                    A[i,:vi.shape[0],:] = vi[:,:]
+                elif d == 2:
+                    A[i,:vi.shape[0],:,:] = vi[:,:,:]
             O["sample"][k] = A 
         for k in O["source"].keys(): O["source"][k] = numpy.array(O["source"][k])
         for k in O["detector"].keys(): O["detector"][k] = numpy.array(O["detector"][k])
@@ -92,16 +103,13 @@ class Propagator:
         D_detector = self.detector.get_next()
 
         # Pull out variables
-        nx                  = D_detector["nx_binned"]
-        ny                  = D_detector["ny_binned"]
-        cx                  = D_detector["cx_binned"]
-        cy                  = D_detector["cy_binned"]
-        cx_unbinned         = D_detector["cx_unbinned"]
-        cy_unbinned         = D_detector["cy_unbinned"]
-        pixel_size          = D_detector["pixel_size_binned"]
-        pixel_size_unbinned = D_detector["pixel_size_unbinned"]
+        nx                  = D_detector["nx"]
+        ny                  = D_detector["ny"]
+        cx                  = D_detector["cx"]
+        cy                  = D_detector["cy"]
+        pixel_size          = D_detector["pixel_size"]
         detector_distance   = D_detector["distance"]
-        Omega_p             = D_detector["solid_angle_binned_pixel"]
+        Omega_p             = D_detector["solid_angle_pixel"]
         wavelength          = D_source["wavelength"]
         I_0                 = D_source["intensity_ph_m2"]
 
@@ -118,7 +126,7 @@ class Propagator:
             e0 = D_particle["euler_angle_0"]
             e1 = D_particle["euler_angle_1"]
             e2 = D_particle["euler_angle_2"]
-            if isinstance(p,SampleSpeciesSphere):
+            if isinstance(p,ParticleSpeciesSphere):
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
                                      euler_angle_0=0., euler_angle_1=0., euler_angle_2=0.)
@@ -129,7 +137,7 @@ class Propagator:
                 K = (F0*V*dn.real)**2
                 # Pattern
                 F = condortools.F_sphere_diffraction(K,q,R)
-            if isinstance(p,SampleSpeciesSpheroid):
+            if isinstance(p,ParticleSpeciesSpheroid):
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
                                      euler_angle_0=0., euler_angle_1=0., euler_angle_2=0.)
@@ -146,7 +154,7 @@ class Propagator:
                 theta = condortools.to_spheroid_theta(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
                 phi = condortools.to_spheroid_phi(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
                 F = condortools.F_spheroid_diffraction(K,qx,qy,a,c,theta,phi)
-            if isinstance(p,SampleSpeciesMap):
+            if isinstance(p,ParticleSpeciesMap):
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength,
                                      euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
@@ -155,8 +163,8 @@ class Propagator:
                 V = 4/3.*numpy.pi*R**3
                 K = (F0*V*dn.real)**2
                 # Generate map
-                dx_required  = self.detector.get_real_space_resolution_element(wavelength,cx_unbinned,cy_unbinned) / numpy.sqrt(2)
-                dx_suggested = self.detector.get_real_space_resolution_element_min(wavelength,cx_unbinned,cy_unbinned) / numpy.sqrt(2)
+                dx_required  = self.detector.get_real_space_resolution_element(wavelength,cx,cy) / numpy.sqrt(2)
+                dx_suggested = self.detector.get_real_space_resolution_element_min(wavelength,cx,cy) / numpy.sqrt(2)
                 map3d, dx = p.get_map3d(D_particle,dx_required,dx_suggested)
                 dn_map3d = numpy.array(map3d,dtype="complex128") * dn
                 if save_map:
@@ -174,13 +182,13 @@ class Propagator:
                 invalid_mask = (abs(qmap_shaped)>0.5)
                 if (invalid_mask).sum() > 0:
                     qmap_shaped[invalid_mask] = 0.
-                    logger.debug("%i invalid pixel positions." % invalid_mask.sum())
-                logger.debug("Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn_map3d.shape[0],dn_map3d.shape[1],dn_map3d.shape[2],len(list(dn_map3d.shape)),abs(dn_map3d).sum()))
+                    log(logger.debug,"%i invalid pixel positions." % invalid_mask.sum())
+                log(logger.debug,"Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn_map3d.shape[0],dn_map3d.shape[1],dn_map3d.shape[2],len(list(dn_map3d.shape)),abs(dn_map3d).sum()))
                 if (numpy.isfinite(dn_map3d)==False).sum() > 0:
-                    logger.warning("There are infinite values in the map3d of the object.")
-                logger.debug("Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (qmap_shaped.shape[0],qmap_shaped.shape[1],len(list(qmap_shaped.shape))))
+                    log(logger.warning,"There are infinite values in the map3d of the object.")
+                log(logger.debug,"Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (qmap_shaped.shape[0],qmap_shaped.shape[1],len(list(qmap_shaped.shape))))
                 if (numpy.isfinite(qmap_shaped)==False).sum() > 0:
-                    logger.warning("There are infinite values in the scattering vectors.")
+                    log(logger.warning,"There are infinite values in the scattering vectors.")
                 # NFFT
                 fourier_pattern = utils.nfft.nfft(dn_map3d,qmap_shaped)
                 # Check output - masking in case of invalid values
@@ -188,7 +196,7 @@ class Propagator:
                     fourier_pattern[numpy.any(invalid_mask)] = numpy.nan
                 # reshaping
                 fourier_pattern = numpy.reshape(fourier_pattern,(qmap_scaled.shape[0],qmap_scaled.shape[1]))
-                logger.debug("Got pattern of %i x %i pixels." % (fourier_pattern.shape[1],fourier_pattern.shape[0]))
+                log(logger.debug,"Got pattern of %i x %i pixels." % (fourier_pattern.shape[1],fourier_pattern.shape[0]))
                 F = F0 * fourier_pattern * dx**3
             F_singles.append(F)
 
@@ -212,13 +220,15 @@ class Propagator:
             for k in keys:
                 exec "if self._qmap_cache[\"%s\"] != %s: calculate = True" % (k,k)
         if calculate:
-            logger.info("Calculating qmap.")
+            log(logger.info,"Calculating qmap.")
             self._qmap_cache["qmap"] = generate_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength,
                                                      euler_angle_0=euler_angle_0,euler_angle_1=euler_angle_1,euler_angle_2=euler_angle_2)
             for k in keys:
                 exec "self._qmap_cache[\"%s\"] =  %s" % (k,k)
         return self._qmap_cache["qmap"]          
-
+    
+    # ------------------------------------------------------------------------------------------------
+    # Caching of map3d might be interesting to implement again in the future
     #def get_map3d(self, map3d, dx, dx_req):
     #    map3d = None
     #    if dx > dx_req:
@@ -261,8 +271,7 @@ class Propagator:
     #        self._dX_fine = self.dX_fine
     #        logger.debug("Using a newly interpolated map for propagtion.")
     #    return map3d
-
-
+    # ------------------------------------------------------------------------------------------------
 
 def generate_absqmap(nx,ny,cx,cy,pixel_size,detector_distance,wavelength):
     X,Y = numpy.meshgrid(numpy.arange(nx),

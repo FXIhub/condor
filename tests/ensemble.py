@@ -21,17 +21,11 @@ from python_tools import gentools
 
 numpy.random.seed(0)
 
-if len(sys.argv) < 2:
-    print "ERROR: Please specify a configuration file."
-    print "Usage: ./ensemble.py ensemble.conf"
-    exit(1)
-conf_fn = sys.argv[1]
-
 out_dir = os.path.abspath(os.path.dirname(__file__))+"/ensemble_out"
 os.system("mkdir -p %s" % out_dir)
-out_fn = out_dir + "/" + conf_fn[:-4] + "cxi"
+out_fn = out_dir + "/ensemble.cxi"
 
-I = condor.Input(conf_fn)
+I = condor.Input("ensemble.conf")
 
 O = condor.Output(I)
 

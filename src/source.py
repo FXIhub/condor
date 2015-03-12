@@ -10,12 +10,18 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
+import os
 import numpy
-import config,logging
-logger = logging.getLogger('Condor')
-from scipy import constants
+import config
 
+import scipy.constants as constants
 from variation import Variation
+import condortools
+
+import logging
+logger = logging.getLogger("Condor")
+import utils.log
+from utils.log import log 
 
 class Source:
     """
@@ -24,23 +30,21 @@ class Source:
 
     """
     def __init__(self,**kwargs):       
-        # Check for required keyword arguments
-        reqk = ["wavelength","focus_diameter","pulse_energy"]
-        for k in reqk:
-            if k not in kwargs.keys():
-                logger.error("Cannot initialize Source instance. %s is a necessary keyword." % k)
-                return
-        # Check for valid keyword arguments
-        allk = ["parent",
-                "wavelength","focus_diameter","pulse_energy","pulse_energy_mean",
-                "pulse_energy_variation","pulse_energy_spread","pulse_energy_variation_n"]
-        self._unproc_kws = [k for k in kwargs.keys() if k not in allk]
-        if len(self._unproc_kws) > 0:
-            print self._unproc_kws
-            logger.error("Source object initialisation failed due to illegal keyword arguments.")
-            return
+
+        # Check for valid set of keyword arguments
+        req_keys = ["wavelength","focus_diameter","pulse_energy"]
+        opt_keys = ["pulse_energy_variation","pulse_energy_spread","pulse_energy_variation_n"]
+        miss_keys,ill_keys = condortools.check_input(kwargs.keys(),req_keys,opt_keys)
+        if len(miss_keys) > 0: 
+            for k in miss_keys:
+                log(logger.error,"Cannot initialize Source instance. %s is a necessary keyword." % k)
+            exit(1)
+        if len(ill_keys) > 0:
+            for k in ill_keys:
+                log(logger.error,"Cannot initialize Source instance. %s is an illegal keyword." % k)
+            exit(1)
+
         # Start initialisation
-        self._parent = kwargs.get('parent',None)
         self.photon = Photon(wavelength=kwargs["wavelength"])
         self.focus_diameter = kwargs["focus_diameter"]
         if "pulse_energy" in kwargs:
@@ -51,7 +55,7 @@ class Source:
         self.set_pulse_energy_variation(variation=kwargs.get("pulse_energy_variation",None),
                                         spread=kwargs.get("pulse_energy_spread",None),
                                         n=kwargs.get("pulse_energy_variation_n",None))
-        logger.debug("Source configured")
+        log(logger.debug,"Source configured")
 
     def set_pulse_energy_variation(self,variation=None, spread=None, n=None):
         self._pulse_energy_variation = Variation(variation,spread,n,number_of_dimensions=1,name="pulse energy")
@@ -67,7 +71,7 @@ class Source:
         elif unit == "mJ/um2":
             I *= 1.E-9
         else:
-            logger.error("%s is not a valid unit." % unit)
+            log(logger.error,"%s is not a valid unit." % unit)
             return
         return I
 
@@ -86,13 +90,13 @@ class Source:
         # Non-random
         if self._pulse_energy_variation._mode in [None,"range"]:
             if p <= 0:
-                logger.error("Pulse energy smaller-equals zero. Change your configuration.")
+                log(logger.error,"Pulse energy smaller-equals zero. Change your configuration.")
             else:
                 self.pulse_energy = p
         # Random
         else:
             if p <= 0.:
-                logger.warning("Pulse energy smaller-equals zero. Try again.")
+                log(logger.warning,"Pulse energy smaller-equals zero. Try again.")
                 self._next_pulse_energy()
             else:
                 self.pulse_energy = p
@@ -105,7 +109,7 @@ class Photon:
         elif "energy" in kwarg.keys(): self.set_energy(kwarg["energy"],"J")
         elif "energy_eV" in kwarg.keys(): self.set_energy(kwarg["energy_eV"],"eV")
         else:
-            logger.error("Photon could not be initialized. It needs to be initialized with either the a given photon energy or the wavelength.")
+            log(logger.error,"Photon could not be initialized. It needs to be initialized with either the a given photon energy or the wavelength.")
             
     def get_energy(self,unit="J"):
         if unit == "J":
@@ -113,7 +117,7 @@ class Photon:
         elif unit == "eV":
             return self._energy/constants.e
         else:
-            logger.error("%s is not a valid energy unit." % unit)
+            log(logger.error,"%s is not a valid energy unit." % unit)
 
     def set_energy(self,energy,unit="J"):
         if unit == "J":
@@ -121,7 +125,7 @@ class Photon:
         elif unit == "eV":
             self._energy = energy*constants.e
         else:
-            logger.error("%s is not a valid energy unit." % unit)
+            log(logger.error,"%s is not a valid energy unit." % unit)
 
     def get_wavelength(self):
         return constants.c*constants.h/self._energy

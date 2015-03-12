@@ -18,7 +18,8 @@ sys.path.insert(0,os.path.join(this_dir, "utils"))
 
 import logging
 logger = logging.getLogger("Condor")
-#logger.setLevel("DEBUG")
+import utils.log
+from utils.log import log 
 
 # Initial configuration and importing Condor files
 import config
@@ -28,6 +29,7 @@ from source import Source
 from sample import Sample
 from detector import Detector
 from propagator import Propagator 
+import particle_species
 
 # Pythontools
 from python_tools import gentools,cxitools,imgtools
@@ -49,8 +51,21 @@ class Input:
         C = self.configuration.confDict
         self.source = Source(**C["source"])
         self.sample = Sample(**C["sample"])
-        for k in [k for k in C.keys() if "sample_species" in k]:
-            self.sample.add_species(**C[k])
+        for k in [k for k in C.keys() if "particle" in k]:
+            if "particle_species" not in C[k]:
+                log(logger.error,"No particle species defined for %s" % k)
+                exit(1)
+            t = C[k]["particle_species"]
+            if t == "uniform_sphere":
+                P = particle_species.ParticleSpeciesSphere(**C[k])
+            elif t == "uniform_spheroid":
+                P = particle_species.ParticleSpeciesSpheroid(**C[k])
+            elif t == "map3d":
+                P =  particle_species.ParticleSpeciesMap(**C[k])
+            else:
+                log(logger.error,"ParticleSpecies class for particle_species=%s is not implemented." % t)
+                exit(1)
+            self.sample.particle_species.append(P)        
         self.detector = Detector(**C["detector"])     
 
 class Output:
@@ -61,11 +76,11 @@ class Output:
     """
     def __init__(self,input):
         if not isinstance(input,Input):
-            logger.error("Illegal input. Argument has to be of instance Input.")
-            return
+            log(logger.error,"Illegal input. Argument has to be of instance Input.")
+            exit(1)
         self.input_object = input 
         self.propagator = Propagator(input.source,input.sample,input.detector)
-        logger.debug("Propagation started.")
+        log(logger.debug,"Propagation started.")
         t_start = time.time()
         self.outdict = self.propagator.propagate()
         # General variables
@@ -87,7 +102,7 @@ class Output:
         #        exec "self.%s = outdict[\"%s\"]" % (s,s)
         #self._intensities = {}
         t_stop = time.time()
-        logger.debug("Propagation finished (time = %f sec)",t_stop-t_start)
+        log(logger.debug,"Propagation finished (time = %f sec)" % (t_stop-t_start))
     
     def get_mask(self,i=0,output_bitmask=False):
         """
@@ -163,7 +178,7 @@ class Output:
 
     def write(self,filename="out.cxi",output="all"):
         if filename[-len(".cxi"):] != ".cxi":
-            logger.error("Illegal file format chosen.")    
+            log(logger.error,"Illegal file format chosen.")
             return
         allout = output == "all"
         W = cxitools.CXIWriter(filename,self.N,logger)
@@ -189,5 +204,3 @@ class Output:
             add(self.outdict,O,i)
             W.write(O,i=i)
         W.close()
-        
-        
