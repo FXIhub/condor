@@ -81,7 +81,7 @@ class Sample:
     def get_next(self):
         self._next_particles()
         O = {}
-        O["particle_types"] = []
+        #O["particle_types"] = []
         O["particles"] = []
         for p in self.particles:
             O["particles"].append(p.get_next())
