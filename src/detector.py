@@ -18,7 +18,6 @@ logger = logging.getLogger("Condor")
 
 import condortools
 from variation import Variation
-from spimage import PixelMask
 
 from python_tools import gentools,cxitools,imgtools
 
@@ -26,7 +25,7 @@ import logging
 logger = logging.getLogger("Condor")
 import utils.log
 from utils.log import log 
-
+from utils.pixelmask import PixelMask
 
 class Detector:
     """
@@ -62,7 +61,7 @@ class Detector:
         OR:
         - mask_CXI_bitmask: bool wheter or not data is stored as a CXI bitmask. [False]
           + False: pixels with value 0 are invalid, pixels with value 1 are valid.
-          + True: (pixels & spimage.PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0 are the valid pixels
+          + True: (pixels & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0 are the valid pixels
         
           EITHER
           - mask: 2d mask array. In the array 1 stands for valid pixel and 0 for an invalid pixel.
