@@ -16,7 +16,6 @@ import scipy.stats
 if "utils" not in sys.path: sys.path.append("utils")
 import condortools
 from variation import Variation
-import particle
 
 import logging
 logger = logging.getLogger("Condor")
