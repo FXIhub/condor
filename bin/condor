@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+import argparse
+import condor
+import condor.utils
+from condor.utils.log import log
+import logging
+logger = logging.getLogger("Condor")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('-v','--verbose',dest='verbose', action='store_true',help='Verbose mode',default=False)
+    parser.add_argument('-d','--debug',dest='debug', action='store_true',help='Debugging mode (even more output than in verbose mode)',default=False)
+    parser.add_argument('-s','--seed',dest='seed', action='store_true',help='Seed random number generator before simulation',default=False)
+    parser.add_argument('configfile',nargs="?",type=str,help='Configuration file to load')
+    args = parser.parse_args()
+    if not args.configfile:
+        parser.error("No configuration file given.")
+    if args.verbose:
+        logger.setLevel("INFO")
+    if args.debug:
+        logger.setLevel("DEBUG")
+    if args.seed:
+        numpy.random.seed(0)
+    I = condor.Input(args.configfile)
+    O = condor.Output(I)
+    out_fn = args.configfile.split("/")[-1].split(".")[0] + ".cxi"
+    log(logger.info,"Writing output to %s" % out_fn)
+    O.write(out_fn,output="all")

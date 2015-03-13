@@ -63,6 +63,7 @@ setup(name='condor',
       package_dir={"condor":"src"},
       packages=['condor', 'condor.utils', "condor.utils.python_tools"],
       package_data={'condor':['data/*']},
+      scripts=['bin/condor'],
       ext_modules=[Extension("condor.utils.icosahedron", sources=["src/utils/icosahedron/icosahedronmodule.c"]),
                    Extension("condor.utils.nfft", sources=["src/utils/nfft/nfftmodule.c"], libraries=["nfft3"])],
       include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs()

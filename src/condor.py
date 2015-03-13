@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # ----------------------------------------------------------------------------------------------------- 
 # CONDOR 
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
@@ -18,10 +19,11 @@ sys.path.insert(0,os.path.join(this_dir, "utils"))
 
 import logging
 logger = logging.getLogger("Condor")
+import utils
 import utils.log
 from utils.log import log 
 
-# Initial configuration and importing Condor files
+# Initial configuration and importing Condor modules
 import config
 config.init_configuration()
 import imgutils,condortools
@@ -204,3 +206,5 @@ class Output:
             add(self.outdict,O,i)
             W.write(O,i=i)
         W.close()
+
+
