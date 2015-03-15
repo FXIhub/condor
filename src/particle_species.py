@@ -376,6 +376,9 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
                 # default is a map of zeros
                 N = int(numpy.ceil(O["diameter"]/self._old_map3d_dx))
                 self._old_map3d = numpy.zeros(shape=(N,N,N),dtype="float64")
+        else:
+            log(logger.error,"Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
+            exit(1)
 
     def _put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")
