@@ -82,7 +82,7 @@ class Source:
         self._next_pulse_energy()
         return {"pulse_energy":self.pulse_energy,
                 "wavelength":self.photon.get_wavelength(),
-                "intensity":self.get_intensity(),
+                "intensity":self.get_intensity("J/m2"),
                 "intensity_ph_m2":self.get_intensity("ph/m2")}
 
     def _next_pulse_energy(self):
