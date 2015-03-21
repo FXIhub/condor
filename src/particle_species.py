@@ -129,8 +129,8 @@ class AbstractParticleSpecies:
                 log(logger.error,"Conflict of arguments: Specified random_euler_angle_0 alignment and also specified a specific euler_angle_0 = %f. This does not make sense." % self._euler_angle_0)
                 exit(1)
             euler_angle_0 = numpy.random.uniform(0,2*numpy.pi)
-            euler_angle_1 = self._euler_angle_1
-            euler_angle_2 = self._euler_angle_2
+            euler_angle_1 = self._euler_angle_1 if self._euler_angle_1 is not None else 0.
+            euler_angle_2 = self._euler_angle_2 if self._euler_angle_2 is not None else 0.
         return euler_angle_0,euler_angle_1,euler_angle_2
 
     def set_diameter_variation(self,diameter_variation=None,diameter_spread=None,diameter_variation_n=None,**kwargs):
