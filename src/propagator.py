@@ -208,11 +208,26 @@ class Propagator:
         for D_particle,F in zip(D_sample["particles"],F_singles):
             v = D_particle["position"]
             F_tot = F_tot + F * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
-        I_tot = self.detector.detect_photons(abs(F_tot)**2)
-        M_tot = self.detector.get_mask(I_tot,False)
-        M_tot_bitmask = self.detector.get_mask(I_tot,True)
+        I_tot, M_tot, IXxX_tot, MXxX_tot = self.detector.detect_photons(abs(F_tot)**2)
+        M_tot_binary = M_tot == 0
+        MXxX_tot_binary = None if MXxX_tot is None else (MXxX_tot == 0)
+        
+        O = {}
+        O["source"]            = D_source
+        O["sample"]            = D_sample
+        O["detector"]          = D_detector
 
-        return {"fourier_pattern":F_tot,"intensity_pattern":I_tot,"mask_binary":M_tot,"mask":M_tot_bitmask,"source":D_source,"sample":D_sample,"detector":D_detector}
+        O["fourier_pattern"]   = F_tot
+        O["intensity_pattern"] = I_tot
+        O["mask_binary"]       = M_tot_binary
+        O["mask"]              = M_tot
+
+        if self.detector.downsampling is not None:
+            O["intensity_pattern_XxX"] = IXxX_tot
+            O["mask_XxX"]              = MXxX_tot
+            O["mask_XxX_binary"]       = MXxX_tot_binary
+
+        return O
         
     def get_qmap(self, nx, ny, cx, cy, pixel_size, detector_distance, wavelength, euler_angle_0, euler_angle_1, euler_angle_2):
         calculate = False

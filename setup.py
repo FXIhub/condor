@@ -46,7 +46,7 @@ print 'Clean up data directory'
 os.system("mkdir -p ./src/data/")
 
 # Copy default configuration file there
-print 'Link default configuration file'
+print 'Copy default configuration file'
 os.system("cp ./default.conf ./src/data/default.conf")
 
 # Scattering factors from the Henke tables and atomic masses 

@@ -77,7 +77,7 @@ class Detector:
                     "center_variation","center_spread_x","center_spread_y","center_variation_n","center_spread_limit",
                     "saturation_level",
                     "mask","mask_filename","mask_dataset",
-                    "nx","ny"]
+                    "nx","ny","downsampling"]
         miss_keys,ill_keys = condortools.check_input(kwargs.keys(),req_keys,opt_keys)
         if len(miss_keys) > 0: 
             for k in miss_keys:
@@ -122,6 +122,7 @@ class Detector:
                            cx_hole=kwargs.get("cx_hole","middle"),cy_hole=kwargs.get("cy_hole","middle"))
         self.cx_mean = kwargs.get("cx","middle")
         self.cy_mean = kwargs.get("cy","middle")
+        self.downsampling = kwargs.get("downsampling",None)
 
     def set_noise(self, noise, noise_spread, noise_variation_n):
         self._noise = Variation(noise,noise_spread,noise_variation_n,number_of_dimensions=1,name="noise")
@@ -140,7 +141,7 @@ class Detector:
         Keyword arguments (if not given variable is set to default value):
         
         EITHER
-        - mask: array that defines the mask (0: masked out, 1: not masked out)
+        - mask: array that defines the mask (CXI bitmask, uint16)
         
         OR:
         - nx: horizontal dimension of the mask (inside the mask, without counting any gaps)
@@ -155,7 +156,7 @@ class Detector:
 
         # init mask array
         if kwargs.get('mask',None) != None: 
-            self._mask = kwargs['mask']
+            self._mask = numpy.array(kwargs['mask'],dtype=numpy.uint16)
             self._nx = self._mask.shape[1]
             self._ny = self._mask.shape[0]
         elif 'nx' in kwargs and 'ny' in kwargs:
@@ -169,7 +170,7 @@ class Detector:
             if 'y_gap_size_in_pixel' in kwargs: 
                 y_gap = kwargs['y_gap_size_in_pixel']
                 Nx += y_gap
-            self._mask = numpy.ones(shape=(Ny,Nx))
+            self._mask = numpy.zeros(shape=(Ny,Nx),dtype=numpy.uint16)
         else:
             log(logger.error,"Either \'mask_array\' or \'nx\' and \'ny\' have to be specified.")
             return 
@@ -180,11 +181,11 @@ class Detector:
         if 'x_gap_size_in_pixel' in kwargs:
             if kwargs['x_gap_size_in_pixel'] != 0:
                 cy = numpy.ceil((self._ny-1)/2.)
-                self._mask[cy-kwargs['x_gap_size_in_pixel']/2:cy-kwargs['x_gap_size_in_pixel']/2+kwargs['x_gap_size_in_pixel'],:] = 0
+                self._mask[cy-kwargs['x_gap_size_in_pixel']/2:cy-kwargs['x_gap_size_in_pixel']/2+kwargs['x_gap_size_in_pixel'],:] |= PixelMask.PIXEL_IS_MISSING
         if 'y_gap_size_in_pixel' in kwargs:
             if kwargs['y_gap_size_in_pixel'] != 0:
                 cx = numpy.ceil((self._nx-1)/2.)
-                self._mask[:,cx-kwargs['y_gap_size_in_pixel']/2:cx-kwargs['y_gap_size_in_pixel']/2+kwargs['y_gap_size_in_pixel']] = 0
+                self._mask[:,cx-kwargs['y_gap_size_in_pixel']/2:cx-kwargs['y_gap_size_in_pixel']/2+kwargs['y_gap_size_in_pixel']] |= PixelMask.PIXEL_IS_MISSING
         if 'hole_diameter_in_pixel' in kwargs:
             if kwargs['hole_diameter_in_pixel'] != 0:
                 cx_hole = kwargs.get("cx_hole","middle")
@@ -198,18 +199,17 @@ class Detector:
                 X = X-cx_hole
                 Y = Y-cy_hole
                 R = numpy.sqrt(X**2 + Y**2)
-                self._mask[R<=kwargs['hole_diameter_in_pixel']/2.0] = 0
+                self._mask[R<=kwargs['hole_diameter_in_pixel']/2.0] |= PixelMask.PIXEL_IS_MISSING
         
 
-    def get_mask(self,intensities,output_bitmask=False):
+    def get_mask(self,intensities,output_bitmask=True):
         if output_bitmask:
             return self.get_bitmask(intensities)
         else:
             return numpy.array(self.get_bitmask(intensities) == 0,dtype="bool")
     
     def get_bitmask(self,intensities):
-        M = numpy.zeros(shape=(self._ny,self._nx),dtype="uint16")
-        M[self._mask == 0] |= PixelMask.PIXEL_IS_MISSING
+        M = self._mask.copy()
         if self.saturation_level is not None:
             M[intensities >= self.saturation_level] |= PixelMask.PIXEL_IS_SATURATED
         return M
@@ -245,6 +245,9 @@ class Detector:
         O["ny"] = self._ny
         O["pixel_size"] = self.pixel_size
         O["distance"] = self.distance
+        if self.downsampling is not None:
+            O["cx_XxX"] = condortools.downsample_pos(cx_now,self._nx,self.downsampling)
+            O["cy_XxX"] = condortools.downsample_pos(cy_now,self._ny,self.downsampling)
         return O
 
     def get_minimum_center_edge_distance(self,cx,cy):
@@ -307,5 +310,11 @@ class Detector:
             temp = I_det > self.saturation_level
             if temp.sum() > 0:
                 I_det[temp] = self.saturation_level
-        return I_det
-
+        M_det = self.get_bitmask(I_det)
+        if self.downsampling is not None:
+            IXxX_det, MXxX_det = condortools.downsample(I_det,self.downsampling,mode="integrate",
+                                                        mask2d0=M_det,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
+        else:
+            IXxX_det = None
+            MXxX_det = None
+        return I_det, M_det, IXxX_det, MXxX_det
