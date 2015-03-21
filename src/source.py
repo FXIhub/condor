@@ -66,9 +66,7 @@ class Source:
         # 1) Radially symmetric profile that is invariant along the beam axis within the sample volume
         # 2) The variation of intensity are on much larger scale than the dimension of the particle size (i.e. flat wavefront)
         r = numpy.sqrt(position[1]**2 + position[2]**2)
-        print r
         I = (self.get_profile())(r) * self.pulse_energy
-        print I, (self.pulse_energy/(numpy.pi*(self.focus_diameter/2)**2))
         if unit == "J/m2":
             pass
         elif unit == "ph/m2":
