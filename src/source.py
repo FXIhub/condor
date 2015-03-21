@@ -101,12 +101,10 @@ class Source:
             # focus diameter is FWHM of lorentzian
             sigma = self.focus_diameter / 2.
             p = lambda r: condortools.pseudo_lorentzian_2dnorm(r, sigma)
-            print "lorentz: p(0)",p(0)
         elif self._profile_model == "gaussian":
             # focus diameter is FWHM of gaussian
             sigma = self.focus_diameter / (2.*numpy.sqrt(2.*numpy.log(2.)))
             p = lambda r: condortools.gaussian_2dnorm(r, sigma)
-            print "gaussian: p(0)",p(0)
         return p
     
     def get_next(self):
