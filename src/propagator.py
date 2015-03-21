@@ -111,18 +111,21 @@ class Propagator:
         detector_distance   = D_detector["distance"]
         Omega_p             = D_detector["solid_angle_pixel"]
         wavelength          = D_source["wavelength"]
-        I_0                 = D_source["intensity_ph_m2"]
-
-        # Calculate primary wave amplitude
-        # F0 = sqrt(I_0 Omega_p) 2pi/wavelength^2
-        F0 = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2
-        D_sample["F0"] = F0
 
         F_singles = []
         # Calculate patterns of all single particles individually
         for D_particle in D_sample["particles"]:
             p  = D_particle["_class_instance"]
+            # Intensity at interaction point
+            pos  = D_particle["position"]
+            I_0  = self.source.get_intensity(pos,"ph/m2")
+            # Calculate primary wave amplitude
+            # F0 = sqrt(I_0 Omega_p) 2pi/wavelength^2
+            F0 = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2
+            D_particle["F0"] = F0
+            # Refractive index
             dn = p.material.get_dn(wavelength)
+            # 3D Orientation
             e0 = D_particle["euler_angle_0"]
             e1 = D_particle["euler_angle_1"]
             e2 = D_particle["euler_angle_2"]

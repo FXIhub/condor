@@ -405,3 +405,22 @@ def check_input(keys,req_keys,opt_keys):
     all_keys = req_keys + opt_keys
     illegal_keys = [k for k in keys if k not in all_keys]
     return missing_keys,illegal_keys
+
+
+gaussian = lambda x, sigma: numpy.exp(-x**2/(2*sigma**2))
+
+gaussian_2dnorm = lambda x, sigma: gaussian(x, sigma) / ( 2 * numpy.pi * sigma**2 )
+
+
+lorentzian = lambda x, sigma: sigma**2 / (x**2 + sigma**2)
+
+
+_pseudo_lorenzian_A1 = 0.74447313315648778 
+_pseudo_lorenzian_A2 = 0.22788162774723308
+_pseudo_lorenzian_s1 = 0.73985516665883544
+_pseudo_lorenzian_s2 = 2.5588165723260907
+pseudo_lorentzian = lambda x, sigma: _pseudo_lorenzian_A1 * gaussian(x, _pseudo_lorenzian_s1*sigma) + \
+                                     _pseudo_lorenzian_A2 * gaussian(x, _pseudo_lorenzian_s2*sigma)
+
+pseudo_lorentzian_2dnorm = lambda x, sigma: pseudo_lorentzian(x, sigma) / ( 2. * numpy.pi * ( _pseudo_lorenzian_A1 * (_pseudo_lorenzian_s1*sigma)**2 + \
+                                                                                              _pseudo_lorenzian_A2 * (_pseudo_lorenzian_s2*sigma)**2 ) )

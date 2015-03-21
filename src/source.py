@@ -32,8 +32,8 @@ class Source:
     def __init__(self,**kwargs):       
 
         # Check for valid set of keyword arguments
-        req_keys = ["wavelength","focus_diameter","pulse_energy"]
-        opt_keys = ["pulse_energy_variation","pulse_energy_spread","pulse_energy_variation_n"]
+        req_keys = ["wavelength", "focus_diameter", "pulse_energy"]
+        opt_keys = ["pulse_energy_variation", "pulse_energy_spread", "pulse_energy_variation_n", "profile_model"]
         miss_keys,ill_keys = condortools.check_input(kwargs.keys(),req_keys,opt_keys)
         if len(miss_keys) > 0: 
             for k in miss_keys:
@@ -55,13 +55,20 @@ class Source:
         self.set_pulse_energy_variation(variation=kwargs.get("pulse_energy_variation",None),
                                         spread=kwargs.get("pulse_energy_spread",None),
                                         n=kwargs.get("pulse_energy_variation_n",None))
+        self.set_profile(profile_model=kwargs.get("profile_model",None))
         log(logger.debug,"Source configured")
 
     def set_pulse_energy_variation(self,variation=None, spread=None, n=None):
         self._pulse_energy_variation = Variation(variation,spread,n,number_of_dimensions=1,name="pulse energy")
 
-    def get_intensity(self,unit="ph/m2"):
-        I = self.pulse_energy / self.get_area()
+    def get_intensity(self,position,unit="ph/m2"):
+        # Assuming
+        # 1) Radially symmetric profile that is invariant along the beam axis within the sample volume
+        # 2) The variation of intensity are on much larger scale than the dimension of the particle size (i.e. flat wavefront)
+        r = numpy.sqrt(position[1]**2 + position[2]**2)
+        print r
+        I = (self.get_profile())(r) * self.pulse_energy
+        print I, (self.pulse_energy/(numpy.pi*(self.focus_diameter/2)**2))
         if unit == "J/m2":
             pass
         elif unit == "ph/m2":
@@ -75,15 +82,39 @@ class Source:
             return
         return I
 
-    def get_area(self):
-        return numpy.pi*(self.focus_diameter/2.0)**2
+    #def get_area(self):
+    #    return numpy.pi*(self.focus_diameter/2.0)**2
 
+    def set_profile(self,profile_model):
+        if profile_model is None or profile_model in ["top_hat","pseudo_lorentzian","gaussian"]:
+            self._profile_model = profile_model
+        else:
+            log(logger.error,"Pulse profile model %s is not implemented. Change your configuration and try again.")
+            exit(1)            
+            
+    def get_profile(self):
+        if self._profile_model is None:
+            # we always hit with full power
+            p = lambda r: 1. / (numpy.pi * (self.focus_diameter / 2.)**2)
+        elif self._profile_model == "top_hat":
+            # focus diameter is diameter of top hat profile
+            p = lambda r: (1.  / (numpy.pi * (self.focus_diameter / 2.)**2)) if r < (self.focus_diameter / 2.) else 0.
+        elif self._profile_model == "pseudo_lorentzian":
+            # focus diameter is FWHM of lorentzian
+            sigma = self.focus_diameter / 2.
+            p = lambda r: condortools.pseudo_lorentzian_2dnorm(r, sigma)
+            print "lorentz: p(0)",p(0)
+        elif self._profile_model == "gaussian":
+            # focus diameter is FWHM of gaussian
+            sigma = self.focus_diameter / (2.*numpy.sqrt(2.*numpy.log(2.)))
+            p = lambda r: condortools.gaussian_2dnorm(r, sigma)
+            print "gaussian: p(0)",p(0)
+        return p
+    
     def get_next(self):
         self._next_pulse_energy()
         return {"pulse_energy":self.pulse_energy,
-                "wavelength":self.photon.get_wavelength(),
-                "intensity":self.get_intensity("J/m2"),
-                "intensity_ph_m2":self.get_intensity("ph/m2")}
+                "wavelength":self.photon.get_wavelength()}
 
     def _next_pulse_energy(self):
         p = self._pulse_energy_variation.get(self.pulse_energy_mean)
