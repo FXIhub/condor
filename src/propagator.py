@@ -41,7 +41,7 @@ class Propagator:
             Os = self._propagate_single(**kwargs)
 
             N_particles = len(Os["sample"]["particles"])
-            print "%i/%i (%i particles)" % (i+1,N,N_particles)
+            print "%i/%i (%i particle%s)" % (i+1,N,N_particles,"s" if N_particles > 1 else "")
 
             for k in [k for k in Os.keys() if k not in ["source","sample","detector"]]:
                 if k not in O:
