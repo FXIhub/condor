@@ -390,25 +390,26 @@ def dict_to_dict(dict_src,dict_dest):
 def read_configfile(configfile):
     import ConfigParser
     config = ConfigParser.ConfigParser()
-
     with open(configfile,"r") as f:
         config.readfp(f)
         confDict = {}
         for section in config.sections(): 
-            c = confDict[section] = dict(config.items(section))
-            for key in c.keys():
-                c[key] = estimate_type(c[key])
-                if isinstance(c[key],str):
-                    if "[" == c[key][0] and "]" == c[key][-1]:
-                        c[key] = c[key][1:-1].split(",")
-                        c[key] = [v for v in c[key] if len(v) > 0]
-                        for i in range(len(c[key])):
-                            c[key][i] = estimate_type(c[key][i]) 
-                            if '$' in c[key]:
-                                c[key][i] = os.path.expandvars(c[key][i])
+            confDict[section] = {}
+            c = config.items(section)
+            for (key,value) in c:
+                v = estimate_type(value)
+                if isinstance(v,str):
+                    if "[" == v[0] and "]" == v[-1]:
+                        v = v[1:-1].split(",")
+                        v = [w for w in v if len(w) > 0]
+                        for i in range(len(v)):
+                            if '$' in v[i]:
+                                v[i] = os.path.expandvars(v[i])
+                            v[i] = estimate_type(v[i]) 
                     else:
-                        if '$' in c[key]:
-                            c[key] = os.path.expandvars(c[key])
+                        if '$' in v:
+                            v = os.path.expandvars(v)
+                confDict[section][key] = v
     return confDict
 
 class Configuration:

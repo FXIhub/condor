@@ -11,6 +11,7 @@
 # ----------------------------------------------------------------------------------------------------- 
 
 import sys,os
+import h5py
 sys.path.append("utils")
 import numpy
 import logging
@@ -47,8 +48,10 @@ class Detector:
         - center_spread_x: If \'normal\', \'uniform\' or \'range\' center variation is specified spread defines width of the distribution in x.
         - center_spread_y: If \'normal\', \'uniform\' or \'range\' center variation is specified spread defines width of the distribution in y.
         - center_variation_n: I \'range\' center variation is specified this argument specifies the number of samples within the specified range.
-        - noise: Noise that is put on the intensities when read. Either None, \'poisson\', \'normal\', \'uniform\' or \'normal_poisson\'. [None]
+        - noise: Noise that is put on the intensities when read. Either None, \'poisson\', \'normal\', \'uniform\' or \'normal_poisson or \'file\' or \'file_poisson\''. [None]
         - noise_spread: If \'normal\', \'uniform\' or \'normal_poisson\' noise is specified spread defines width of gaussian/uniform distribution.
+        - noise_filename: If \'file\' or \'file_poisson\' noise is specified this HDF5 file contains the dataset that is added to an image.
+        - noise_dataset:  If \'file\' or \'file_poisson\' noise is specified this HDF5 file dataset contains the signal that is added to a diffraction image. If the dataset has 3 dimensions a random frame (i.e. dataset[i_random,:,:]) is picked for every read out.
         - saturation_level: Value at which detector pixels satutrate. [None]
 
         EITHER (default):
@@ -74,6 +77,7 @@ class Detector:
         req_keys = ["distance","pixel_size","cx","cy"]
         opt_keys = ["x_gap_size_in_pixel","y_gap_size_in_pixel","hole_diameter_in_pixel",
                     "noise","noise_spread","noise_variation_n",
+                    "noise_filename","noise_dataset",
                     "center_variation","center_spread_x","center_spread_y","center_variation_n","center_spread_limit",
                     "saturation_level",
                     "mask","mask_filename","mask_dataset",
@@ -96,7 +100,9 @@ class Detector:
         hd = kwargs["hole_diameter_in_pixel"]
         self.set_noise(noise=kwargs["noise"],
                        noise_spread=kwargs.get("noise_spread",None),
-                       noise_variation_n=kwargs.get("noise_variation_n",None))
+                       noise_variation_n=kwargs.get("noise_variation_n",None),
+                       noise_filename=kwargs.get("noise_filename",None),
+                       noise_dataset=kwargs.get("noise_dataset",None))
         self.set_center_variation(center_variation=kwargs["center_variation"],
                                   center_spread_x=kwargs["center_spread_x"],
                                   center_spread_y=kwargs["center_spread_y"],
@@ -108,8 +114,8 @@ class Detector:
                 M = kwargs["mask"]
             else:
                 with h5py.File(kwargs["mask_filename"],"r") as f:
-                    M = f["mask_dataset"][:]
-            if kwargs.get("mask_CXI_bitmask",False): M = (M & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0
+                    M = f[kwargs["mask_dataset"]][:,:]
+            if not kwargs.get("mask_CXI_bitmask",True): M = (M & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0
             self.init_mask(mask=M)
         else:
             reqk = ["nx","ny"]
@@ -124,8 +130,15 @@ class Detector:
         self.cy_mean = kwargs.get("cy","middle")
         self.downsampling = kwargs.get("downsampling",None)
 
-    def set_noise(self, noise, noise_spread, noise_variation_n):
-        self._noise = Variation(noise,noise_spread,noise_variation_n,number_of_dimensions=1,name="noise")
+    def set_noise(self, noise, noise_spread, noise_variation_n, noise_filename, noise_dataset):
+        if noise in ["file","file_poisson"]:
+            self._noise_filename = noise_filename
+            self._noise_dataset = noise_dataset
+            self._noise = Variation("poisson" if noise == "file_poisson" else None,noise_spread,noise_variation_n,number_of_dimensions=1,name="noise")
+        else:
+            self._noise_filename = None
+            self._noise_dataset = None
+            self._noise = Variation(noise,noise_spread,noise_variation_n,number_of_dimensions=1,name="noise")
 
     def set_center_variation(self, center_variation, center_spread_x, center_spread_y, center_variation_n, center_spread_limit):
         self._center_variation = Variation(center_variation,[center_spread_y,center_spread_x],center_variation_n,number_of_dimensions=2,name="center position")
@@ -246,8 +259,8 @@ class Detector:
         O["pixel_size"] = self.pixel_size
         O["distance"] = self.distance
         if self.downsampling is not None:
-            O["cx_XxX"] = condortools.downsample_pos(cx_now,self._nx,self.downsampling)
-            O["cy_XxX"] = condortools.downsample_pos(cy_now,self._ny,self.downsampling)
+            O["cx_xxx"] = condortools.downsample_pos(cx_now,self._nx,self.downsampling)
+            O["cy_xxx"] = condortools.downsample_pos(cy_now,self._ny,self.downsampling)
         return O
 
     def get_minimum_center_edge_distance(self,cx,cy):
@@ -306,10 +319,15 @@ class Detector:
 
     def detect_photons(self,I):
         I_det = self._noise.get(I)
+        if self._noise_filename is not None:
+            with h5py.File(self._noise_filename,"r") as f:
+                ds = f[self._noise_dataset]
+                if len(list(ds.shape)) == 2:
+                    bg = ds[:,:]
+                else:
+                    bg = ds[numpy.random.randint(ds.shape[0]),:,:]
         if self.saturation_level is not None:
-            temp = I_det > self.saturation_level
-            if temp.sum() > 0:
-                I_det[temp] = self.saturation_level
+            I_det = numpy.clip(I_det, -numpy.inf, self.saturation_level)
         M_det = self.get_bitmask(I_det)
         if self.downsampling is not None:
             IXxX_det, MXxX_det = condortools.downsample(I_det,self.downsampling,mode="integrate",

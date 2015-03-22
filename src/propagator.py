@@ -223,9 +223,9 @@ class Propagator:
         O["mask"]              = M_tot
 
         if self.detector.downsampling is not None:
-            O["intensity_pattern_XxX"] = IXxX_tot
-            O["mask_XxX"]              = MXxX_tot
-            O["mask_XxX_binary"]       = MXxX_tot_binary
+            O["intensity_pattern_xxx"] = IXxX_tot
+            O["mask_xxx"]              = MXxX_tot
+            O["mask_xxx_binary"]       = MXxX_tot_binary
 
         return O
         
