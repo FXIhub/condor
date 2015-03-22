@@ -4,7 +4,7 @@ logger = logging.getLogger('Condor')
 
 class Variation:
     def __init__(self,mode=None,spread=None,n=None,number_of_dimensions=1,name=""):
-        self.name = ""
+        self.name = name
         self._number_of_dimensions = number_of_dimensions
         self.set_mode(mode,spread,n)
         self.reset_counter()
