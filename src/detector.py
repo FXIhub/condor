@@ -326,6 +326,7 @@ class Detector:
                     bg = ds[:,:]
                 else:
                     bg = ds[numpy.random.randint(ds.shape[0]),:,:]
+            I_det = I_det + bg
         if self.saturation_level is not None:
             I_det = numpy.clip(I_det, -numpy.inf, self.saturation_level)
         M_det = self.get_bitmask(I_det)

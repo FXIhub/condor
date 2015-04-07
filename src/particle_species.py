@@ -275,13 +275,13 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
 
     def set_geometry_variation(self, geometry, geometry_concentrations):
         self._geometry = list(geometry)
-        self._geometry_concentrations = list(geometry_concentrations)
+        self._geometry_concentrations = numpy.array(geometry_concentrations) / numpy.array(geometry_concentrations).sum()
         
     def _get_next_geometry(self):
         if len(self._geometry) == 1:
             return self._geometry[0]
         else:
-            dist = scipy.stats.rv_discrete(name='geometry distribution', values=(range(len(self._geometry)), self._geometry_concentrations))
+            dist = scipy.stats.rv_discrete(values=(numpy.arange(len(self._geometry)), self._geometry_concentrations))
             return self._geometry[dist.rvs()]
 
     def set_flattening_variation(self,flattening_variation=None,flattening_spread=None,flattening_variation_n=None,**kwargs):

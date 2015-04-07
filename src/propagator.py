@@ -16,6 +16,7 @@ import logging
 logger = logging.getLogger("Condor")
 import utils.log
 from utils.log import log 
+from utils.pixelmask import PixelMask
 
 import utils
 import condortools
@@ -209,6 +210,9 @@ class Propagator:
             v = D_particle["position"]
             F_tot = F_tot + F * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
         I_tot, M_tot, IXxX_tot, MXxX_tot = self.detector.detect_photons(abs(F_tot)**2)
+        if self.detector.downsampling is not None:
+            FXxX_tot, MXxX_tot = condortools.downsample(F_tot,self.detector.downsampling,mode="integrate",
+                                                        mask2d0=M_tot,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
         M_tot_binary = M_tot == 0
         MXxX_tot_binary = None if MXxX_tot is None else (MXxX_tot == 0)
         
@@ -223,6 +227,7 @@ class Propagator:
         O["mask"]              = M_tot
 
         if self.detector.downsampling is not None:
+            O["fourier_pattern_xxx"]   = FXxX_tot
             O["intensity_pattern_xxx"] = IXxX_tot
             O["mask_xxx"]              = MXxX_tot
             O["mask_xxx_binary"]       = MXxX_tot_binary
