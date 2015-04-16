@@ -63,7 +63,9 @@ class Input:
             elif t == "uniform_spheroid":
                 P = particle_species.ParticleSpeciesSpheroid(**C[k])
             elif t == "map3d":
-                P =  particle_species.ParticleSpeciesMap(**C[k])
+                P = particle_species.ParticleSpeciesMap(**C[k])
+            elif t == "molecule":
+                P = particle_species.ParticleSpeciesMolecule(**C[k])
             else:
                 log(logger.error,"ParticleSpecies class for particle_species=%s is not implemented." % t)
                 exit(1)

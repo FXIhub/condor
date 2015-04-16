@@ -11,6 +11,7 @@
 # ----------------------------------------------------------------------------------------------------- 
 
 import sys,os
+import tempfile
 import numpy
 import scipy.stats
 
@@ -27,7 +28,6 @@ from utils.log import log
 
 class AbstractParticleSpecies:
     def __init__(self,**kwargs):
-
         # Check for valid set of keyword arguments
         self.req_keys += ["particle_species","alignment","euler_angle_0","euler_angle_1","euler_angle_2","diameter","position","concentration"]
         cel_keys = ["c"+k for k in config.DICT_atomic_number.keys()]
@@ -37,14 +37,12 @@ class AbstractParticleSpecies:
                           "massdensity","material_type"] + cel_keys
         
         # Check input
-        miss_keys,ill_keys = condortools.check_input(kwargs.keys(),self.req_keys,self.opt_keys)
+        miss_keys,ill_keys = condortools.check_input(kwargs.keys(),self.req_keys,self.opt_keys,verbose=True)
         if len(miss_keys) > 0: 
-            for k in miss_keys:
-                log(logger.error,"Cannot initialize ParticleSpeciesSphere instance. %s is a necessary keyword." % k)
+            log(logger.error,"Cannot initialize %s because of missing keyword arguments." % self.__class__.__name__)
             exit(1)
         if len(ill_keys) > 0:
-            for k in ill_keys:
-                log(logger.error,"Cannot initialize ParticleSpeciesSphere instance. %s is an illegal keyword." % k)
+            log(logger.error,"Cannot initialize %s instance because of illegal keyword arguments." % self.__class__.__name__)
             exit(1)
 
         # Start initialisation
@@ -547,3 +545,53 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
     #                f.close()
     #    else:
     #        logger.error("Invalid filename extension, has to be \'.h5\'.")
+
+class ParticleSpeciesMolecule(AbstractParticleSpecies):
+    def __init__(self,**kwargs):
+        try:
+            import spsim
+        except:
+            log(logger.error,"Cannot import spsim module. This module is necessary to simulate diffraction for particle species \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
+            return
+        # Check for valid set of keyword arguments
+        self.req_keys = [["pdb_filename",["atomic_position","atomic_number"]]]
+        self.opt_keys = []
+        # Start initialisation
+        AbstractParticleSpecies.__init__(self,**kwargs)
+        self.atomic_positions  = None
+        self.atomic_numbers    = None
+        self.pbd_filename      = None
+        if "pdb_filename" in kwargs:
+            self.pdb_filename = kwargs["pdb_filename"]
+        else:
+            self.atomic_positions = numpy.array(kwargs["atomic_positions"])
+            self.atomic_numbers   = numpy.array(kwarfs["atomic_numbers"])
+
+    def get_next(self):
+        O = AbstractParticleSpecies.get_next(self)
+        O["pdb_filename"]     = self.pdb_filename
+        O["atomic_positions"] = self.atomic_positions
+        O["atomic_numbers"]   = self.atomic_numbers
+        return O
+
+
+def get_spsim_conf(D_source,D_particle,D_detector):
+    s = []
+    s += "# THIS FILE HAS BEEN CREATED AUTOMATICALLY BY CONDOR\n"
+    s += "# Temporary configuration file for spsim\n"
+    s += "number_of_dimensions = 2;\n"
+    s += "number_of_patterns = 1;\n"
+    s += "input_type = \"pdb\";\n"
+    s += "pdb_filename = \"%s\";\n" % D_particle["pdb_filename"]
+    s += "detector_distance = %.6e;\n" % D_detector["distance"]
+    s += "detector_width = %.6e;\n" % (D_detector["pixel_size"] * D_detector["nx"]) 
+    s += "detector_height = %.6e;\n" % (D_detector["pixel_size"] * D_detector["ny"])
+    s += "detector_pixel_width = %.6e;\n" % D_detector["pixel_size"]
+    s += "detector_pixel_height = %.6e;\n" % D_detector["pixel_size"]
+    s += "detector_center_x = %.6e;\n" % (D_detector["pixel_size"] * (D_detector["cx"] - (D_detector["nx"]-1)/2.))
+    s += "detector_center_y = %.6e;\n" % (D_detector["pixel_size"] * (D_detector["cy"] - (D_detector["ny"]-1)/2.))
+    s += "detector_binning = 1;\n"
+    s += "experiment_wavelength = %.6e;\n" % D_source["wavelength"]
+    s += "experiment_beam_intensity = %.6e;\n" % D_particle["intensity"]
+    return s
+

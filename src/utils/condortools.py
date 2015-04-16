@@ -474,10 +474,55 @@ def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pix
 
 
 
-def check_input(keys,req_keys,opt_keys):
-    missing_keys = [k for k in req_keys if k not in keys]
+def check_input(keys,req_keys,opt_keys,verbose=False):
+    missing_keys = [k for k in req_keys if not isinstance(k,list) and (k not in keys)]
+    for l in [l for k in keys if isinstance(k,list)]:
+        tmp_miss = []
+        # Alternatives (non-exclusive)
+        for a in l:
+            if isinstance(a,list):
+                # Combined requirement
+                com = [c for c in a if c not in keys]
+                if len(com) > 0:
+                    tmp_miss.append(com)
+            else:
+                # Single requirement
+                if a not in keys:
+                    tmp_miss.append(a)
+        if len(tmp_miss) == len(l):
+            missing_keys.append(tmp_miss)
     all_keys = req_keys + opt_keys
+    def sublist_elements(l):
+        l_new = []
+        for k0 in l:
+            if isinstance(k0,list):
+                for k1 in k0:
+                    l_new.append(k1)
+            else:
+                l_new.append(k0)
+        return l_new
     illegal_keys = [k for k in keys if k not in all_keys]
+    illegal_keys = [k for k in illegal_keys if k not in sublist_elements(all_keys)]
+    illegal_keys = [k for k in illegal_keys if k not in sublist_elements(sublist_elements(all_keys))]
+    if verbose:
+        for illegal_key in illegal_keys:
+            print "Illegal key: %s" % illegal_key
+        if len(missing_keys) > 0:
+            print "Missing key(s):"
+        for missing_key in missing_keys:
+            if isinstance(missing_key,list):
+                print "= Alternatives:"
+                for missing_key_alternative in missing_key:
+                    if isinstance(missing_key_alternative,list):
+                        s = "- ["
+                        for missing_key_alternative_component in missing_key_alternative:
+                            s += missing_key_alternative_component + " + "
+                        s += "]"
+                        print s
+                    else:
+                        print ("- " + missing_key_alternative)
+            else:
+                print ("= " + missing_key)
     return missing_keys,illegal_keys
 
 

@@ -11,7 +11,9 @@
 # ----------------------------------------------------------------------------------------------------- 
 
 import numpy
-    
+
+import tempfile, os
+   
 import logging
 logger = logging.getLogger("Condor")
 import utils.log
@@ -20,7 +22,8 @@ from utils.pixelmask import PixelMask
 
 import utils
 import condortools
-from particle_species import ParticleSpeciesSphere,ParticleSpeciesSpheroid,ParticleSpeciesMap
+import particle_species
+from particle_species import ParticleSpeciesSphere, ParticleSpeciesSpheroid, ParticleSpeciesMap, ParticleSpeciesMolecule
 
 class Propagator:
     def __init__(self,source,sample,detector):
@@ -119,7 +122,8 @@ class Propagator:
             p  = D_particle["_class_instance"]
             # Intensity at interaction point
             pos  = D_particle["position"]
-            I_0  = self.source.get_intensity(pos,"ph/m2")
+            D_particle["intensity"] = self.source.get_intensity(pos,"ph/m2")
+            I_0 = D_particle["intensity"]
             # Calculate primary wave amplitude
             # F0 = sqrt(I_0 Omega_p) 2pi/wavelength^2
             F0 = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2
@@ -202,6 +206,53 @@ class Propagator:
                 fourier_pattern = numpy.reshape(fourier_pattern,(qmap_scaled.shape[0],qmap_scaled.shape[1]))
                 log(logger.debug,"Got pattern of %i x %i pixels." % (fourier_pattern.shape[1],fourier_pattern.shape[0]))
                 F = F0 * fourier_pattern * dx**3
+            if isinstance(p,ParticleSpeciesMolecule):
+                # Scattering vectors
+                #qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
+                #                     euler_angle_0=0., euler_angle_1=0., euler_angle_2=0.)
+                import spsim
+                if D_particle["pdb_filename"] is None:
+                    tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.pdb', prefix='tmp_spsim', dir=None, delete=False)
+                    tmpf_pdb_name = tmpf_pdb.name
+                    tmpf_pfb.close()
+                    mol = spsim.alloc_molecule()
+                    for j,(p0,p1,p2) in zip(D_particle["atomic_numbers"],D_particle["atomic_positions"].reshape((D_particle["atomic_positions"].size/3,3))):
+                        spsim.add_atom(mol,j,p0,p1,p2)
+                    spsim.write_pdb_from_mol(tmpf_pdb_name, mol)
+                    spsim.free_molecule(mol)
+                    D_particle["pdb_filename"] = tmpf_pdb_name
+                spsim_conf = particle_species.get_spsim_conf(D_source, D_particle, D_detector)
+                opts = spsim.set_defaults()
+                tmpf = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
+                tmpf.writelines(spsim_conf)
+                tmpf_name = tmpf.name
+                tmpf.close()
+                spsim.read_options_file(tmpf_name, opts)
+                # This deletes the temporary file
+                os.unlink(tmpf_name)
+                #spsim.write_options_file("./spsim.confout",opts)
+                mol = spsim.get_molecule(opts)
+                if D_particle["atomic_positions"] is None:
+                    pos_img = spsim.sp_image_alloc(mol.natoms,3,1)
+                    spsim.array_to_image(mol.pos,pos_img)
+                    D_particle["atomic_positions"] = pos_img.image.real[:,:].copy()
+                    spsim.sp_image_free(pos_img)
+                    anum_img = spsim.sp_image_alloc(mol.natoms,1,1)
+                    spsim.iarray_to_image(mol.atomic_number,anum_img)
+                    D_particle["atomic_numbers"] = numpy.int32(anum_img.image.real[:,:].copy())
+                    spsim.sp_image_free(anum_img)
+                pat = spsim.simulate_shot(mol, opts)
+                F_img = spsim.make_cimage(pat.F,pat.rot,opts)
+                phot_img = spsim.make_image(opts.detector.photons_per_pixel,pat.rot,opts)
+                F = numpy.sqrt(abs(phot_img.image[:])) * numpy.exp(1.j * numpy.angle(F_img.image[:]))
+                spsim.sp_image_free(F_img)
+                spsim.sp_image_free(phot_img)
+                qmap_img = spsim.sp_image_alloc(3,D_detector["ny"],D_detector["nx"])
+                spsim.array_to_image(pat.HKL_list, qmap_img)
+                qmap = qmap_img.image.real[:,:,:].copy()
+                spsim.sp_image_free(qmap_img)
+                spsim.free_diffraction_pattern(pat)
+                spsim.free_output_in_options(opts)
             F_singles.append(F)
 
         F_tot = numpy.zeros_like(F)
