@@ -14,19 +14,16 @@ import sys,os
 import h5py
 sys.path.append("utils")
 import numpy
-import logging
-logger = logging.getLogger("Condor")
-
-import condortools
-from variation import Variation
-
-from python_tools import gentools,cxitools,imgtools
 
 import logging
 logger = logging.getLogger("Condor")
 import utils.log
 from utils.log import log 
+
+import config
+from utils.variation import Variation
 from utils.pixelmask import PixelMask
+
 
 class Detector:
     """
@@ -82,7 +79,7 @@ class Detector:
                     "saturation_level",
                     "mask","mask_filename","mask_dataset",
                     "nx","ny","downsampling"]
-        miss_keys,ill_keys = condortools.check_input(kwargs.keys(),req_keys,opt_keys)
+        miss_keys,ill_keys = check_input(kwargs.keys(),req_keys,opt_keys)
         if len(miss_keys) > 0: 
             for k in miss_keys:
                 log(logger.error,"Cannot initialize Detector instance. %s is a necessary keyword." % k)
@@ -259,8 +256,8 @@ class Detector:
         O["pixel_size"] = self.pixel_size
         O["distance"] = self.distance
         if self.downsampling is not None:
-            O["cx_xxx"] = condortools.downsample_pos(cx_now,self._nx,self.downsampling)
-            O["cy_xxx"] = condortools.downsample_pos(cy_now,self._ny,self.downsampling)
+            O["cx_xxx"] = utils.resample.downsample_pos(cx_now,self._nx,self.downsampling)
+            O["cy_xxx"] = utils.resample.downsample_pos(cy_now,self._ny,self.downsampling)
         return O
 
     def get_minimum_center_edge_distance(self,cx,cy):
@@ -331,8 +328,8 @@ class Detector:
             I_det = numpy.clip(I_det, -numpy.inf, self.saturation_level)
         M_det = self.get_bitmask(I_det)
         if self.downsampling is not None:
-            IXxX_det, MXxX_det = condortools.downsample(I_det,self.downsampling,mode="integrate",
-                                                        mask2d0=M_det,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
+            IXxX_det, MXxX_det = utils.resample.downsample(I_det,self.downsampling,mode="integrate",
+                                                           mask2d0=M_det,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
         else:
             IXxX_det = None
             MXxX_det = None

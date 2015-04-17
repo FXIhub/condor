@@ -10,7 +10,7 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
-import sys, os, numpy, types, pickle, time, math, logging
+import sys, os, numpy, types, pickle, time, math, logging, ConfigParser
 logging.basicConfig(format='%(levelname)s: %(message)s')
 logger = logging.getLogger('Condor')
 from scipy import constants
@@ -210,3 +210,145 @@ def unpickle_scattering_factors():
     for var in DICT_scattering_factors.values():
         if F_MIN_ENERGY_EV < var[0,0] or F_MIN_ENERGY_EV == 0: F_MIN_ENERGY_EV = var[0,0]
         if F_MAX_ENERGY_EV > var[-1,0] or F_MAX_ENERGY_EV == 0: F_MAX_ENERGY_EV = var[-1,0]
+
+
+def check_input(keys,req_keys,opt_keys,verbose=False):
+    missing_keys = [k for k in req_keys if not isinstance(k,list) and (k not in keys)]
+    for l in [l for k in keys if isinstance(k,list)]:
+        tmp_miss = []
+        # Alternatives (non-exclusive)
+        for a in l:
+            if isinstance(a,list):
+                # Combined requirement
+                com = [c for c in a if c not in keys]
+                if len(com) > 0:
+                    tmp_miss.append(com)
+            else:
+                # Single requirement
+                if a not in keys:
+                    tmp_miss.append(a)
+        if len(tmp_miss) == len(l):
+            missing_keys.append(tmp_miss)
+    all_keys = req_keys + opt_keys
+    def sublist_elements(l):
+        l_new = []
+        for k0 in l:
+            if isinstance(k0,list):
+                for k1 in k0:
+                    l_new.append(k1)
+            else:
+                l_new.append(k0)
+        return l_new
+    illegal_keys = [k for k in keys if k not in all_keys]
+    illegal_keys = [k for k in illegal_keys if k not in sublist_elements(all_keys)]
+    illegal_keys = [k for k in illegal_keys if k not in sublist_elements(sublist_elements(all_keys))]
+    if verbose:
+        for illegal_key in illegal_keys:
+            print "Illegal key: %s" % illegal_key
+        if len(missing_keys) > 0:
+            print "Missing key(s):"
+        for missing_key in missing_keys:
+            if isinstance(missing_key,list):
+                print "= Alternatives:"
+                for missing_key_alternative in missing_key:
+                    if isinstance(missing_key_alternative,list):
+                        s = "- ["
+                        for missing_key_alternative_component in missing_key_alternative:
+                            s += missing_key_alternative_component + " + "
+                        s += "]"
+                        print s
+                    else:
+                        print ("- " + missing_key_alternative)
+            else:
+                print ("= " + missing_key)
+    return missing_keys,illegal_keys
+
+def estimate_type(var):
+    #first test bools
+    if var.lower() == 'true':
+        return True
+    elif var.lower() == 'false':
+        return False
+    elif var.lower() == 'none':
+        return None
+    else:
+        #int
+        try:
+            return int(var)
+        except ValueError:
+            pass
+        #float
+        try:
+            return float(var)
+        except ValueError:
+            pass
+        #string
+        try:
+            return str(var)
+        except ValueError:
+            raise NameError('Something messed up autocasting var %s (%s)' % (var, type(var)))
+
+def read_configfile(configfile):
+    config = ConfigParser.ConfigParser()
+    with open(configfile,"r") as f:
+        config.readfp(f)
+        confDict = {}
+        for section in config.sections(): 
+            confDict[section] = {}
+            c = config.items(section)
+            for (key,value) in c:
+                v = estimate_type(value)
+                if isinstance(v,str):
+                    if "[" == v[0] and "]" == v[-1]:
+                        v = v[1:-1].split(",")
+                        v = [w for w in v if len(w) > 0]
+                        for i in range(len(v)):
+                            if '$' in v[i]:
+                                v[i] = os.path.expandvars(v[i])
+                            v[i] = estimate_type(v[i]) 
+                    else:
+                        if '$' in v:
+                            v = os.path.expandvars(v)
+                confDict[section][key] = v
+    return confDict
+
+class Configuration:
+    def __init__(self,config={},default={},verbose=False):
+        self.verbose = verbose
+        if isinstance(config,str):
+            self.confDict = read_configfile(config)
+            self.configfile = config
+        else:
+            self.confDict = config
+        
+        if isinstance(default,str):
+            defDict = read_configfile(default)
+        else:
+            defDict = default
+        self.set_unspecified_to_default(defDict)
+    
+    def set_unspecified_to_default(self,defaultDict):
+        for section in defaultDict.keys():
+            matched_sections = [s for s in self.confDict.keys() if section in s]
+            if matched_sections == []:
+                self.confDict[section] = {}
+                logger.info("Add section %s to configuration as it did not exist." % section)
+            for variableName in defaultDict[section].keys():
+                for ms in matched_sections:
+                    if variableName not in self.confDict[ms].keys():
+                        self.confDict[ms][variableName] = defaultDict[section][variableName]
+                        logger.info("Add variable %s with default value %s to configuration section %s as variable did not exist." % (variableName,str(defaultDict[section][variableName]),ms))
+
+    def write_to_file(self,filename):
+        ls = ["# Configuration file\n# Automatically written by Configuration instance\n\n"]
+        for section_name,section in self.confDict.items():
+            if isinstance(section,dict):
+                ls.append("[%s]\n" % section_name)
+                for variable_name,variable in section.items():
+                    ls.append("%s=%s\n" % (variable_name,str(variable)))
+                ls.append("\n")
+        s = open(filename,"w")
+        s.writelines(ls)
+        s.close()        
+
+        

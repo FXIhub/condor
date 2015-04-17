@@ -21,7 +21,10 @@ from utils.log import log
 from utils.pixelmask import PixelMask
 
 import utils
-import condortools
+import utils.sphere_diffraction
+import utils.spheroid_diffraction
+import utils.scattering_vector
+import utils.resample
 import particle_species
 from particle_species import ParticleSpeciesSphere, ParticleSpeciesSpheroid, ParticleSpeciesMap, ParticleSpeciesMolecule
 
@@ -144,7 +147,7 @@ class Propagator:
                 V = 4/3.*numpy.pi*R**3
                 K = (F0*V*dn.real)**2
                 # Pattern
-                F = condortools.F_sphere_diffraction(K,q,R)
+                F = utils.sphere_diffraction.F_sphere_diffraction(K,q,R)
             if isinstance(p,ParticleSpeciesSpheroid):
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
@@ -155,13 +158,13 @@ class Propagator:
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
                 K = (F0*V*dn.real)**2
-                a = condortools.to_spheroid_semi_diameter_a(D_particle["diameter"],D_particle["flattening"])
-                c = condortools.to_spheroid_semi_diameter_c(D_particle["diameter"],D_particle["flattening"])
+                a = utils.spheroid_diffraction.to_spheroid_semi_diameter_a(D_particle["diameter"],D_particle["flattening"])
+                c = utils.spheroid_diffraction.to_spheroid_semi_diameter_c(D_particle["diameter"],D_particle["flattening"])
                 # Pattern
                 # (Rotation is taken into account directly in the diffraction formula (much faster))
-                theta = condortools.to_spheroid_theta(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
-                phi = condortools.to_spheroid_phi(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
-                F = condortools.F_spheroid_diffraction(K,qx,qy,a,c,theta,phi)
+                theta = utils.spheroid_diffraction.to_spheroid_theta(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
+                phi = utils.spheroid_diffraction.to_spheroid_phi(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
+                F = utils.spheroid_diffraction.F_spheroid_diffraction(K,qx,qy,a,c,theta,phi)
             if isinstance(p,ParticleSpeciesMap):
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength,
@@ -262,8 +265,8 @@ class Propagator:
             F_tot = F_tot + F * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
         I_tot, M_tot, IXxX_tot, MXxX_tot = self.detector.detect_photons(abs(F_tot)**2)
         if self.detector.downsampling is not None:
-            FXxX_tot, MXxX_tot = condortools.downsample(F_tot,self.detector.downsampling,mode="integrate",
-                                                        mask2d0=M_tot,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
+            FXxX_tot, MXxX_tot = utils.resample.downsample(F_tot,self.detector.downsampling,mode="integrate",
+                                                           mask2d0=M_tot,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
         M_tot_binary = M_tot == 0
         MXxX_tot_binary = None if MXxX_tot is None else (MXxX_tot == 0)
         
@@ -355,7 +358,7 @@ def generate_absqmap(nx,ny,cx,cy,pixel_size,detector_distance,wavelength):
     Y = numpy.float64(Y)
     X -= cx
     Y -= cy
-    return condortools.generate_absqmap(X,Y,pixel_size,detector_distance,wavelength)
+    return utils.scattering_vector.generate_absqmap(X,Y,pixel_size,detector_distance,wavelength)
 
 def generate_qmap(nx,ny,cx,cy,pixel_size,detector_distance,wavelength,euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.):
     X,Y = numpy.meshgrid(numpy.arange(nx),
@@ -365,4 +368,4 @@ def generate_qmap(nx,ny,cx,cy,pixel_size,detector_distance,wavelength,euler_angl
     Y = numpy.float64(Y)
     X -= cx
     Y -= cy
-    return condortools.generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0,euler_angle_1,euler_angle_2)
+    return utils.scattering_vector.generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0,euler_angle_1,euler_angle_2)

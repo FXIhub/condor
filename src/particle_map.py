@@ -10,196 +10,22 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
-import sys,os
-import tempfile
 import numpy
 import scipy.stats
-
-if "utils" not in sys.path: sys.path.append("utils")
-import condortools
-from variation import Variation
-from material import Material
-import config
 
 import logging
 logger = logging.getLogger("Condor")
 import utils.log
 from utils.log import log 
 
-class AbstractParticleSpecies:
-    def __init__(self,**kwargs):
-        # Check for valid set of keyword arguments
-        self.req_keys += ["particle_species","alignment","euler_angle_0","euler_angle_1","euler_angle_2","diameter","position","concentration"]
-        cel_keys = ["c"+k for k in config.DICT_atomic_number.keys()]
-        self.opt_keys += ["diameter_variation","diameter_spread","diameter_variation_n",
-                          "position_variation","position_spread","position_variation_n",
-                          "geometry_euler_angle_0","geometry_euler_angle_1","geometry_euler_angle_2",
-                          "massdensity","material_type"] + cel_keys
-        
-        # Check input
-        miss_keys,ill_keys = condortools.check_input(kwargs.keys(),self.req_keys,self.opt_keys,verbose=True)
-        if len(miss_keys) > 0: 
-            log(logger.error,"Cannot initialize %s because of missing keyword arguments." % self.__class__.__name__)
-            exit(1)
-        if len(ill_keys) > 0:
-            log(logger.error,"Cannot initialize %s instance because of illegal keyword arguments." % self.__class__.__name__)
-            exit(1)
+from utils.variation import Variation
+import utils.spheroid_diffraction
+import utils.diffraction
+import utils.bodies
 
-        # Start initialisation
-        self.set_alignment(alignment=kwargs["alignment"],euler_angle_0=kwargs["euler_angle_0"],euler_angle_1=kwargs["euler_angle_1"],euler_angle_2=kwargs["euler_angle_2"])
-        self.set_diameter_variation(diameter_variation=kwargs["diameter_variation"],diameter_spread=kwargs.get("diameter_spread",None),diameter_variation_n=kwargs.get("diameter_variation_n",None))
-        self.diameter_mean = kwargs["diameter"]
-        self.set_position_variation(position_variation=kwargs["position_variation"],position_spread=kwargs.get("position_spread",None),position_variation_n=kwargs.get("position_variation_n",None))
-        self.position_mean = kwargs["position"]
-        self.concentration = kwargs["concentration"]
-        self.geometry_euler_angle_0 = kwargs.get("geometry_euler_angle_0",0.)
-        self.geometry_euler_angle_1 = kwargs.get("geometry_euler_angle_1",0.)
-        self.geometry_euler_angle_2 = kwargs.get("geometry_euler_angle_2",0.)
-        materialargs = {}
-        if 'massdensity' in kwargs:
-            materialargs['massdensity'] = kwargs['massdensity']
-            for key in kwargs.keys():
-                if key in cel_keys: materialargs[key] = kwargs[key]
-        elif "material_type" in kwargs:
-            materialargs['material_type'] = kwargs['material_type']
-        else:
-            log(logger.error,"Illegal material configuration for sample species.")
-            exit(0)
-        self.set_material(**materialargs)
+from particle_abstract import AbstractContinuousParticleSpecies
 
-    def get_next(self):
-        O = {}
-        O["_class_instance"] = self 
-        euler_angle_0,euler_angle_1,euler_angle_2 = self._get_next_orientation()
-        O["euler_angle_0"] = euler_angle_0
-        O["euler_angle_1"] = euler_angle_1
-        O["euler_angle_2"] = euler_angle_2
-        O["geometry_euler_angle_0"] = self.geometry_euler_angle_0
-        O["geometry_euler_angle_1"] = self.geometry_euler_angle_1
-        O["geometry_euler_angle_2"] = self.geometry_euler_angle_2       
-        O["diameter"] = self._get_next_diameter()
-        O["position"] = self._get_next_position()
-        return O
-
-    def set_random_orientation(self):
-        self.set_alignment("random")
-
-    def set_alignment(self,alignment=None,euler_angle_0=None,euler_angle_1=None,euler_angle_2=None):
-        if alignment not in [None,"random","euler_angles","first_axis","random_euler_angle_0"]:
-            log(logger.error,"Invalid argument for sample alignment specified.")
-            return
-        self._euler_angle_0 = euler_angle_0
-        self._euler_angle_1 = euler_angle_1
-        self._euler_angle_2 = euler_angle_2
-        if alignment is None and (self._euler_angle_0 is not None and self._euler_angle_1 is not None and self._euler_angle_2 is not None):
-            self._alignment = "euler_angles"
-        else:
-            self._alignment = alignment
-
-    def _get_next_orientation(self):
-        if self._alignment == "first_axis":
-            # Sanity check
-            if self._euler_angle_0 is not None or self._euler_angle_1 is not None or self._euler_angle_2 is not None:
-                log(logger.error,"Conflict of arguments: Specified first_axis alignment and also specified set of euler angles. This does not make sense.")
-                exit(1)
-            euler_angle_0 = 0.
-            euler_angle_1 = 0.
-            euler_angle_2 = 0.
-        elif self._alignment == "random":
-            # Sanity check
-            if self._euler_angle_0 is not None or self._euler_angle_1 is not None or self._euler_angle_2 is not None:
-                log(logger.error,"Conflict of arguments: Specified random alignment and also specified set of euler angles. This does not make sense.")
-                exit(1)
-            (euler_angle_0,euler_angle_1,euler_angle_2) = condortools.random_euler_angles()
-        elif self._alignment == "euler_angles":
-            # Many orientations (lists of euler angles)
-            if isinstance(self._euler_angle_0,list):
-                euler_angle_0 = self._euler_angle_0[self._i]
-                euler_angle_1 = self._euler_angle_1[self._i]
-                euler_angle_2 = self._euler_angle_2[self._i]
-            # One orientation (euler angles are scalars)
-            else:
-                euler_angle_0 = self._euler_angle_0
-                euler_angle_1 = self._euler_angle_1
-                euler_angle_2 = self._euler_angle_2
-        elif self._alignment == "random_euler_angle_0":
-            if self._euler_angle_0 is not None:
-                log(logger.error,"Conflict of arguments: Specified random_euler_angle_0 alignment and also specified a specific euler_angle_0 = %f. This does not make sense." % self._euler_angle_0)
-                exit(1)
-            euler_angle_0 = numpy.random.uniform(0,2*numpy.pi)
-            euler_angle_1 = self._euler_angle_1 if self._euler_angle_1 is not None else 0.
-            euler_angle_2 = self._euler_angle_2 if self._euler_angle_2 is not None else 0.
-        return euler_angle_0,euler_angle_1,euler_angle_2
-
-    def set_diameter_variation(self,diameter_variation=None,diameter_spread=None,diameter_variation_n=None,**kwargs):
-        self._diameter_variation = Variation(diameter_variation,diameter_spread,diameter_variation_n,name="sample diameter")       
-
-    def _get_next_diameter(self):
-        d = self._diameter_variation.get(self.diameter_mean)
-        # Non-random diameter
-        if self._diameter_variation._mode in [None,"range"]:
-            if d <= 0:
-                log(logger.error,"Sample diameter smaller-equals zero. Change your configuration.")
-            else:
-                return d
-        # Random diameter
-        else:
-            if d <= 0.:
-                log(logger.warning,"Sample diameter smaller-equals zero. Try again.")
-                return self._get_next_diameter()
-            else:
-                return d
-
-    def set_material(self, **kwargs):
-        self.material = Material(**kwargs)
-
-    def set_position_variation(self,position_variation,position_spread,position_variation_n):
-        self._position_variation = Variation(position_variation,position_spread,position_variation_n,number_of_dimensions=3,name="particle position")
-
-    def _get_next_position(self):
-        return self._position_variation.get(self.position_mean)
-
-class ParticleSpeciesSphere(AbstractParticleSpecies):
-    def __init__(self,**kwargs):
-        self.req_keys = []
-        self.opt_keys = []
-        AbstractParticleSpecies.__init__(self,**kwargs)
-
-class ParticleSpeciesSpheroid(AbstractParticleSpecies):
-    def __init__(self,**kwargs):
-        # Check for valid set of keyword arguments
-        self.req_keys = ["flattening"]
-        self.opt_keys = ["flattening_variation","flattening_spread","flattening_variation_n"]
-        # Start initialisation
-        AbstractParticleSpecies.__init__(self,**kwargs)
-        self.flattening_mean = kwargs["flattening"]
-        self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
-
-    def get_next(self):
-        O = AbstractParticleSpecies.get_next(self)
-        O["flattening"] = self._get_next_flattening()
-        return O
-        
-    def set_flattening_variation(self,flattening_variation=None,flattening_spread=None,flattening_variation_n=None,**kwargs):
-        self._flattening_variation = Variation(flattening_variation,flattening_spread,flattening_variation_n,name="spheroid flattening")       
-
-    def _get_next_flattening(self):
-        f = self._flattening_variation.get(self.flattening_mean)
-        # Non-random 
-        if self._flattening_variation._mode in [None,"range"]:
-            if f <= 0:
-                log(logger.error,"Spheroid flattening smaller-equals zero. Change your configuration.")
-            else:
-                return f
-        # Random 
-        else:
-            if f <= 0.:
-                log(logger.warning,"Spheroid flattening smaller-equals zero. Try again.")
-                return self._get_next_flattening()
-            else:
-                return f
-
-class ParticleSpeciesMap(AbstractParticleSpecies):
+class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
     def __init__(self,**kwargs):
         """
         Function initializes ParticleSpeciesMap object:
@@ -251,7 +77,7 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
         self.opt_keys = ["flattening","flattening_variation","flattening_spread","flattening_variation_n"]
 
         # Start initialisation
-        AbstractParticleSpecies.__init__(self,**kwargs)
+        AbstractContinuousParticleSpecies.__init__(self,**kwargs)
         self.set_geometry_variation(geometry=kwargs["geometry"],geometry_concentrations=kwargs["geometry_concentrations"])
         self.flattening_mean = kwargs.get("flattening",1.)
         self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
@@ -266,7 +92,7 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
         self._old_map3d                        = None
 
     def get_next(self):
-        O = AbstractParticleSpecies.get_next(self)
+        O = AbstractContinuousParticleSpecies.get_next(self)
         O["geometry"] = self._get_next_geometry()
         O["flattening"] = self._get_next_flattening()
         return O
@@ -344,8 +170,8 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
         if O["geometry"] == "icosahedron":
             self._put_icosahedron(O["diameter"]/2.,geometry_euler_angle_0=O["geometry_euler_angle_0"],geometry_euler_angle_1=O["geometry_euler_angle_1"],geometry_euler_angle_2=O["geometry_euler_angle_2"])
         elif O["geometry"] == "spheroid":
-            a = condortools.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
-            c = condortools.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
+            a = utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
+            c = utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
             self._put_spheroid(a,c,geometry_euler_angle_0=O["geometry_euler_angle_0"],geometry_euler_angle_1=O["geometry_euler_angle_1"],geometry_euler_angle_2=O["geometry_euler_angle_2"])
         elif O["geometry"] == "sphere":
             self._put_sphere(O["diameter"]/2.)
@@ -392,12 +218,12 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
             self._old_map3d = numpy.array(map_add,dtype="float64")
             return
         else:
-            self._old_map3d = imgtools.array_to_array(map_add,self._old_map3d,p,origin,mode,0.,factor)
+            self._old_map3d = utils.bodies.array_to_array(map_add,self._old_map3d,p,origin,mode,0.,factor)
 
     def _put_sphere(self,radius,**kwargs):
         nR = radius/self._old_map3d_dx
         N = int(round((nR*1.2)*2))
-        spheremap = condortools.make_sphere_map(N,nR)
+        spheremap = utils.bodies.make_sphere_map(N,nR)
         self._put_custom_map(spheremap,**kwargs)
  
     def _put_spheroid(self,a,c,**kwargs):
@@ -413,7 +239,7 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
         nC = c/self._old_map3d_dx
         # leaving a bit of free space around spheroid
         N = int(round((nRmax*1.2)*2))
-        spheromap = condortools.make_spheroid_map(N,nA,nC,e0,e1,e2)
+        spheromap = utils.bodies.make_spheroid_map(N,nA,nC,e0,e1,e2)
         self._put_custom_map(spheromap,**kwargs)
 
     def _put_icosahedron(self,radius,**kwargs):
@@ -429,7 +255,7 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
         # leaving a bit of free space around icosahedron 
         N = int(numpy.ceil(2.3*(nRmax)))
         log(logger.info,"Building icosahedron with radius %e (%i pixel) in %i x %i x %i voxel cube." % (radius,nRmax,N,N,N))
-        icomap = condortools.make_icosahedron_map(N,nRmax,e0,e1,e2)
+        icomap = utils.bodies.make_icosahedron_map(N,nRmax,e0,e1,e2)
         self._put_custom_map(icomap,**kwargs)
 
     def _put_cube(self,a,**kwargs):
@@ -545,53 +371,3 @@ class ParticleSpeciesMap(AbstractParticleSpecies):
     #                f.close()
     #    else:
     #        logger.error("Invalid filename extension, has to be \'.h5\'.")
-
-class ParticleSpeciesMolecule(AbstractParticleSpecies):
-    def __init__(self,**kwargs):
-        try:
-            import spsim
-        except:
-            log(logger.error,"Cannot import spsim module. This module is necessary to simulate diffraction for particle species \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
-            return
-        # Check for valid set of keyword arguments
-        self.req_keys = [["pdb_filename",["atomic_position","atomic_number"]]]
-        self.opt_keys = []
-        # Start initialisation
-        AbstractParticleSpecies.__init__(self,**kwargs)
-        self.atomic_positions  = None
-        self.atomic_numbers    = None
-        self.pbd_filename      = None
-        if "pdb_filename" in kwargs:
-            self.pdb_filename = kwargs["pdb_filename"]
-        else:
-            self.atomic_positions = numpy.array(kwargs["atomic_positions"])
-            self.atomic_numbers   = numpy.array(kwarfs["atomic_numbers"])
-
-    def get_next(self):
-        O = AbstractParticleSpecies.get_next(self)
-        O["pdb_filename"]     = self.pdb_filename
-        O["atomic_positions"] = self.atomic_positions
-        O["atomic_numbers"]   = self.atomic_numbers
-        return O
-
-
-def get_spsim_conf(D_source,D_particle,D_detector):
-    s = []
-    s += "# THIS FILE HAS BEEN CREATED AUTOMATICALLY BY CONDOR\n"
-    s += "# Temporary configuration file for spsim\n"
-    s += "number_of_dimensions = 2;\n"
-    s += "number_of_patterns = 1;\n"
-    s += "input_type = \"pdb\";\n"
-    s += "pdb_filename = \"%s\";\n" % D_particle["pdb_filename"]
-    s += "detector_distance = %.6e;\n" % D_detector["distance"]
-    s += "detector_width = %.6e;\n" % (D_detector["pixel_size"] * D_detector["nx"]) 
-    s += "detector_height = %.6e;\n" % (D_detector["pixel_size"] * D_detector["ny"])
-    s += "detector_pixel_width = %.6e;\n" % D_detector["pixel_size"]
-    s += "detector_pixel_height = %.6e;\n" % D_detector["pixel_size"]
-    s += "detector_center_x = %.6e;\n" % (D_detector["pixel_size"] * (D_detector["cx"] - (D_detector["nx"]-1)/2.))
-    s += "detector_center_y = %.6e;\n" % (D_detector["pixel_size"] * (D_detector["cy"] - (D_detector["ny"]-1)/2.))
-    s += "detector_binning = 1;\n"
-    s += "experiment_wavelength = %.6e;\n" % D_source["wavelength"]
-    s += "experiment_beam_intensity = %.6e;\n" % D_particle["intensity"]
-    return s
-

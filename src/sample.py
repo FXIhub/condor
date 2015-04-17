@@ -13,14 +13,15 @@
 import sys,os
 import numpy
 import scipy.stats
-if "utils" not in sys.path: sys.path.append("utils")
-import condortools
-from variation import Variation
 
 import logging
 logger = logging.getLogger("Condor")
 import utils.log
 from utils.log import log 
+
+import config
+from utils.variation import Variation
+
 
 
 class Sample:
@@ -29,7 +30,7 @@ class Sample:
         # Check for valid set of keyword arguments
         req_keys = ["number_of_images","number_of_particles"]
         opt_keys = ["number_of_particles_variation","number_of_particles_spread","number_of_particles_variation_n"]
-        miss_keys,ill_keys = condortools.check_input(kwargs.keys(),req_keys,opt_keys)
+        miss_keys,ill_keys = config.check_input(kwargs.keys(),req_keys,opt_keys)
         if len(miss_keys) > 0: 
             for k in miss_keys:
                 log(logger.error,"Cannot initialize Sample instance. %s is a necessary keyword." % k)

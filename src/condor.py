@@ -26,15 +26,11 @@ from utils.log import log
 # Initial configuration and importing Condor modules
 import config
 config.init_configuration()
-import imgutils,condortools
 from source import Source
 from sample import Sample
 from detector import Detector
 from propagator import Propagator 
 import particle_species
-
-# Pythontools
-from python_tools import gentools,cxitools,imgtools
 
 class Input:
     """
@@ -49,7 +45,7 @@ class Input:
         self._reconfigure(configuration)
     
     def _reconfigure(self,configuration={}):
-        self.configuration = gentools.Configuration(configuration,self.default_configuration)
+        self.configuration = config.Configuration(configuration,self.default_configuration)
         C = self.configuration.confDict
         self.source = Source(**C["source"])
         self.sample = Sample(**C["sample"])
@@ -163,7 +159,7 @@ class Output:
         if self.input_object.sample.radius == None:
             return None
         else:
-            pN = condortools.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),numpy.pi*self.input_object.sample.radius**2)
+            pN = utils.diffraction.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),numpy.pi*self.input_object.sample.radius**2)
             pD = self.input_object.detector.get_pixel_size("binned")
             return pN/pD
             
@@ -178,14 +174,14 @@ class Output:
         | :math:`D`: Detector distance
 
         """
-        return condortools.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
+        return utils.diffraction.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
 
     def write(self,filename="out.cxi",output="all"):
         if filename[-len(".cxi"):] != ".cxi":
             log(logger.error,"Illegal file format chosen.")
             return
         allout = output == "all"
-        W = cxitools.CXIWriter(filename,self.N,logger)
+        W = utils.log.CXIWriter(filename,self.N,logger)
 
         def add(d0,d1,i):
             for k,v in d0.items():
