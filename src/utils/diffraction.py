@@ -10,7 +10,7 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
-import numpy
+import numpy, math
  
 import logging
 logger = logging.getLogger("Condor")

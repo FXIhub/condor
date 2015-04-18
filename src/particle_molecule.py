@@ -10,6 +10,7 @@
 #  All variables are in SI units by default. Exceptions explicit by variable name.
 # ----------------------------------------------------------------------------------------------------- 
 
+import os
 import numpy
 
 import logging
@@ -35,7 +36,11 @@ class ParticleSpeciesMolecule(AbstractParticleSpecies):
         self.atomic_numbers    = None
         self.pbd_filename      = None
         if "pdb_filename" in kwargs:
-            self.pdb_filename = kwargs["pdb_filename"]
+            if os.path.isfile(kwargs["pdb_filename"]):
+                self.pdb_filename = kwargs["pdb_filename"]
+            else:
+                log(logger.error,"Cannot initialize particle species molecule. PDB file %s does not exist." % kwargs["pdb_filename"])
+                exit(0)
         else:
             self.atomic_positions = numpy.array(kwargs["atomic_positions"])
             self.atomic_numbers   = numpy.array(kwarfs["atomic_numbers"])
@@ -52,6 +57,7 @@ def get_spsim_conf(D_source,D_particle,D_detector):
     s = []
     s += "# THIS FILE HAS BEEN CREATED AUTOMATICALLY BY CONDOR\n"
     s += "# Temporary configuration file for spsim\n"
+    s += "verbosity_level = 0;\n"
     s += "number_of_dimensions = 2;\n"
     s += "number_of_patterns = 1;\n"
     s += "input_type = \"pdb\";\n"

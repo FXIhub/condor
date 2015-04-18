@@ -25,8 +25,10 @@ import utils.sphere_diffraction
 import utils.spheroid_diffraction
 import utils.scattering_vector
 import utils.resample
-import particle_species
-from particle_species import ParticleSpeciesSphere, ParticleSpeciesSpheroid, ParticleSpeciesMap, ParticleSpeciesMolecule
+from particle_sphere import ParticleSpeciesSphere
+from particle_spheroid import ParticleSpeciesSpheroid
+from particle_map import ParticleSpeciesMap
+from particle_molecule import ParticleSpeciesMolecule, get_spsim_conf
 
 class Propagator:
     def __init__(self,source,sample,detector):
@@ -131,13 +133,13 @@ class Propagator:
             # F0 = sqrt(I_0 Omega_p) 2pi/wavelength^2
             F0 = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2
             D_particle["F0"] = F0
-            # Refractive index
-            dn = p.material.get_dn(wavelength)
             # 3D Orientation
             e0 = D_particle["euler_angle_0"]
             e1 = D_particle["euler_angle_1"]
             e2 = D_particle["euler_angle_2"]
             if isinstance(p,ParticleSpeciesSphere):
+                # Refractive index
+                dn = p.material.get_dn(wavelength)
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
                                      euler_angle_0=0., euler_angle_1=0., euler_angle_2=0.)
@@ -148,7 +150,9 @@ class Propagator:
                 K = (F0*V*dn.real)**2
                 # Pattern
                 F = utils.sphere_diffraction.F_sphere_diffraction(K,q,R)
-            if isinstance(p,ParticleSpeciesSpheroid):
+            elif isinstance(p,ParticleSpeciesSpheroid):
+                # Refractive index
+                dn = p.material.get_dn(wavelength)
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
                                      euler_angle_0=0., euler_angle_1=0., euler_angle_2=0.)
@@ -165,7 +169,9 @@ class Propagator:
                 theta = utils.spheroid_diffraction.to_spheroid_theta(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
                 phi = utils.spheroid_diffraction.to_spheroid_phi(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
                 F = utils.spheroid_diffraction.F_spheroid_diffraction(K,qx,qy,a,c,theta,phi)
-            if isinstance(p,ParticleSpeciesMap):
+            elif isinstance(p,ParticleSpeciesMap):
+                # Refractive index
+                dn = p.material.get_dn(wavelength)
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength,
                                      euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
@@ -209,12 +215,10 @@ class Propagator:
                 fourier_pattern = numpy.reshape(fourier_pattern,(qmap_scaled.shape[0],qmap_scaled.shape[1]))
                 log(logger.debug,"Got pattern of %i x %i pixels." % (fourier_pattern.shape[1],fourier_pattern.shape[0]))
                 F = F0 * fourier_pattern * dx**3
-            if isinstance(p,ParticleSpeciesMolecule):
-                # Scattering vectors
-                #qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
-                #                     euler_angle_0=0., euler_angle_1=0., euler_angle_2=0.)
+            elif isinstance(p,ParticleSpeciesMolecule):
                 import spsim
                 if D_particle["pdb_filename"] is None:
+                    # Write PDB file (not given in configuration)
                     tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.pdb', prefix='tmp_spsim', dir=None, delete=False)
                     tmpf_pdb_name = tmpf_pdb.name
                     tmpf_pfb.close()
@@ -224,18 +228,26 @@ class Propagator:
                     spsim.write_pdb_from_mol(tmpf_pdb_name, mol)
                     spsim.free_molecule(mol)
                     D_particle["pdb_filename"] = tmpf_pdb_name
-                spsim_conf = particle_species.get_spsim_conf(D_source, D_particle, D_detector)
+                # Start with default spsim configuration
                 opts = spsim.set_defaults()
+                # Create temporary file for spsim configuration
                 tmpf = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
+                # Write string sequence from configuration dicts
+                spsim_conf = get_spsim_conf(D_source, D_particle, D_detector)
+                # Write string sequence to file
                 tmpf.writelines(spsim_conf)
+                # Close temporary file
                 tmpf_name = tmpf.name
                 tmpf.close()
+                # Read configuration into options struct
                 spsim.read_options_file(tmpf_name, opts)
                 # This deletes the temporary file
                 os.unlink(tmpf_name)
                 #spsim.write_options_file("./spsim.confout",opts)
+                # Create molecule struct
                 mol = spsim.get_molecule(opts)
                 if D_particle["atomic_positions"] is None:
+                    # Get atomic positions and species (extracted from PDB file)
                     pos_img = spsim.sp_image_alloc(mol.natoms,3,1)
                     spsim.array_to_image(mol.pos,pos_img)
                     D_particle["atomic_positions"] = pos_img.image.real[:,:].copy()
@@ -244,18 +256,24 @@ class Propagator:
                     spsim.iarray_to_image(mol.atomic_number,anum_img)
                     D_particle["atomic_numbers"] = numpy.int32(anum_img.image.real[:,:].copy())
                     spsim.sp_image_free(anum_img)
+                # Calculate diffraction pattern
                 pat = spsim.simulate_shot(mol, opts)
+                # Extract complex Fourier values from spsim output
                 F_img = spsim.make_cimage(pat.F,pat.rot,opts)
                 phot_img = spsim.make_image(opts.detector.photons_per_pixel,pat.rot,opts)
                 F = numpy.sqrt(abs(phot_img.image[:])) * numpy.exp(1.j * numpy.angle(F_img.image[:]))
                 spsim.sp_image_free(F_img)
                 spsim.sp_image_free(phot_img)
+                # Extract qmap from spsim output
                 qmap_img = spsim.sp_image_alloc(3,D_detector["ny"],D_detector["nx"])
                 spsim.array_to_image(pat.HKL_list, qmap_img)
                 qmap = qmap_img.image.real[:,:,:].copy()
                 spsim.sp_image_free(qmap_img)
                 spsim.free_diffraction_pattern(pat)
                 spsim.free_output_in_options(opts)
+            else:
+                log(logger.error,"No valid particles initialized.")
+                exit(0)
             F_singles.append(F)
 
         F_tot = numpy.zeros_like(F)

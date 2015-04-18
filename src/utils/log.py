@@ -36,7 +36,7 @@ class CXIWriter:
     def write(self,d,prefix="",i=-1):
         for k in d.keys():
             name = prefix+"/"+k
-            log(logger.debug, "Writing dataest %s",name)
+            log(logger.debug, "Writing dataest %s" % name)
             if isinstance(d[k],dict):
                 if name not in self.f:
                     self.f.create_group(name)

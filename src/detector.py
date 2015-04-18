@@ -79,7 +79,7 @@ class Detector:
                     "saturation_level",
                     "mask","mask_filename","mask_dataset",
                     "nx","ny","downsampling"]
-        miss_keys,ill_keys = check_input(kwargs.keys(),req_keys,opt_keys)
+        miss_keys,ill_keys = config.check_input(kwargs.keys(),req_keys,opt_keys)
         if len(miss_keys) > 0: 
             for k in miss_keys:
                 log(logger.error,"Cannot initialize Detector instance. %s is a necessary keyword." % k)

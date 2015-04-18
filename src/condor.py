@@ -30,7 +30,11 @@ from source import Source
 from sample import Sample
 from detector import Detector
 from propagator import Propagator 
-import particle_species
+from particle_sphere import ParticleSpeciesSphere
+from particle_spheroid import ParticleSpeciesSpheroid
+from particle_map import ParticleSpeciesMap
+from particle_molecule import ParticleSpeciesMolecule
+
 
 class Input:
     """
@@ -55,13 +59,13 @@ class Input:
                 exit(1)
             t = C[k]["particle_species"]
             if t == "uniform_sphere":
-                P = particle_species.ParticleSpeciesSphere(**C[k])
+                P = ParticleSpeciesSphere(**C[k])
             elif t == "uniform_spheroid":
-                P = particle_species.ParticleSpeciesSpheroid(**C[k])
+                P = ParticleSpeciesSpheroid(**C[k])
             elif t == "map3d":
-                P = particle_species.ParticleSpeciesMap(**C[k])
+                P = ParticleSpeciesMap(**C[k])
             elif t == "molecule":
-                P = particle_species.ParticleSpeciesMolecule(**C[k])
+                P = ParticleSpeciesMolecule(**C[k])
             else:
                 log(logger.error,"ParticleSpecies class for particle_species=%s is not implemented." % t)
                 exit(1)
@@ -181,7 +185,7 @@ class Output:
             log(logger.error,"Illegal file format chosen.")
             return
         allout = output == "all"
-        W = utils.log.CXIWriter(filename,self.N,logger)
+        W = utils.log.CXIWriter(filename,self.N)
 
         def add(d0,d1,i):
             for k,v in d0.items():

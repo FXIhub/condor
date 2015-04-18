@@ -11,7 +11,7 @@
 # ----------------------------------------------------------------------------------------------------- 
 
 import numpy, sys, numpy, types, pickle, time, math
-import icosahedron
+import icosahedron, linalg
  
 import logging
 logger = logging.getLogger("Condor")
@@ -94,7 +94,7 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
                 
     if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
         for i in range(0,len(n_list)):
-            n_list[i] = rotation(n_list[i],euler_1,euler_2,euler_3)
+            n_list[i] = linalg.rotation(n_list[i],euler_1,euler_2,euler_3)
 
 
     return n_list
@@ -105,7 +105,7 @@ def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.):
     Y = Y-(N-1)/2.
     Z = Z-(N-1)/2.
     R_sq = X**2+Y**2+Z**2
-    e_c = rotation(numpy.array([0.0,1.0,0.0]),euler0,euler1,euler2)
+    e_c = linalg.rotation(numpy.array([0.0,1.0,0.0]),euler0,euler1,euler2)
     d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
     r_sq_c = abs( R_sq * (1 - (d_sq_c/(R_sq+numpy.finfo("float32").eps))))
     spheroidmap = r_sq_c/nA**2+d_sq_c/nB**2
