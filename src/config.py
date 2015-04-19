@@ -18,17 +18,11 @@ from scipy import constants
 def init_configuration():
     # Some global configuration variables
     #=============
-    # are those really still needed?
-    global PROPAGATION_MODE_PROJECTION
-    PROPAGATION_MODE_PROJECTION = 0
-    global PROPAGATION_MODE_3DSAMPLING
-    PROPAGATION_MODE_3DSAMPLING = 1
-    global CONDOR_DIR
-    CONDOR_DIR = os.path.dirname(os.path.realpath(__file__))
-    #=============
     # Load global dictionaries
     init_global_dictionaries()
     # Add path of Condor to sys.path
+    #global CONDOR_DIR
+    CONDOR_DIR = os.path.dirname(os.path.realpath(__file__))
     sys.path.append(CONDOR_DIR+"/utils")
     
 def init_global_dictionaries():
@@ -44,7 +38,6 @@ def init_global_dictionaries():
                                'lipid':[69,36,0,6,1,0,0],
                                'genophore':[205,134,38,48,3,6,0],
                                'virus':[72.43,49.85,16.32,24.49,2.57,1.39,0],
-                               'mimivirus':[23,3,1,10,0,1,0],
                                'carboxysome':[0.51,0.30,0.07,0.10,0.,0.02,0],
                                'sucrose':[22,12,0,11,0,0,0],
                                'gold':[0,0,0,0,0,0,1]}
@@ -185,17 +178,6 @@ def init_global_dictionaries():
                           'Uuh':116,
                           'Uus':117,
                           'Uuo':118}
-
-
-    # Physical constants [SI-units]
-    global DICT_physical_constants
-    DICT_physical_constants = {'e'    : constants.e,
-                               'c'    : constants.c,
-                               'h'    : constants.h,
-                               're'   : constants.value("classical electron radius"),
-                               'barn' : 1E-28,
-                               'u'    : constants.value("atomic mass constant") }
-
 
 def unpickle_scattering_factors():
     global DICT_atomic_mass
