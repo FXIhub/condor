@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import numpy
 import condor
 import condor.utils
 from condor.utils.log import log

@@ -50,19 +50,15 @@ from particle_molecule import ParticleSpeciesMolecule
 
 class Input:
     """
-    The Input object that holds all necessary information for the experiment that shall be simulated. After initialization the configuration is saved to the variable configuration.confDict.
+    The Input object that holds all necessary information for the simulation experiment. After initialization the configuration is saved to the variable configuration.confDict.
 
     :param configuration: Either a dictionary or the location of the configuration file. Missing but necessary arguments will be set to default values as specified in *default.conf*.
     
     """
     
     def __init__(self,configuration={}):
-        self.default_configuration = this_dir+"/data/default.conf"
-        self._reconfigure(configuration)
-    
-    def _reconfigure(self,configuration={}):
-        self.configuration = config.Configuration(configuration,self.default_configuration)
-        C = self.configuration.confDict
+        default_configuration = this_dir+"/data/default.conf"
+        C = config.Configuration(configuration,self.default_configuration).confDict
         self.source = Source(**C["source"])
         self.sample = Sample(**C["sample"])
         for k in [k for k in C.keys() if "particle" in k]:
@@ -105,18 +101,6 @@ class Output:
         self.mask              = self.outdict["mask_binary"]
         self.bitmask           = self.outdict["mask"]
         self.N = len(self.fourier_pattern)
-        #self.sample_diameter = outdict.get("sample_diameter",None)
-        #self.cx = outdict.get("cx")
-        #self.cy = outdict.get("cy")
-        #self.cxXxX = outdict.get("cxXxX")
-        #self.cyXxX = outdict.get("cyXxX")
-        #self.beam_intensity = outdict["beam_intensity"]
-        #self._optional_outputs = ["F0","dX3","grid","qmap3d",
-        #                          "sample_spheroid_diameter_a","sample_spheroid_diameter_c","sample_spheroid_theta","sample_spheroid_phi","sample_spheroid_flattening","euler_angle_0","euler_angle_1","euler_angle_2"]
-        #for s in self._optional_outputs:
-        #    if s in outdict:
-        #        exec "self.%s = outdict[\"%s\"]" % (s,s)
-        #self._intensities = {}
         t_stop = time.time()
         log(logger.debug,"Propagation finished (time = %f sec)" % (t_stop-t_start))
     
