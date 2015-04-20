@@ -22,7 +22,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-import os
+import sys,os
 import numpy
 import config
 
@@ -53,11 +53,11 @@ class Source:
         if len(miss_keys) > 0: 
             for k in miss_keys:
                 log(logger.error,"Cannot initialize Source instance. %s is a necessary keyword." % k)
-            exit(1)
+            sys.exit(1)
         if len(ill_keys) > 0:
             for k in ill_keys:
                 log(logger.error,"Cannot initialize Source instance. %s is an illegal keyword." % k)
-            exit(1)
+            sys.exit(1)
 
         # Start initialisation
         self.photon = Photon(wavelength=kwargs["wavelength"])
@@ -162,7 +162,7 @@ class Profile:
             self._model = model
         else:
             log(logger.error,"Pulse profile model %s is not implemented. Change your configuration and try again.")
-            exit(0)
+            sys.exit(0)
 
     def get_model(self):
         return self._model

@@ -46,11 +46,11 @@ class Sample:
         if len(miss_keys) > 0: 
             for k in miss_keys:
                 log(logger.error,"Cannot initialize Sample instance. %s is a necessary keyword." % k)
-            exit(1)
+            sys.exit(1)
         if len(ill_keys) > 0:
             for k in ill_keys:
                 log(logger.error,"Cannot initialize Sample instance. %s is an illegal keyword." % k)
-            exit(1)
+            sys.exit(1)
 
         # Start initialisation
         self.number_of_images = kwargs["number_of_images"]
@@ -67,7 +67,7 @@ class Sample:
         if self._number_of_particles_variation._mode in [None,"range"]:
             if N <= 0:
                 log(logger.error,"Sample number of particles smaller-equals zero. Change your configuration.")
-                exit(0)
+                sys.exit(0)
             else:
                 return N
         # Random

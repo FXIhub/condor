@@ -95,11 +95,11 @@ class Detector:
         if len(miss_keys) > 0: 
             for k in miss_keys:
                 log(logger.error,"Cannot initialize Detector instance. %s is a necessary keyword." % k)
-            exit(1)
+            sys.exit(1)
         if len(ill_keys) > 0:
             for k in ill_keys:
                 log(logger.error,"Cannot initialize Detector instance. %s is an illegal keyword." % k)
-            exit(1)
+            sys.exit(1)
 
         # Start initialisation            
         self.distance = kwargs["distance"]
@@ -131,7 +131,7 @@ class Detector:
             for k in reqk:
                 if k not in kwargs.keys():
                     log(logger.error,"Cannot initialize Detector instance. %s is a necessary keyword if no mask is given." % k)
-                    exit(1)
+                    sys.exit(1)
             self.init_mask(nx=kwargs["nx"],ny=kwargs["ny"],
                            x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy,hole_diameter_in_pixel=hd,
                            cx_hole=kwargs.get("cx_hole","middle"),cy_hole=kwargs.get("cy_hole","middle"))

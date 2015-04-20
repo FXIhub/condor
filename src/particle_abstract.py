@@ -22,6 +22,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+import sys
 import numpy
 
 import logging
@@ -44,10 +45,10 @@ class AbstractParticleSpecies:
         miss_keys,ill_keys = config.check_input(kwargs.keys(),self.req_keys,self.opt_keys,verbose=True)
         if len(miss_keys) > 0: 
             log(logger.error,"Cannot initialize %s because of missing keyword arguments." % self.__class__.__name__)
-            exit(1)
+            sys.exit(1)
         if len(ill_keys) > 0:
             log(logger.error,"Cannot initialize %s instance because of illegal keyword arguments." % self.__class__.__name__)
-            exit(1)
+            sys.exit(1)
 
         # Start initialisation
         self.set_alignment(alignment=kwargs["alignment"],euler_angle_0=kwargs["euler_angle_0"],euler_angle_1=kwargs["euler_angle_1"],euler_angle_2=kwargs["euler_angle_2"])

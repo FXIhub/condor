@@ -22,6 +22,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+import sys
 import numpy
 
 import tempfile, os
@@ -285,7 +286,7 @@ class Propagator:
                 spsim.free_output_in_options(opts)
             else:
                 log(logger.error,"No valid particles initialized.")
-                exit(0)
+                sys.exit(0)
             F_singles.append(F)
 
         F_tot = numpy.zeros_like(F)

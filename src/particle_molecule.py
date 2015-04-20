@@ -22,7 +22,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-import os
+import os,sys
 import numpy
 
 import logging
@@ -52,7 +52,7 @@ class ParticleSpeciesMolecule(AbstractParticleSpecies):
                 self.pdb_filename = kwargs["pdb_filename"]
             else:
                 log(logger.error,"Cannot initialize particle species molecule. PDB file %s does not exist." % kwargs["pdb_filename"])
-                exit(0)
+                sys.exit(0)
         else:
             self.atomic_positions = numpy.array(kwargs["atomic_positions"])
             self.atomic_numbers   = numpy.array(kwarfs["atomic_numbers"])

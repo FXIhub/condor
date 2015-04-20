@@ -22,6 +22,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+import sys
 import numpy
 import scipy.stats
 
@@ -206,7 +207,7 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
                     s = numpy.array(d.shape)
                     if not numpy.all(s==s[0]):
                         log(logger.error,"Condor only accepts maps with equal dimensions.")
-                        exit(0)
+                        sys.exit(0)
                     self._old_map3d = d
             else:
                 # default is a map of zeros
@@ -214,7 +215,7 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
                 self._old_map3d = numpy.zeros(shape=(N,N,N),dtype="float64")
         else:
             log(logger.error,"Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
-            exit(1)
+            sys.exit(1)
 
     def _put_custom_map(self,map_add,**kwargs):
         unit = kwargs.get("unit","meter")

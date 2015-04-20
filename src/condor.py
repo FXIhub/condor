@@ -58,13 +58,13 @@ class Input:
     
     def __init__(self,configuration={}):
         default_configuration = this_dir+"/data/default.conf"
-        C = config.Configuration(configuration,self.default_configuration).confDict
+        C = config.Configuration(configuration,default_configuration).confDict
         self.source = Source(**C["source"])
         self.sample = Sample(**C["sample"])
         for k in [k for k in C.keys() if "particle" in k]:
             if "particle_species" not in C[k]:
                 log(logger.error,"No particle species defined for %s" % k)
-                exit(1)
+                sys.exit(1)
             t = C[k]["particle_species"]
             if t == "uniform_sphere":
                 P = ParticleSpeciesSphere(**C[k])
@@ -76,7 +76,7 @@ class Input:
                 P = ParticleSpeciesMolecule(**C[k])
             else:
                 log(logger.error,"ParticleSpecies class for particle_species=%s is not implemented." % t)
-                exit(1)
+                sys.exit(1)
             self.sample.particle_species.append(P)        
         self.detector = Detector(**C["detector"])     
 
@@ -89,7 +89,7 @@ class Output:
     def __init__(self,input):
         if not isinstance(input,Input):
             log(logger.error,"Illegal input. Argument has to be of instance Input.")
-            exit(1)
+            sys.exit(1)
         self.input_object = input 
         self.propagator = Propagator(input.source,input.sample,input.detector)
         log(logger.debug,"Propagation started.")
