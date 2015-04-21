@@ -230,17 +230,19 @@ class Propagator:
                 F = F0 * fourier_pattern * dx**3
             elif isinstance(p,ParticleSpeciesMolecule):
                 import spsim
+                mol = None
                 if D_particle["pdb_filename"] is None:
                     # Write PDB file (not given in configuration)
-                    tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.pdb', prefix='tmp_spsim', dir=None, delete=False)
-                    tmpf_pdb_name = tmpf_pdb.name
-                    tmpf_pfb.close()
-                    mol = spsim.alloc_molecule()
-                    for j,(p0,p1,p2) in zip(D_particle["atomic_numbers"],D_particle["atomic_positions"].reshape((D_particle["atomic_positions"].size/3,3))):
-                        spsim.add_atom(mol,j,p0,p1,p2)
-                    spsim.write_pdb_from_mol(tmpf_pdb_name, mol)
-                    spsim.free_molecule(mol)
-                    D_particle["pdb_filename"] = tmpf_pdb_name
+                    #tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.pdb', prefix='tmp_spsim', dir=None, delete=False)
+                    #tmpf_pdb_name = tmpf_pdb.name
+                    #tmpf_pdb.close()
+                    mol = spsim.alloc_mol()
+                    for j,(pos0,pos1,pos2) in zip(D_particle["atomic_number"],D_particle["atomic_position"].reshape(len(D_particle["atomic_number"]),3)):
+                        spsim.add_atom_to_mol(mol, int(j), pos0, pos1, pos2)
+                    #spsim.write_pdb_from_mol(tmpf_pdb_name, mol)
+                    spsim.write_pdb_from_mol("mol.pdbout", mol)
+                    #spsim.free_mol(mol)
+                    #D_particle["pdb_filename"] = tmpf_pdb_name
                 # Start with default spsim configuration
                 opts = spsim.set_defaults()
                 # Create temporary file for spsim configuration
@@ -258,16 +260,17 @@ class Propagator:
                 os.unlink(tmpf_name)
                 #spsim.write_options_file("./spsim.confout",opts)
                 # Create molecule struct
-                mol = spsim.get_molecule(opts)
-                if D_particle["atomic_positions"] is None:
+                if mol is None:
+                    mol = spsim.get_molecule(opts)
+                if D_particle["atomic_position"] is None:
                     # Get atomic positions and species (extracted from PDB file)
                     pos_img = spsim.sp_image_alloc(mol.natoms,3,1)
                     spsim.array_to_image(mol.pos,pos_img)
-                    D_particle["atomic_positions"] = pos_img.image.real[:,:].copy()
+                    D_particle["atomic_position"] = pos_img.image.real[:,:].copy()
                     spsim.sp_image_free(pos_img)
                     anum_img = spsim.sp_image_alloc(mol.natoms,1,1)
                     spsim.iarray_to_image(mol.atomic_number,anum_img)
-                    D_particle["atomic_numbers"] = numpy.int32(anum_img.image.real[:,:].copy())
+                    D_particle["atomic_number"] = numpy.int32(anum_img.image.real[:,:].copy())
                     spsim.sp_image_free(anum_img)
                 # Calculate diffraction pattern
                 pat = spsim.simulate_shot(mol, opts)

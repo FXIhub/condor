@@ -48,6 +48,28 @@ from particle_map import ParticleSpeciesMap
 from particle_molecule import ParticleSpeciesMolecule
 
 
+def get_default_source_conf():
+    return config.Configuration(this_dir+"/data/source.conf").confDict["source"]    
+
+def get_default_sample_conf():
+    return config.Configuration(this_dir+"/data/sample.conf").confDict["sample"]    
+
+def get_default_detector_conf():
+    return config.Configuration(this_dir+"/data/detector.conf").confDict["detector"]    
+
+def get_default_particle_uniform_sphere_conf():
+    return config.Configuration(this_dir+"/data/particle_uniform_sphere.conf").confDict["particle"]    
+
+def get_default_particle_uniform_spheroid_conf():
+    return config.Configuration(this_dir+"/data/particle_uniform_spheroid.conf").confDict["particle"]    
+
+def get_default_particle_map3d_conf():
+    return config.Configuration(this_dir+"/data/particle_map3d.conf").confDict["particle"]    
+
+def get_default_particle_molecule_conf():
+    return config.Configuration(this_dir+"/data/particle_molecule.conf").confDict["particle"]    
+
+
 class Input:
     """
     The Input object that holds all necessary information for the simulation experiment. After initialization the configuration is saved to the variable configuration.confDict.
@@ -57,29 +79,45 @@ class Input:
     """
     
     def __init__(self,configuration={}):
-        default_configuration = this_dir+"/data/default.conf"
-        C = config.Configuration(configuration,default_configuration).confDict
-        self.source = Source(**C["source"])
-        self.sample = Sample(**C["sample"])
-        for k in [k for k in C.keys() if "particle" in k]:
-            if "particle_species" not in C[k]:
+        C_raw = config.Configuration(configuration).confDict
+        self.confDict = {}
+
+        # Source
+        self.confDict["source"] = config.Configuration(C_raw, {"source": get_default_source_conf()}).confDict["source"]
+        self.source = Source(**self.confDict["source"])
+
+        # Sample
+        self.confDict["sample"] = config.Configuration(C_raw, {"sample": get_default_sample_conf()}).confDict["sample"]
+        self.sample = Sample(**self.confDict["sample"])
+
+        # Particles
+        for k in [k for k in C_raw.keys() if "particle" in k]:
+            if "particle_species" not in C_raw[k]:
                 log(logger.error,"No particle species defined for %s" % k)
                 sys.exit(1)
-            t = C[k]["particle_species"]
+            t = C_raw[k]["particle_species"]
             if t == "uniform_sphere":
-                P = ParticleSpeciesSphere(**C[k])
+                self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_uniform_sphere_conf()}).confDict["particle"]
+                P = ParticleSpeciesSphere(**self.confDict[k])
             elif t == "uniform_spheroid":
-                P = ParticleSpeciesSpheroid(**C[k])
+                self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_uniform_spheroid_conf()}).confDict["particle"]
+                P = ParticleSpeciesSpheroid(**self.confDict[k])
             elif t == "map3d":
-                P = ParticleSpeciesMap(**C[k])
+                self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_map3d_conf()}).confDict["particle"]
+                P = ParticleSpeciesMap(**self.confDict[k])
             elif t == "molecule":
-                P = ParticleSpeciesMolecule(**C[k])
+                self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_molecule_conf()}).confDict["particle"]
+                P = ParticleSpeciesMolecule(**self.confDict[k])
             else:
                 log(logger.error,"ParticleSpecies class for particle_species=%s is not implemented." % t)
                 sys.exit(1)
-            self.sample.particle_species.append(P)        
-        self.detector = Detector(**C["detector"])     
-
+            self.sample.particle_species.append(P)
+            
+        # Detector
+        self.confDict["detector"] = config.Configuration(C_raw, {"detector": get_default_detector_conf()}).confDict["detector"]
+        self.detector = Detector(**self.confDict["detector"])
+        
+        
 class Output:
     """
     An instance of the Output object is initialized with an instance of the Input object and initiates the simulation of the diffraction data.
@@ -103,7 +141,14 @@ class Output:
         self.N = len(self.fourier_pattern)
         t_stop = time.time()
         log(logger.debug,"Propagation finished (time = %f sec)" % (t_stop-t_start))
-    
+        confout = "./condor.confout"
+        self._write_conf(confout)
+        
+    def _write_conf(self, filename):
+        log(logger.debug,"Writing configuration to: %s" % filename) 
+        C = config.Configuration(self.input_object.confDict)
+        C.write_to_file(filename)
+        
     def get_mask(self,i=0,output_bitmask=False):
         """
         Returns 2-dimensional array with bit mask values (binned).

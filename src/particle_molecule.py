@@ -44,30 +44,31 @@ class ParticleSpeciesMolecule(AbstractParticleSpecies):
         self.opt_keys = []
         # Start initialisation
         AbstractParticleSpecies.__init__(self,**kwargs)
-        self.atomic_positions  = None
-        self.atomic_numbers    = None
-        self.pbd_filename      = None
+        self.atomic_position   = None
+        self.atomic_number     = None
+        self.pdb_filename      = None
         if "pdb_filename" in kwargs:
-            if os.path.isfile(kwargs["pdb_filename"]):
-                self.pdb_filename = kwargs["pdb_filename"]
-            else:
-                log(logger.error,"Cannot initialize particle species molecule. PDB file %s does not exist." % kwargs["pdb_filename"])
-                sys.exit(0)
-        else:
-            self.atomic_positions = numpy.array(kwargs["atomic_positions"])
-            self.atomic_numbers   = numpy.array(kwarfs["atomic_numbers"])
+            if kwargs["pdb_filename"] is not None:
+                if os.path.isfile(kwargs["pdb_filename"]):
+                    self.pdb_filename = kwargs["pdb_filename"]
+                else:
+                    log(logger.error,"Cannot initialize particle species molecule. PDB file %s does not exist." % kwargs["pdb_filename"])
+                    sys.exit(0)
+        if self.pdb_filename is None:
+            self.atomic_position = numpy.array(kwargs["atomic_position"])
+            self.atomic_number   = numpy.array(kwargs["atomic_number"])
 
     def get_next(self):
         O = AbstractParticleSpecies.get_next(self)
         O["pdb_filename"]     = self.pdb_filename
-        O["atomic_positions"] = self.atomic_positions
-        O["atomic_numbers"]   = self.atomic_numbers
+        O["atomic_position"] = self.atomic_position
+        O["atomic_number"]   = self.atomic_number
         return O
 
 
 def get_spsim_conf(D_source,D_particle,D_detector):
     s = []
-    s += "# THIS FILE HAS BEEN CREATED AUTOMATICALLY BY CONDOR\n"
+    s += "# THIS FILE WAS CREATED AUTOMATICALLY BY CONDOR\n"
     s += "# Temporary configuration file for spsim\n"
     s += "verbosity_level = 0;\n"
     s += "number_of_dimensions = 2;\n"

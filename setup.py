@@ -40,14 +40,14 @@ except:
     print "ERROR: Cannot import h5py. Please install it and try to install Condor again."
     print "Installation of Condor failed."
     quit(0)
-
+    
 # Create dir for data
 print 'Clean up data directory'
 os.system("mkdir -p ./src/data/")
 
 # Copy default configuration file there
 print 'Copy default configuration file'
-os.system("cp ./default.conf ./src/data/default.conf")
+os.system("cp ./default/*.conf ./src/data/")
 
 # Scattering factors from the Henke tables and atomic masses 
 print 'Loading scattering constants...'
@@ -63,7 +63,7 @@ setup(name='condor',
       package_dir={"condor":"src"},
       packages=['condor', 'condor.utils'],
       package_data={'condor':['data/*']},
-      scripts=['bin/condor'],
+      scripts=['bin/condor','bin/test_condor'],
       ext_modules=[Extension("condor.utils.icosahedron", sources=["src/utils/icosahedron/icosahedronmodule.c"]),
                    Extension("condor.utils.nfft", sources=["src/utils/nfft/nfftmodule.c"], libraries=["nfft3"])],
       include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs()

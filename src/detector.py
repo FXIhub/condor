@@ -113,10 +113,10 @@ class Detector:
                        noise_filename=kwargs.get("noise_filename",None),
                        noise_dataset=kwargs.get("noise_dataset",None))
         self.set_center_variation(center_variation=kwargs["center_variation"],
-                                  center_spread_x=kwargs["center_spread_x"],
-                                  center_spread_y=kwargs["center_spread_y"],
+                                  center_spread_x=kwargs.get("center_spread_x",None),
+                                  center_spread_y=kwargs.get("center_spread_y",None),
                                   center_variation_n=kwargs.get("center_variation_n",None),
-                                  center_spread_limit=kwargs["center_spread_limit"])
+                                  center_spread_limit=kwargs.get("center_spread_limit",None))
         self.saturation_level = kwargs["saturation_level"]
         if "mask" in kwargs or  ("mask_filename" in kwargs and "mask_dataset" in kwargs):
             if "mask" in kwargs:

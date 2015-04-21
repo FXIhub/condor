@@ -38,9 +38,9 @@ from utils.variation import Variation
 class AbstractParticleSpecies:
     def __init__(self, **kwargs):       
         # Check for valid set of keyword arguments
-        self.req_keys += ["particle_species","alignment","euler_angle_0","euler_angle_1","euler_angle_2","position","concentration"]
-        self.opt_keys += ["position_variation","position_spread","position_variation_n",
-                          "geometry_euler_angle_0","geometry_euler_angle_1","geometry_euler_angle_2"] 
+        self.req_keys += ["particle_species","alignment","position","concentration"]
+        self.opt_keys += ["euler_angle_0","euler_angle_1","euler_angle_2",
+                          "position_variation","position_spread","position_variation_n"] 
         # Check input
         miss_keys,ill_keys = config.check_input(kwargs.keys(),self.req_keys,self.opt_keys,verbose=True)
         if len(miss_keys) > 0: 
@@ -51,13 +51,10 @@ class AbstractParticleSpecies:
             sys.exit(1)
 
         # Start initialisation
-        self.set_alignment(alignment=kwargs["alignment"],euler_angle_0=kwargs["euler_angle_0"],euler_angle_1=kwargs["euler_angle_1"],euler_angle_2=kwargs["euler_angle_2"])
+        self.set_alignment(alignment=kwargs["alignment"],euler_angle_0=kwargs.get("euler_angle_0",None),euler_angle_1=kwargs.get("euler_angle_1",None),euler_angle_2=kwargs.get("euler_angle_2",None))
         self.set_position_variation(position_variation=kwargs["position_variation"],position_spread=kwargs.get("position_spread",None),position_variation_n=kwargs.get("position_variation_n",None))
         self.position_mean = kwargs["position"]
         self.concentration = kwargs["concentration"]
-        self.geometry_euler_angle_0 = kwargs.get("geometry_euler_angle_0",0.)
-        self.geometry_euler_angle_1 = kwargs.get("geometry_euler_angle_1",0.)
-        self.geometry_euler_angle_2 = kwargs.get("geometry_euler_angle_2",0.)
 
     def get_next(self):
         O = {}
@@ -66,9 +63,6 @@ class AbstractParticleSpecies:
         O["euler_angle_0"] = euler_angle_0
         O["euler_angle_1"] = euler_angle_1
         O["euler_angle_2"] = euler_angle_2
-        O["geometry_euler_angle_0"] = self.geometry_euler_angle_0
-        O["geometry_euler_angle_1"] = self.geometry_euler_angle_1
-        O["geometry_euler_angle_2"] = self.geometry_euler_angle_2       
         O["position"] = self._get_next_position()
         return O
     

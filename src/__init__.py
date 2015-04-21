@@ -22,3 +22,5 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 from condor import Input,Output,logger
+from condor import get_default_source_conf,get_default_sample_conf,get_default_detector_conf
+from condor import get_default_particle_uniform_sphere_conf,get_default_particle_uniform_spheroid_conf,get_default_particle_map3d_conf,get_default_particle_molecule_conf

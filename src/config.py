@@ -25,7 +25,6 @@
 import sys, os, numpy, types, pickle, time, math, logging, ConfigParser
 logging.basicConfig(format='%(levelname)s: %(message)s')
 logger = logging.getLogger('Condor')
-from scipy import constants
 
 def init_configuration():
     # Some global configuration variables
@@ -36,6 +35,8 @@ def init_configuration():
     #global CONDOR_DIR
     CONDOR_DIR = os.path.dirname(os.path.realpath(__file__))
     sys.path.append(CONDOR_DIR+"/utils")
+    global _CONDOR_DEFAULT_PDB
+    _CONDOR_DEFAULT_PDB = CONDOR_DIR + "/data/DNA.pdb"
     
 def init_global_dictionaries():
     # Load scattering factors and atomic masses from Henke tables
@@ -243,18 +244,18 @@ def check_input(keys,req_keys,opt_keys,verbose=False):
             print "Missing key(s):"
         for missing_key in missing_keys:
             if isinstance(missing_key,list):
-                print "= Alternatives:"
+                print " - Alternatives:"
                 for missing_key_alternative in missing_key:
                     if isinstance(missing_key_alternative,list):
-                        s = "- ["
+                        s = "  - ["
                         for missing_key_alternative_component in missing_key_alternative:
                             s += missing_key_alternative_component + " + "
                         s += "]"
                         print s
                     else:
-                        print ("- " + missing_key_alternative)
+                        print ("  - " + missing_key_alternative)
             else:
-                print ("= " + missing_key)
+                print (" - " + missing_key)
     return missing_keys,illegal_keys
 
 def estimate_type(var):
@@ -311,7 +312,6 @@ class Configuration:
         self.verbose = verbose
         if isinstance(config,str):
             self.confDict = read_configfile(config)
-            self.configfile = config
         else:
             self.confDict = config
         
@@ -319,19 +319,25 @@ class Configuration:
             defDict = read_configfile(default)
         else:
             defDict = default
+            
         self.set_unspecified_to_default(defDict)
-    
+        self.replace_condor_variables_by_values()
+        
     def set_unspecified_to_default(self,defaultDict):
-        for section in defaultDict.keys():
-            matched_sections = [s for s in self.confDict.keys() if section in s]
-            if matched_sections == []:
-                self.confDict[section] = {}
-                logger.info("Add section %s to configuration as it did not exist." % section)
-            for variableName in defaultDict[section].keys():
-                for ms in matched_sections:
-                    if variableName not in self.confDict[ms].keys():
-                        self.confDict[ms][variableName] = defaultDict[section][variableName]
-                        logger.info("Add variable %s with default value %s to configuration section %s as variable did not exist." % (variableName,str(defaultDict[section][variableName]),ms))
+        for sectionName in defaultDict.keys():
+            if sectionName not in self.confDict.keys():
+                self.confDict[sectionName] = {}
+                logger.info("Add section %s with as section does not exist." % (sectionName))
+            for variableName in [n for n in defaultDict[sectionName].keys() if n not in self.confDict[sectionName].keys()]:
+                self.confDict[sectionName][variableName] = defaultDict[sectionName][variableName]
+                logger.info("Add variable %s with default value %s to configuration section %s as variable does not exist." % (variableName,str(defaultDict[sectionName][variableName]),sectionName))
+
+    def replace_condor_variables_by_values(self):
+        for sectionName,section in self.confDict.items():
+            for variableName,variable in section.items():
+                if isinstance(variable, basestring):
+                    if variable[:len("_CONDOR_")] == "_CONDOR_":
+                        exec("self.confDict[sectionName][variableName] = %s" % variable)
 
     def write_to_file(self,filename):
         ls = ["# Configuration file\n# Automatically written by Configuration instance\n\n"]
@@ -339,10 +345,24 @@ class Configuration:
             if isinstance(section,dict):
                 ls.append("[%s]\n" % section_name)
                 for variable_name,variable in section.items():
-                    ls.append("%s=%s\n" % (variable_name,str(variable)))
+                    if (hasattr(variable, '__len__') and (not isinstance(variable, str))) or isinstance(variable, list):
+                        ls.append("%s=%s\n" % (variable_name,list_to_str(variable)))
+                    else:
+                        ls.append("%s=%s\n" % (variable_name,str(variable)))
                 ls.append("\n")
         s = open(filename,"w")
         s.writelines(ls)
         s.close()        
 
         
+def list_to_str(L):
+    if (hasattr(L, '__len__') and (not isinstance(L, str))) or isinstance(L, list):
+        s = ""
+        for l in L:
+            s += list_to_str(l)
+            s += ","
+        s = "[" + s[:-1] + "]"
+        return s
+    else:
+        return str(L)
+            

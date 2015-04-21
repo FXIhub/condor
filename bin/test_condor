@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+import argparse
+import numpy
+from scipy import constants
+import condor
+import condor.utils
+from condor.utils.log import log
+import logging
+logger = logging.getLogger("Condor")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('-v','--verbose',dest='verbose', action='store_true',help='Verbose mode',default=False)
+    parser.add_argument('-d','--debug',dest='debug', action='store_true',help='Debugging mode (even more output than in verbose mode)',default=False)
+    args = parser.parse_args()
+    if args.verbose:
+        logger.setLevel("INFO")
+    if args.debug:
+        logger.setLevel("DEBUG")
+
+
+    # Compare condor / spsim
+    print "COMARISON TEST: Compare diffraction from continuous and atomistic sample model in the limit of a uniformly filled sphere."
+
+    diameter = 2000E-9
+    N = 10000
+
+    C_source = condor.get_default_source_conf()
+    C_source["pulse_energy"] = 10000000.
+    C_source["wavelength"] = 1E-8
+    C_sample   = condor.get_default_sample_conf()
+    C_particle_s = condor.get_default_particle_uniform_sphere_conf()
+    C_particle_m = condor.get_default_particle_molecule_conf()
+    C_detector = condor.get_default_detector_conf()
+    C_detector["nx"] = 1024
+    C_detector["ny"] = 1024
+    C_detector["noise"] = None
+    C_detector["distance"] = 1.
+
+    # SAMPLE CONTINUOUS
+
+    C_particle_s["diameter"] = diameter
+    C_particle_s["material_type"] = "custom"
+    C_particle_s["cH"] = 1.
+    C_particle_s["massdensity"] = N * constants.value("atomic mass constant") / (4/3. * numpy.pi * (diameter/2.)**3)
+
+    print "SAMPLE 1) Uniform sphere of Hydrogen"
+    print "Simulating pattern ..."
+
+    C_s = {"source": C_source,
+    	   "sample"  : C_sample,
+	   "particle": C_particle_s,
+	   "detector": C_detector}
+    I_s = condor.Input(C_s)
+    O_s = condor.Output(I_s)
+    #O_s.write("./test_sphere.cxi")
+    ints_s = O_s.outdict["intensity_pattern"][0,:,:]	
+    i_max = ints_s.flatten().argmax()
+    x_max = i_max % ints_s.shape[1]
+    y_max = i_max / ints_s.shape[1]
+
+    # SAMPLE ATOMISTIC
+
+    C_particle_m["pdb_filename"] = None
+    dx = (4/3.*numpy.pi/N)**(1/3.) * diameter/2.
+    N_edge = int(numpy.round(diameter/dx))
+    #theta    = numpy.arccos(numpy.random.uniform(-1, 1., N))
+    #phi      = numpy.random.uniform(0, 2*numpy.pi, N)
+    #r        = (numpy.random.uniform(0, 1., N))**(1/3.) * diameter/2.
+    #theta    = numpy.arccos(numpy.linspace(-1, 1., N))
+    #phi      = numpy.linspace(0, 2*numpy.pi, N)
+    #r        = (numpy.linspace(0, 1., N))**(1/3.) * diameter/2.
+    z,y,x = numpy.array(numpy.mgrid[0:N_edge, 0:N_edge, 0:N_edge], dtype="float") * diameter / N_edge - diameter/2.
+    r = numpy.sqrt(x**2+y**2+z**2)
+    in_sphere = r <= diameter/2.
+    N = in_sphere.sum()
+    x = x[in_sphere]
+    y = y[in_sphere]	
+    z = z[in_sphere]
+    pos      = numpy.zeros(shape=(N,3))
+    #pos[:,2] = r * numpy.sin(theta) * numpy.cos(phi)
+    #pos[:,1] = r * numpy.sin(theta) * numpy.sin(phi)
+    #pos[:,0] = r * numpy.cos(theta)
+    pos[:,2] = x
+    pos[:,1] = y
+    pos[:,0] = z
+    C_particle_m["atomic_position"] = pos
+    C_particle_m["atomic_number"]   = numpy.ones(N,dtype=numpy.int32)
+
+    print "SAMPLE 2) Ball filled with %i individual Hydrogen atoms on a grid" % N
+    print "Simulating pattern ..."
+
+    C_m = {"source": C_source,
+    	   "sample"  : C_sample,
+	   "particle": C_particle_m,
+	   "detector": C_detector}
+    I_m = condor.Input(C_m)
+    O_m = condor.Output(I_m)
+    #O_m.write("./test_molecule.cxi")
+    ints_m = O_m.outdict["intensity_pattern"][0,:,:]
+    i_max = ints_m.flatten().argmax()
+    x_max = i_max % ints_m.shape[1]
+    y_max = i_max / ints_m.shape[1]
+
+    err = abs((ints_m - ints_s).sum() / (0.5*(ints_s + ints_m).sum()))
+    if err < 0.01:
+        print "COMPARISON TEST PASSED (err = %f)" % err
+    else:
+        print "COMPARISON TEST FAILED (err = %f)" % err
+
+    if args.debug:
+        from matplotlib import pyplot
+    	fig = pyplot.figure()
+    	ax = fig.add_subplot(111)
+    	ax.semilogy(range(ints_m.shape[0]),ints_m[ints_m.shape[0]/2,:])
+    	ax.semilogy(range(ints_m.shape[0]),ints_s[ints_m.shape[0]/2,:])	
+    	ax.legend(["Discrete model","Uniform sphere model"])
+    	fig.savefig("./testout_%09i.png" % N)
+
+ 	#pyplot.imsave("./testout_diff.png",abs(ints_m-ints_s))
+	ints_ss = abs(ints_s)
+        scale = ints_ss.max()
+	ints_ss[ints_ss<1E-5*scale] = 1E-5*scale
+	ints_mm = abs(ints_m)
+        ints_mm[ints_mm<1E-5*scale] = 1E-5*scale
+	pyplot.imsave("./testout_s_%09i.png" % N,numpy.log10(ints_ss))
+        pyplot.imsave("./testout_m_%09i.png" % N,numpy.log10(ints_mm))
