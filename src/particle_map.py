@@ -85,7 +85,7 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         # Check for valid set of keyword arguments
         self.req_keys += ["geometry"]
         self.opt_keys += ["flattening","flattening_variation","flattening_spread","flattening_variation_n"]
-        if kwargs["geometry"] is not in ["icosahedron", "cube", "sphere", "spheroid", "custom"]:
+        if kwargs["geometry"] not in ["icosahedron", "cube", "sphere", "spheroid", "custom"]:
             log(logger.error,"Cannot initialize %s because \'%s\' is not a valid argument for \'geometry\'." % (kwargs["geometry"], self.__class__.__name__))
             sys.exit(1)
         # Start initialisation
