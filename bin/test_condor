@@ -20,6 +20,9 @@ if __name__ == "__main__":
 
 
     # Compare condor / spsim
+    print "=================="
+    print "CONDOR TEST SCRIPT"
+    print "=================="
     print "COMARISON TEST: Compare diffraction from continuous and atomistic sample model in the limit of a uniformly filled sphere."
 
     diameter = 2000E-9

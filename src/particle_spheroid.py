@@ -37,8 +37,8 @@ from utils.variation import Variation
 class ParticleSpeciesSpheroid(AbstractContinuousParticleSpecies):
     def __init__(self,**kwargs):
         # Check for valid set of keyword arguments
-        self.req_keys = ["flattening"]
-        self.opt_keys = ["flattening_variation","flattening_spread","flattening_variation_n"]
+        self.req_keys = self.req_keys + ["flattening"]
+        self.opt_keys = self.opt_keys + ["flattening_variation","flattening_spread","flattening_variation_n"]
         # Start initialisation
         AbstractContinuousParticleSpecies.__init__(self,**kwargs)
         self.flattening_mean = kwargs["flattening"]

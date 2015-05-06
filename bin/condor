@@ -27,3 +27,5 @@ if __name__ == "__main__":
     out_fn = args.configfile.split("/")[-1].split(".")[0] + ".cxi"
     log(logger.info,"Writing output to %s" % out_fn)
     O.write(out_fn,output="all")
+
+    

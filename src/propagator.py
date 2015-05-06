@@ -105,19 +105,20 @@ class Propagator:
                     A[i,:vi.shape[0]] = vi[:]
                 elif d == 2:
                     A[i,:vi.shape[0],:] = vi[:,:]
-                elif d == 2:
+                elif d == 3:
                     A[i,:vi.shape[0],:,:] = vi[:,:,:]
+                elif d == 4:
+                    A[i,:vi.shape[0],:,:,:] = vi[:,:,:,:]
             O["sample"][k] = A 
         for k in O["source"].keys(): O["source"][k] = numpy.array(O["source"][k])
         for k in O["detector"].keys(): O["detector"][k] = numpy.array(O["detector"][k])
         for k in [k for k in O.keys() if k not in ["source","sample","detector"]]:
             O[k] = numpy.array(O[k])
-
         return O
 
     def _propagate_single(self,**kwargs):
         save_map = kwargs.get("save_map",False)
-        save_qmap = kwargs.get("save_qmap",False)
+        save_qmap = kwargs.get("save_qmap",True)
 
         # Iterate objects
         D_source   = self.source.get_next()
@@ -205,8 +206,6 @@ class Propagator:
                 qmap_scaled = dx * qmap / (2 * numpy.pi)
                 #qmap /= self.get_absq_max(wavelength)/0.5*numpy.sqrt(2)
                 qmap_shaped = qmap_scaled.reshape(qmap_scaled.shape[0]*qmap_scaled.shape[1],3)
-                if save_qmap:
-                    D_particle["qmap"] = qmap_shaped
                     #D_particle["qmap3d"] = detector.generate_qmap_ori(nfft_scaled=True)
                 # Check inputs
                 invalid_mask = (abs(qmap_shaped)>0.5)
@@ -281,15 +280,23 @@ class Propagator:
                 spsim.sp_image_free(F_img)
                 spsim.sp_image_free(phot_img)
                 # Extract qmap from spsim output
-                qmap_img = spsim.sp_image_alloc(3,D_detector["ny"],D_detector["nx"])
+                qmap_img = spsim.sp_image_alloc(D_detector["ny"],D_detector["nx"],3)
                 spsim.array_to_image(pat.HKL_list, qmap_img)
-                qmap = qmap_img.image.real[:,:,:].copy()
+                qmap = numpy.zeros(shape=(D_detector["ny"],D_detector["nx"],3))
+                qmap[:,:,0] = qmap_img.image.real[0,:,:]
+                qmap[:,:,1] = qmap_img.image.real[1,:,:]
+                qmap[:,:,2] = qmap_img.image.real[2,:,:]
                 spsim.sp_image_free(qmap_img)
                 spsim.free_diffraction_pattern(pat)
                 spsim.free_output_in_options(opts)
             else:
                 log(logger.error,"No valid particles initialized.")
                 sys.exit(0)
+
+            if save_qmap:
+                D_particle["qmap"] = qmap
+
+                
             F_singles.append(F)
 
         F_tot = numpy.zeros_like(F)
@@ -319,7 +326,7 @@ class Propagator:
             O["intensity_pattern_xxx"] = IXxX_tot
             O["mask_xxx"]              = MXxX_tot
             O["mask_xxx_binary"]       = MXxX_tot_binary
-
+            
         return O
         
     def get_qmap(self, nx, ny, cx, cy, pixel_size, detector_distance, wavelength, euler_angle_0, euler_angle_1, euler_angle_2):

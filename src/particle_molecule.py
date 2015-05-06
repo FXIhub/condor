@@ -85,5 +85,9 @@ def get_spsim_conf(D_source,D_particle,D_detector):
     s += "detector_binning = 1;\n"
     s += "experiment_wavelength = %.6e;\n" % D_source["wavelength"]
     s += "experiment_beam_intensity = %.6e;\n" % D_particle["intensity"]
+    s += "phi = %.6e;\n" % D_particle["euler_angle_0"]
+    s += "theta = %.6e;\n" % D_particle["euler_angle_1"]
+    s += "psi = %.6e;\n" % D_particle["euler_angle_2"]
+    s += "random_orientation = 0;\n"
     return s
 
