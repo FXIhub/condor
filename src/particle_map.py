@@ -83,8 +83,8 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
 
         """
         # Check for valid set of keyword arguments
-        self.req_keys = ["geometry"]
-        self.opt_keys = ["flattening","flattening_variation","flattening_spread","flattening_variation_n"]
+        self.req_keys += ["geometry"]
+        self.opt_keys += ["flattening","flattening_variation","flattening_spread","flattening_variation_n"]
         if kwargs["geometry"] is not in ["icosahedron", "cube", "sphere", "spheroid", "custom"]:
             log(logger.error,"Cannot initialize %s because \'%s\' is not a valid argument for \'geometry\'." % (kwargs["geometry"], self.__class__.__name__))
             sys.exit(1)
@@ -93,6 +93,7 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         self.geometry = kwargs["geometry"]
         self.flattening_mean = kwargs.get("flattening",1.)
         self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
+        self.geometry = kwargs["geometry"]
 
         # Init chache
         self._old_map3d_diameter               = None
@@ -102,9 +103,8 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
 
     def get_next(self):
         O = AbstractContinuousParticleSpecies.get_next(self)
-        O["geometry"] = self.geometry
         O["flattening"] = self._get_next_flattening()
-       return O
+        return O
 
     def set_flattening_variation(self,flattening_variation=None,flattening_spread=None,flattening_variation_n=None,**kwargs):
         self._flattening_variation = Variation(flattening_variation,flattening_spread,flattening_variation_n,name="spheroid flattening")       
@@ -134,11 +134,6 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         build_map = False
         if self._old_map3d is None:
             build_map = True
-        if self._old_map3d_geometry is None:
-            build_map = True
-        else:
-            if self._old_map3d_geometry != O["geometry"]:
-                build_map = True
         if self._old_map3d_diameter is None:
             build_map = True
         else:
@@ -153,8 +148,7 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         self._old_map3d = None
         self._old_map3d_dx = dx_suggested
         self._old_map3d_diameter = O["diameter"]
-        self._old_map3d_geometry = O["geometry"]
-
+        
         if O["geometry"] is not "custom":
             n = self.material.get_dn()
             if O["geometry"] == "icosahedron":

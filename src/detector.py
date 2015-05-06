@@ -89,7 +89,7 @@ class Detector:
                     "noise_filename","noise_dataset",
                     "center_variation","center_spread_x","center_spread_y","center_variation_n","center_spread_limit",
                     "saturation_level",
-                    "mask","mask_filename","mask_dataset",
+                    "mask","mask_filename","mask_dataset","mask_is_cxi_bitmask",
                     "nx","ny","downsampling"]
         miss_keys,ill_keys = config.check_input(kwargs.keys(),req_keys,opt_keys)
         if len(miss_keys) > 0: 
@@ -124,7 +124,7 @@ class Detector:
             else:
                 with h5py.File(kwargs["mask_filename"],"r") as f:
                     M = f[kwargs["mask_dataset"]][:,:]
-            if not kwargs.get("mask_CXI_bitmask",True): M = (M & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0
+            if not kwargs.get("mask_is_cxi_bitmask",False): M = (M == 0) * PixelMask.PIXEL_IS_MISSING
             self.init_mask(mask=M)
         else:
             reqk = ["nx","ny"]

@@ -25,6 +25,7 @@
 import numpy
 
 from scattering_vector import generate_qmap
+from linalg import rotation
 
 # scattering amplitude from homogeneous spheroid:
 # -----------------------------------------------

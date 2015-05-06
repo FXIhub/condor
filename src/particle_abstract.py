@@ -122,19 +122,19 @@ class AbstractParticleModel:
     def _get_next_position(self):
         return self._position_variation.get(self.position_mean)
 
-class AbstractContinuousParticleModel(AbstractParticleModel):
+class AbstractContinuousParticleSpecies(AbstractParticleSpecies):
+    req_keys = ["diameter"]
+    opt_keys = ["diameter_variation","diameter_spread","diameter_variation_n","massdensity","material_type"] + ["c"+k for k in config.DICT_atomic_number.keys()]
     def __init__(self, **kwargs):
         # Argument check and initialization of inherited class
-        self.req_keys = ["diameter"]
-        cel_keys = ["c"+k for k in config.DICT_atomic_number.keys()]
-        self.opt_keys = ["diameter_variation","diameter_spread","diameter_variation_n","massdensity","material_type"] + cel_keys
-        AbstractParticleModel.__init__(self,**kwargs)
+        AbstractParticleSpecies.__init__(self,**kwargs)
         # Continue initialization
         # Diameter
         self.set_diameter_variation(diameter_variation=kwargs["diameter_variation"],diameter_spread=kwargs.get("diameter_spread",None),diameter_variation_n=kwargs.get("diameter_variation_n",None))
         self.diameter_mean = kwargs["diameter"]
         # Material
         materialargs = {}
+        cel_keys = ["c"+k for k in config.DICT_atomic_number.keys()]
         if 'massdensity' in kwargs:
             materialargs['massdensity'] = kwargs['massdensity']
             for key in kwargs.keys():
