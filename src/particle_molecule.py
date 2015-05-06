@@ -30,20 +30,20 @@ logger = logging.getLogger("Condor")
 import utils.log
 from utils.log import log 
 
-from particle_abstract import AbstractParticleSpecies
+from particle_abstract import AbstractParticleModel
 
-class ParticleSpeciesMolecule(AbstractParticleSpecies):
+class ParticleModelMolecule(AbstractParticleModel):
     def __init__(self,**kwargs):
         try:
             import spsim
         except:
-            log(logger.error,"Cannot import spsim module. This module is necessary to simulate diffraction for particle species \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
+            log(logger.error,"Cannot import spsim module. This module is necessary to simulate diffraction for particle model \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
             return
         # Check for valid set of keyword arguments
         self.req_keys = [["pdb_filename",["atomic_position","atomic_number"]]]
         self.opt_keys = []
         # Start initialisation
-        AbstractParticleSpecies.__init__(self,**kwargs)
+        AbstractParticleModel.__init__(self,**kwargs)
         self.atomic_position   = None
         self.atomic_number     = None
         self.pdb_filename      = None
@@ -52,14 +52,14 @@ class ParticleSpeciesMolecule(AbstractParticleSpecies):
                 if os.path.isfile(kwargs["pdb_filename"]):
                     self.pdb_filename = kwargs["pdb_filename"]
                 else:
-                    log(logger.error,"Cannot initialize particle species molecule. PDB file %s does not exist." % kwargs["pdb_filename"])
+                    log(logger.error,"Cannot initialize particle model molecule. PDB file %s does not exist." % kwargs["pdb_filename"])
                     sys.exit(0)
         if self.pdb_filename is None:
             self.atomic_position = numpy.array(kwargs["atomic_position"])
             self.atomic_number   = numpy.array(kwargs["atomic_number"])
 
     def get_next(self):
-        O = AbstractParticleSpecies.get_next(self)
+        O = AbstractParticleModel.get_next(self)
         O["pdb_filename"]     = self.pdb_filename
         O["atomic_position"] = self.atomic_position
         O["atomic_number"]   = self.atomic_number

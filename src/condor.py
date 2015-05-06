@@ -42,10 +42,10 @@ from source import Source
 from sample import Sample
 from detector import Detector
 from propagator import Propagator 
-from particle_sphere import ParticleSpeciesSphere
-from particle_spheroid import ParticleSpeciesSpheroid
-from particle_map import ParticleSpeciesMap
-from particle_molecule import ParticleSpeciesMolecule
+from particle_sphere import ParticleModelSphere
+from particle_spheroid import ParticleModelSpheroid
+from particle_map import ParticleModelMap
+from particle_molecule import ParticleModelMolecule
 
 
 def get_default_source_conf():
@@ -92,26 +92,26 @@ class Input:
 
         # Particles
         for k in [k for k in C_raw.keys() if "particle" in k]:
-            if "particle_species" not in C_raw[k]:
-                log(logger.error,"No particle species defined for %s" % k)
+            if "particle_model" not in C_raw[k]:
+                log(logger.error,"No particle model defined for %s" % k)
                 sys.exit(1)
-            t = C_raw[k]["particle_species"]
+            t = C_raw[k]["particle_model"]
             if t == "uniform_sphere":
                 self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_uniform_sphere_conf()}).confDict["particle"]
-                P = ParticleSpeciesSphere(**self.confDict[k])
+                P = ParticleModelSphere(**self.confDict[k])
             elif t == "uniform_spheroid":
                 self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_uniform_spheroid_conf()}).confDict["particle"]
-                P = ParticleSpeciesSpheroid(**self.confDict[k])
+                P = ParticleModelSpheroid(**self.confDict[k])
             elif t == "map3d":
                 self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_map3d_conf()}).confDict["particle"]
-                P = ParticleSpeciesMap(**self.confDict[k])
+                P = ParticleModelMap(**self.confDict[k])
             elif t == "molecule":
                 self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_molecule_conf()}).confDict["particle"]
-                P = ParticleSpeciesMolecule(**self.confDict[k])
+                P = ParticleModelMolecule(**self.confDict[k])
             else:
-                log(logger.error,"ParticleSpecies class for particle_species=%s is not implemented." % t)
+                log(logger.error,"ParticleModel class for particle_model=%s is not implemented." % t)
                 sys.exit(1)
-            self.sample.particle_species.append(P)
+            self.sample.particle_models.append(P)
             
         # Detector
         self.confDict["detector"] = config.Configuration(C_raw, {"detector": get_default_detector_conf()}).confDict["detector"]

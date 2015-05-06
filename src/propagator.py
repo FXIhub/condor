@@ -38,10 +38,10 @@ import utils.sphere_diffraction
 import utils.spheroid_diffraction
 import utils.scattering_vector
 import utils.resample
-from particle_sphere import ParticleSpeciesSphere
-from particle_spheroid import ParticleSpeciesSpheroid
-from particle_map import ParticleSpeciesMap
-from particle_molecule import ParticleSpeciesMolecule, get_spsim_conf
+from particle_sphere import ParticleModelSphere
+from particle_spheroid import ParticleModelSpheroid
+from particle_map import ParticleModelMap
+from particle_molecule import ParticleModelMolecule, get_spsim_conf
 
 class Propagator:
     def __init__(self,source,sample,detector):
@@ -49,7 +49,6 @@ class Propagator:
         self.sample   = sample
         self.detector = detector
         self._qmap_cache = {}
-        self._map3d_cache = {}
 
     def propagate(self,**kwargs):
         N = self.sample.number_of_images
@@ -150,7 +149,9 @@ class Propagator:
             e0 = D_particle["euler_angle_0"]
             e1 = D_particle["euler_angle_1"]
             e2 = D_particle["euler_angle_2"]
-            if isinstance(p,ParticleSpeciesSphere):
+
+            # UNIFORM SPHERE
+            if isinstance(p,ParticleModelSphere):
                 # Refractive index
                 dn = p.material.get_dn(wavelength)
                 # Scattering vectors
@@ -163,7 +164,9 @@ class Propagator:
                 K = (F0*V*dn.real)**2
                 # Pattern
                 F = utils.sphere_diffraction.F_sphere_diffraction(K,q,R)
-            elif isinstance(p,ParticleSpeciesSpheroid):
+
+            # UNIFORM SPHEROID
+            elif isinstance(p,ParticleModelSpheroid):
                 # Refractive index
                 dn = p.material.get_dn(wavelength)
                 # Scattering vectors
@@ -182,28 +185,25 @@ class Propagator:
                 theta = utils.spheroid_diffraction.to_spheroid_theta(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
                 phi = utils.spheroid_diffraction.to_spheroid_phi(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
                 F = utils.spheroid_diffraction.F_spheroid_diffraction(K,qx,qy,a,c,theta,phi)
-            elif isinstance(p,ParticleSpeciesMap):
-                # Refractive index
-                dn = p.material.get_dn(wavelength)
+
+            # MAP
+            elif isinstance(p,ParticleModelMap):
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength,
                                      euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
-                K = (F0*V*dn.real)**2
                 # Generate map
                 dx_required  = self.detector.get_real_space_resolution_element(wavelength,cx,cy) / numpy.sqrt(2)
                 dx_suggested = self.detector.get_real_space_resolution_element_min(wavelength,cx,cy) / numpy.sqrt(2)
-                map3d, dx = p.get_map3d(D_particle,dx_required,dx_suggested)
-                dn_map3d = numpy.array(map3d,dtype="complex128") * dn
+                dn, dx = p.get_map3d(D_particle,dx_required,dx_suggested)
                 if save_map:
-                    D_particle["map3d"] = map3d
+                    D_particle["dn"] = dn
                     D_particle["dx"] = dx
                     D_particle["dx3"] = dx**3
                 # Rescale and shape qmap for nfft
                 qmap_scaled = dx * qmap / (2 * numpy.pi)
-                #qmap /= self.get_absq_max(wavelength)/0.5*numpy.sqrt(2)
                 qmap_shaped = qmap_scaled.reshape(qmap_scaled.shape[0]*qmap_scaled.shape[1],3)
                 if save_qmap:
                     D_particle["qmap"] = qmap_shaped
@@ -213,14 +213,14 @@ class Propagator:
                 if (invalid_mask).sum() > 0:
                     qmap_shaped[invalid_mask] = 0.
                     log(logger.debug,"%i invalid pixel positions." % invalid_mask.sum())
-                log(logger.debug,"Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn_map3d.shape[0],dn_map3d.shape[1],dn_map3d.shape[2],len(list(dn_map3d.shape)),abs(dn_map3d).sum()))
-                if (numpy.isfinite(dn_map3d)==False).sum() > 0:
-                    log(logger.warning,"There are infinite values in the map3d of the object.")
+                log(logger.debug,"Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn.shape[0],dn.shape[1],dn.shape[2],len(list(dn.shape)),abs(dn).sum()))
+                if (numpy.isfinite(abs(dn))==False).sum() > 0:
+                    log(logger.warning,"There are infinite values in the dn map of the object.")
                 log(logger.debug,"Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (qmap_shaped.shape[0],qmap_shaped.shape[1],len(list(qmap_shaped.shape))))
                 if (numpy.isfinite(qmap_shaped)==False).sum() > 0:
                     log(logger.warning,"There are infinite values in the scattering vectors.")
                 # NFFT
-                fourier_pattern = utils.nfft.nfft(dn_map3d,qmap_shaped)
+                fourier_pattern = utils.nfft.nfft(dn,qmap_shaped)
                 # Check output - masking in case of invalid values
                 if (invalid_mask).sum() > 0:
                     fourier_pattern[numpy.any(invalid_mask)] = numpy.nan
@@ -228,7 +228,9 @@ class Propagator:
                 fourier_pattern = numpy.reshape(fourier_pattern,(qmap_scaled.shape[0],qmap_scaled.shape[1]))
                 log(logger.debug,"Got pattern of %i x %i pixels." % (fourier_pattern.shape[1],fourier_pattern.shape[0]))
                 F = F0 * fourier_pattern * dx**3
-            elif isinstance(p,ParticleSpeciesMolecule):
+
+            # MOLECULE
+            elif isinstance(p,ParticleModelMolecule):
                 import spsim
                 mol = None
                 if D_particle["pdb_filename"] is None:
@@ -263,7 +265,7 @@ class Propagator:
                 if mol is None:
                     mol = spsim.get_molecule(opts)
                 if D_particle["atomic_position"] is None:
-                    # Get atomic positions and species (extracted from PDB file)
+                    # Get atomic positions and model (extracted from PDB file)
                     pos_img = spsim.sp_image_alloc(mol.natoms,3,1)
                     spsim.array_to_image(mol.pos,pos_img)
                     D_particle["atomic_position"] = pos_img.image.real[:,:].copy()
@@ -287,9 +289,11 @@ class Propagator:
                 spsim.sp_image_free(qmap_img)
                 spsim.free_diffraction_pattern(pat)
                 spsim.free_output_in_options(opts)
+                
             else:
                 log(logger.error,"No valid particles initialized.")
                 sys.exit(0)
+
             F_singles.append(F)
 
         F_tot = numpy.zeros_like(F)

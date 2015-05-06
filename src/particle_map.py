@@ -62,11 +62,8 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         OR:
         - geometry: Geometry that shall be generated (icosahedron, sphere, spheroid, cube)
           - oversampling_fine: Additional oversampling for the initial map self.map3d_fine [1.]
-          ADDITIONAL (icosahedron):
-          - geometry_euler_angle_0, geometry_euler_angle_1, geometry_euler_angle_2: Euler angles defining orientation of 5-fold axis in relation to z-axis in grid. [0.0,0.0,0.0]
           ADDITIONAL (spheroid):
           - flattening
-          - geometry_euler_angle_0, geometry_euler_angle_1: Euler angles defining orientation of singular axis in relation to z-axis in grid. [0.0,0.0]
 
         ADDITIONAL:
         - euler_angle_0, euler_angle_1, euler_angle_2: Euler angles defining orientation of 3D grid in the experimental reference frame (beam axis). [0.0,0.0,0.0]
@@ -86,48 +83,28 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
 
         """
         # Check for valid set of keyword arguments
-        self.req_keys = ["geometry","geometry_concentrations"]
-        self.opt_keys = ["flattening","flattening_variation","flattening_spread","flattening_variation_n",
-                         "geometry_euler_angle_0","geometry_euler_angle_1","geometry_euler_angle_2"]
-
+        self.req_keys = ["geometry"]
+        self.opt_keys = ["flattening","flattening_variation","flattening_spread","flattening_variation_n"]
+        if kwargs["geometry"] is not in ["icosahedron", "cube", "sphere", "spheroid", "custom"]:
+            log(logger.error,"Cannot initialize %s because \'%s\' is not a valid argument for \'geometry\'." % (kwargs["geometry"], self.__class__.__name__))
+            sys.exit(1)
         # Start initialisation
         AbstractContinuousParticleSpecies.__init__(self,**kwargs)
-        self.set_geometry_variation(geometry=kwargs["geometry"],geometry_concentrations=kwargs["geometry_concentrations"])
+        self.geometry = kwargs["geometry"]
         self.flattening_mean = kwargs.get("flattening",1.)
         self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
-        self.geometry_euler_angle_0 = kwarfs.get("geometry_euler_angle_0", 0.)
-        self.geometry_euler_angle_1 = kwarfs.get("geometry_euler_angle_1", 0.)
-        self.geometry_euler_angle_2 = kwarfs.get("geometry_euler_angle_2", 0.)
-
 
         # Init chache
         self._old_map3d_diameter               = None
         self._old_map3d_geometry               = None
-        self._old_map3d_geometry_euler_angle_0 = None
-        self._old_map3d_geometry_euler_angle_1 = None
-        self._old_map3d_geometry_euler_angle_2 = None
         self._old_map3d_dx                     = None
         self._old_map3d                        = None
 
     def get_next(self):
         O = AbstractContinuousParticleSpecies.get_next(self)
-        O["geometry"] = self._get_next_geometry()
+        O["geometry"] = self.geometry
         O["flattening"] = self._get_next_flattening()
-        O["geometry_euler_angle_0"] = self.geometry_euler_angle_0
-        O["geometry_euler_angle_1"] = self.geometry_euler_angle_1
-        O["geometry_euler_angle_2"] = self.geometry_euler_angle_2       
-        return O
-
-    def set_geometry_variation(self, geometry, geometry_concentrations):
-        self._geometry = list(geometry)
-        self._geometry_concentrations = numpy.array(geometry_concentrations) / numpy.array(geometry_concentrations).sum()
-        
-    def _get_next_geometry(self):
-        if len(self._geometry) == 1:
-            return self._geometry[0]
-        else:
-            dist = scipy.stats.rv_discrete(values=(numpy.arange(len(self._geometry)), self._geometry_concentrations))
-            return self._geometry[dist.rvs()]
+       return O
 
     def set_flattening_variation(self,flattening_variation=None,flattening_spread=None,flattening_variation_n=None,**kwargs):
         self._flattening_variation = Variation(flattening_variation,flattening_spread,flattening_variation_n,name="spheroid flattening")       
@@ -150,7 +127,8 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
 
     def get_map3d(self,O,dx_required,dx_suggested):
         self._build_map(O,dx_required,dx_suggested)
-        return self._old_map3d,self._old_map3d_dx
+        dx = self._old_map3d_dx
+        return m, dx
             
     def _build_map(self,O,dx_required,dx_suggested):
         build_map = False
@@ -169,14 +147,6 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         if self._old_map3d_dx > dx_required:
             build_map = True
             self._old_map3d = None
-        if self._old_map3d_geometry_euler_angle_0 is None or self._old_map3d_geometry_euler_angle_1 is None or self._old_map3d_geometry_euler_angle_2 is None:
-            build_map = True
-        else:
-            de0 = abs(self._old_map3d_geometry_euler_angle_0 - O["geometry_euler_angle_0"])
-            de1 = abs(self._old_map3d_geometry_euler_angle_0 - O["geometry_euler_angle_1"])
-            de2 = abs(self._old_map3d_geometry_euler_angle_0 - O["geometry_euler_angle_2"])
-            if de0 > 0.001 or  de1 > 0.001 or  de2 > 0.001 :
-                build_map = True
         if not build_map:
             return
 
@@ -184,27 +154,30 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         self._old_map3d_dx = dx_suggested
         self._old_map3d_diameter = O["diameter"]
         self._old_map3d_geometry = O["geometry"]
-        self._old_map3d_geometry_euler_angle_0 = O["geometry_euler_angle_0"]
-        self._old_map3d_geometry_euler_angle_1 = O["geometry_euler_angle_1"]
-        self._old_map3d_geometry_euler_angle_2 = O["geometry_euler_angle_2"]
 
-        if O["geometry"] == "icosahedron":
-            self._put_icosahedron(O["diameter"]/2.,geometry_euler_angle_0=O["geometry_euler_angle_0"],geometry_euler_angle_1=O["geometry_euler_angle_1"],geometry_euler_angle_2=O["geometry_euler_angle_2"])
-        elif O["geometry"] == "spheroid":
-            a = utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
-            c = utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
-            self._put_spheroid(a,c,geometry_euler_angle_0=O["geometry_euler_angle_0"],geometry_euler_angle_1=O["geometry_euler_angle_1"],geometry_euler_angle_2=O["geometry_euler_angle_2"])
-        elif O["geometry"] == "sphere":
-            self._put_sphere(O["diameter"]/2.)
-        elif O["geometry"] == "cube":
-            self._put_cube(O["diameter"]/2.,geometry_euler_angle_0=O["geometry_euler_angle_0"],geometry_euler_angle_1=O["geometry_euler_angle_1"],geometry_euler_angle_2=O["geometry_euler_angle_2"])
-        elif O["geometry"] == "custom":
+        if O["geometry"] is not "custom":
+            n = self.material.get_dn()
+            if O["geometry"] == "icosahedron":
+                self._put_icosahedron(O["diameter"]/2., dn)
+            elif O["geometry"] == "spheroid":
+                a = utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
+                c = utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
+                self._put_spheroid(a, c, n)
+            elif O["geometry"] == "sphere":
+                self._put_sphere(O["diameter"]/2., dn)
+            elif O["geometry"] == "cube":
+                self._put_cube(O["diameter"]/2., dn)
+            else:
+                log(logger.error,"Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
+                sys.exit(1)
+        else:
             if "map3d" in O:
                 s = numpy.array(O["map3d"].shape)
                 if not numpy.all(s==s[0]):
                     log(logger.error,"Condor only accepts maps with equal dimensions.")
                     return
                 self._old_map3d = O['map3d']
+                self._old_map3d_dx = O["diameter"]/float(s[0]-1)
             elif "filename" in O:
                 import h5py
                 with h5py.File(O["filename"],"r") as f:
@@ -217,40 +190,36 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
                         log(logger.error,"Condor only accepts maps with equal dimensions.")
                         sys.exit(0)
                     self._old_map3d = d
+                    self._old_map3d_dx = O["diameter"]/float(s[0]-1)
             else:
-                # default is a map of zeros
-                N = int(numpy.ceil(O["diameter"]/self._old_map3d_dx))
-                self._old_map3d = numpy.zeros(shape=(N,N,N),dtype="float64")
-        else:
-            log(logger.error,"Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
-            sys.exit(1)
+                log(logger.error,"For a custom geometry either map3d or filename has to be specified to load the map. Change your configuration and try again.")
+                sys.exit(1)
 
-    def _put_custom_map(self,map_add,**kwargs):
-        unit = kwargs.get("unit","meter")
-        p = numpy.array([kwargs.get("z",0.),kwargs.get("y",0.),kwargs.get("x",0.)])
-        origin = kwargs.get("origin","middle")
-        mode = kwargs.get("mode","factor")
-        dn = kwargs.get("dn",None)
-        if dn == None:
-            factor = 1.
-        else:
-            factor = abs(dn)/abs(self._get_dn())
-        if self._old_map3d == None:
-            self._old_map3d = numpy.array(map_add,dtype="float64")
-            return
-        else:
-            self._old_map3d = utils.bodies.array_to_array(map_add,self._old_map3d,p,origin,mode,0.,factor)
+    #def _put_custom_map(self,map_add,**kwargs):
+    #    unit = kwargs.get("unit","meter")
+    #    p = numpy.array([kwargs.get("z",0.),kwargs.get("y",0.),kwargs.get("x",0.)])
+    #    origin = kwargs.get("origin","middle")
+    #    mode = kwargs.get("mode","factor")
+    #    dn = kwargs.get("n",None)
+    #    if dn == None:
+    #        factor = 1.
+    #    else:
+    #        factor = abs(dn)/abs(self._get_dn())
+    #    if self._old_map3d == None:
+    #        self._old_map3d = numpy.array(map_add,dtype="float64")
+    #    else:
+    #        self._old_map3d = utils.bodies.array_to_array(map_add,self._old_map3d,p,origin,mode,0.,factor)
 
-    def _put_sphere(self,radius,**kwargs):
+    def _put_custom_map(self, map_add, n):
+        self._old_map3d = numpy.array(map_add, dtype=numpy.complex128) * n
+    
+    def _put_sphere(self, radius, n):
         nR = radius/self._old_map3d_dx
         N = int(round((nR*1.2)*2))
         spheremap = utils.bodies.make_sphere_map(N,nR)
-        self._put_custom_map(spheremap,**kwargs)
+        self._put_custom_map(spheremap, n)
  
-    def _put_spheroid(self,a,c,**kwargs):
-        e0 = kwargs.get("geometry_euler_angle_0")
-        e1 = kwargs.get("geometry_euler_angle_1")
-        e2 = kwargs.get("geometry_euler_angle_2")
+    def _put_spheroid(self, a, c, n, e0=0., e1=0., e2=0.):
         # maximum radius
         Rmax = max([a,c])
         # maximum radius in pixel
@@ -261,12 +230,9 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         # leaving a bit of free space around spheroid
         N = int(round((nRmax*1.2)*2))
         spheromap = utils.bodies.make_spheroid_map(N,nA,nC,e0,e1,e2)
-        self._put_custom_map(spheromap,**kwargs)
+        self._put_custom_map(spheromap, n)
 
-    def _put_icosahedron(self,radius,**kwargs):
-        e0 = kwargs.get("geometry_euler_angle_0")
-        e1 = kwargs.get("geometry_euler_angle_1")
-        e2 = kwargs.get("geometry_euler_angle_2")
+    def _put_icosahedron(self, radius, n, e0=0., e1=0., e2=0.):
         # icosahedon size parameter
         a = radius*(16*numpy.pi/5.0/(3+numpy.sqrt(5)))**(1/3.0)
         # radius at corners in meter
@@ -277,12 +243,9 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         N = int(numpy.ceil(2.3*(nRmax)))
         log(logger.info,"Building icosahedron with radius %e (%i pixel) in %i x %i x %i voxel cube." % (radius,nRmax,N,N,N))
         icomap = utils.bodies.make_icosahedron_map(N,nRmax,e0,e1,e2)
-        self._put_custom_map(icomap,**kwargs)
+        self._put_custom_map(icomap, n)
 
-    def _put_cube(self,a,**kwargs):
-        e0 = kwargs.get("geometry_euler_angle_0")
-        e1 = kwargs.get("geometry_euler_angle_1")
-        e2 = kwargs.get("geometry_euler_angle_2")
+    def _put_cube(self, a, n, e0=0., e1=0., e2=0.):
         # edge_length in pixels
         nel = a/self._old_map3d_dx 
         # leaving a bit of free space around
@@ -302,7 +265,7 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         temp = (Dmax<0.5)*(cubemap==0.)
         d = Dmax[temp]
         cubemap[temp] = 0.5-d
-        self._put_custom_map(cubemap,**kwargs)        
+        self._put_custom_map(cubemap, n)        
 
     def plot_map3d(self,mode='surface'):
         try:

@@ -56,7 +56,7 @@ class Sample:
         self.number_of_images = kwargs["number_of_images"]
         self.number_of_particles_mean = kwargs["number_of_particles"]
         self.set_number_of_particles_variation(kwargs["number_of_particles_variation"],kwargs.get("number_of_particles_spread",None),kwargs.get("number_of_particles_variation_n",None))
-        self.particle_species = []
+        self.particle_models = []
 
     def set_number_of_particles_variation(self,mode,spread,variation_n):
         self._number_of_particles_variation = Variation(mode,spread,variation_n)
@@ -81,15 +81,15 @@ class Sample:
     def _next_particles(self):
         N = self._get_next_number_of_particles()
         if N > 1:
-            if len(self.particle_species) == 1:
-                self.particles = self.particle_species * N
+            if len(self.particle_models) == 1:
+                self.particles = self.particle_models * N
             else:
-                i_s = range(len(self.particle_species))
-                c_s = [s.concentration for s in self.particle_species]
-                dist = scipy.stats.rv_discrete(name='species distribution', values=(i_s, c_s))
-                self.particles = self.particle_species[dist.rvs(size=self.number_of_particles)]
+                i_s = range(len(self.particle_models))
+                c_s = [s.concentration for s in self.particle_models]
+                dist = scipy.stats.rv_discrete(name='model distribution', values=(i_s, c_s))
+                self.particles = self.particle_models[dist.rvs(size=self.number_of_particles)]
         else:
-            self.particles = self.particle_species
+            self.particles = self.particle_models
 
     def get_next(self):
         self._next_particles()

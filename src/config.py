@@ -209,6 +209,7 @@ def unpickle_scattering_factors():
 
 def check_input(keys,req_keys,opt_keys,verbose=False):
     missing_keys = [k for k in req_keys if not isinstance(k,list) and (k not in keys)]
+    # Required keys from different alternative combination sets (list in req_keys)
     for l in [l for k in keys if isinstance(k,list)]:
         tmp_miss = []
         # Alternatives (non-exclusive)
@@ -224,6 +225,13 @@ def check_input(keys,req_keys,opt_keys,verbose=False):
                     tmp_miss.append(a)
         if len(tmp_miss) == len(l):
             missing_keys.append(tmp_miss)
+    # Required keys from the optional keys (keys that are needed in combined sets, indicated by tuples in opt_keys list)
+    req_opt_keys = []
+    for t in [t for t in opt_keys if isinstance(t,tuple)]:
+        if list(set(t).intersection(keys)):
+            for tt in t:
+                if tt not in req_opt_keys:
+                    req_opt_keys.append(tt)
     all_keys = req_keys + opt_keys
     def sublist_elements(l):
         l_new = []

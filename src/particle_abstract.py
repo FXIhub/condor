@@ -35,10 +35,10 @@ from material import Material
 from utils.variation import Variation
 
 
-class AbstractParticleSpecies:
+class AbstractParticleModel:
     def __init__(self, **kwargs):       
         # Check for valid set of keyword arguments
-        self.req_keys += ["particle_species","alignment","position","concentration"]
+        self.req_keys += ["particle_model","alignment","position","concentration"]
         self.opt_keys += ["euler_angle_0","euler_angle_1","euler_angle_2",
                           "position_variation","position_spread","position_variation_n"] 
         # Check input
@@ -122,13 +122,13 @@ class AbstractParticleSpecies:
     def _get_next_position(self):
         return self._position_variation.get(self.position_mean)
 
-class AbstractContinuousParticleSpecies(AbstractParticleSpecies):
+class AbstractContinuousParticleModel(AbstractParticleModel):
     def __init__(self, **kwargs):
         # Argument check and initialization of inherited class
         self.req_keys = ["diameter"]
         cel_keys = ["c"+k for k in config.DICT_atomic_number.keys()]
         self.opt_keys = ["diameter_variation","diameter_spread","diameter_variation_n","massdensity","material_type"] + cel_keys
-        AbstractParticleSpecies.__init__(self,**kwargs)
+        AbstractParticleModel.__init__(self,**kwargs)
         # Continue initialization
         # Diameter
         self.set_diameter_variation(diameter_variation=kwargs["diameter_variation"],diameter_spread=kwargs.get("diameter_spread",None),diameter_variation_n=kwargs.get("diameter_variation_n",None))
@@ -142,12 +142,12 @@ class AbstractContinuousParticleSpecies(AbstractParticleSpecies):
         elif "material_type" in kwargs:
             materialargs['material_type'] = kwargs['material_type']
         else:
-            log(logger.error,"Illegal material configuration for sample species.")
+            log(logger.error,"Illegal material configuration for sample model.")
             exit(0)
         self.set_material(**materialargs)
 
     def get_next(self):
-        O = AbstractParticleSpecies.get_next(self)
+        O = AbstractParticleModel.get_next(self)
         O["diameter"] = self._get_next_diameter()
         return O
     
