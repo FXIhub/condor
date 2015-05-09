@@ -40,8 +40,8 @@ class ParticleModelMolecule(AbstractParticleModel):
             log(logger.error,"Cannot import spsim module. This module is necessary to simulate diffraction for particle model \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
             return
         # Check for valid set of keyword arguments
-        self.req_keys = [["pdb_filename",["atomic_position","atomic_number"]]]
-        self.opt_keys = []
+        self.req_keys += [["pdb_filename",["atomic_position","atomic_number"]]]
+        self.opt_keys += []
         # Start initialisation
         AbstractParticleModel.__init__(self,**kwargs)
         self.atomic_position   = None

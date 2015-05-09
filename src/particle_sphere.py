@@ -29,10 +29,8 @@ logger = logging.getLogger("Condor")
 import utils.log
 from utils.log import log 
 
-from particle_abstract import AbstractContinuousParticleSpecies
+from particle_abstract import AbstractContinuousParticleModel
 
-class ParticleSpeciesSphere(AbstractContinuousParticleSpecies):
+class ParticleModelSphere(AbstractContinuousParticleModel):
     def __init__(self,**kwargs):
-        self.req_keys = []
-        self.opt_keys = []
-        AbstractContinuousParticleSpecies.__init__(self,**kwargs)
+        AbstractContinuousParticleModel.__init__(self,**kwargs)

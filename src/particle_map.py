@@ -36,12 +36,12 @@ import utils.spheroid_diffraction
 import utils.diffraction
 import utils.bodies
 
-from particle_abstract import AbstractContinuousParticleSpecies
+from particle_abstract import AbstractContinuousParticleModel
 
-class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
+class ParticleModelMap(AbstractContinuousParticleModel):
     def __init__(self,**kwargs):
         """
-        Function initializes ParticleSpeciesMap object:
+        Function initializes ParticleModelMap object:
         =============================================
 
         Arguments:
@@ -89,7 +89,7 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
             log(logger.error,"Cannot initialize %s because \'%s\' is not a valid argument for \'geometry\'." % (kwargs["geometry"], self.__class__.__name__))
             sys.exit(1)
         # Start initialisation
-        AbstractContinuousParticleSpecies.__init__(self,**kwargs)
+        AbstractContinuousParticleModel.__init__(self,**kwargs)
         self.geometry = kwargs["geometry"]
         self.flattening_mean = kwargs.get("flattening",1.)
         self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
@@ -102,7 +102,7 @@ class ParticleSpeciesMap(AbstractContinuousParticleSpecies):
         self._old_map3d                        = None
 
     def get_next(self):
-        O = AbstractContinuousParticleSpecies.get_next(self)
+        O = AbstractContinuousParticleModel.get_next(self)
         O["flattening"] = self._get_next_flattening()
         return O
 
