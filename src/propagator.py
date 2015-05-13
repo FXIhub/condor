@@ -162,7 +162,7 @@ class Propagator:
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
-                K = (F0*V*dn.real)**2
+                K = (F0*V*abs(dn))**2
                 # Pattern
                 F = utils.sphere_diffraction.F_sphere_diffraction(K,q,R)
 
@@ -178,7 +178,7 @@ class Propagator:
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
-                K = (F0*V*dn.real)**2
+                K = (F0*V*abs(dn))**2
                 a = utils.spheroid_diffraction.to_spheroid_semi_diameter_a(D_particle["diameter"],D_particle["flattening"])
                 c = utils.spheroid_diffraction.to_spheroid_semi_diameter_c(D_particle["diameter"],D_particle["flattening"])
                 # Pattern
@@ -189,6 +189,8 @@ class Propagator:
 
             # MAP
             elif isinstance(p,ParticleModelMap):
+                # Refractive index
+                dn = p.material.get_dn(wavelength)
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength,
                                      euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
@@ -198,7 +200,7 @@ class Propagator:
                 # Generate map
                 dx_required  = self.detector.get_real_space_resolution_element(wavelength,cx,cy) / numpy.sqrt(2)
                 dx_suggested = self.detector.get_real_space_resolution_element_min(wavelength,cx,cy) / numpy.sqrt(2)
-                dn, dx = p.get_map3d(D_particle,dx_required,dx_suggested)
+                dn, dx = p.get_map3d(D_particle,dx_required,dx_suggested,dn)
                 if save_map:
                     D_particle["dn"] = dn
                     D_particle["dx"] = dx

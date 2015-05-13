@@ -93,7 +93,6 @@ class ParticleModelMap(AbstractContinuousParticleModel):
         self.geometry = kwargs["geometry"]
         self.flattening_mean = kwargs.get("flattening",1.)
         self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
-        self.geometry = kwargs["geometry"]
 
         # Init chache
         self._old_map3d_diameter               = None
@@ -103,6 +102,7 @@ class ParticleModelMap(AbstractContinuousParticleModel):
 
     def get_next(self):
         O = AbstractContinuousParticleModel.get_next(self)
+        O["geometry"]   = self.geometry
         O["flattening"] = self._get_next_flattening()
         return O
 
@@ -125,12 +125,13 @@ class ParticleModelMap(AbstractContinuousParticleModel):
             else:
                 return f
 
-    def get_map3d(self,O,dx_required,dx_suggested):
-        self._build_map(O,dx_required,dx_suggested)
+    def get_map3d(self,O,dx_required,dx_suggested,dn):
+        self._build_map(O,dx_required,dx_suggested,dn)
         dx = self._old_map3d_dx
+        m = self._old_map3d
         return m, dx
             
-    def _build_map(self,O,dx_required,dx_suggested):
+    def _build_map(self,O,dx_required,dx_suggested,dn):
         build_map = False
         if self._old_map3d is None:
             build_map = True
@@ -150,13 +151,12 @@ class ParticleModelMap(AbstractContinuousParticleModel):
         self._old_map3d_diameter = O["diameter"]
         
         if O["geometry"] is not "custom":
-            n = self.material.get_dn()
             if O["geometry"] == "icosahedron":
                 self._put_icosahedron(O["diameter"]/2., dn)
             elif O["geometry"] == "spheroid":
                 a = utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
                 c = utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
-                self._put_spheroid(a, c, n)
+                self._put_spheroid(a, c, dn)
             elif O["geometry"] == "sphere":
                 self._put_sphere(O["diameter"]/2., dn)
             elif O["geometry"] == "cube":
