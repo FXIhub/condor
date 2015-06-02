@@ -41,7 +41,7 @@ class Sample:
 
         # Check for valid set of keyword arguments
         req_keys = ["number_of_images","number_of_particles"]
-        opt_keys = ["number_of_particles_variation","number_of_particles_spread","number_of_particles_variation_n"]
+        opt_keys = ["number_of_particles_variation","number_of_particles_spread","number_of_particles_variation_n","particle_pick"]
         miss_keys,ill_keys = config.check_input(kwargs.keys(),req_keys,opt_keys)
         if len(miss_keys) > 0: 
             for k in miss_keys:
@@ -55,6 +55,7 @@ class Sample:
         # Start initialisation
         self.number_of_images = kwargs["number_of_images"]
         self.number_of_particles_mean = kwargs["number_of_particles"]
+        self.particle_pick = kwargs.get("particle_variation","random")
         self.set_number_of_particles_variation(kwargs["number_of_particles_variation"],kwargs.get("number_of_particles_spread",None),kwargs.get("number_of_particles_variation_n",None))
         self.particle_models = []
 
@@ -80,16 +81,17 @@ class Sample:
         
     def _next_particles(self):
         N = self._get_next_number_of_particles()
-        if N > 1:
-            if len(self.particle_models) == 1:
-                self.particles = self.particle_models * N
-            else:
-                i_s = range(len(self.particle_models))
-                c_s = [s.concentration for s in self.particle_models]
-                dist = scipy.stats.rv_discrete(name='model distribution', values=(i_s, c_s))
-                self.particles = self.particle_models[dist.rvs(size=self.number_of_particles)]
+        if self.particle_pick == "sequential":
+            self.particles = [self.particle_models[i%len(self.particle_models)] for i in range(N)]
+        elif self.particle_pick == "random":
+            i_s = range(len(self.particle_models))
+            c_s = numpy.array([s.concentration for s in self.particle_models])
+            c_s = c_s / c_s.sum()
+            dist = scipy.stats.rv_discrete(name='model distribution', values=(i_s, c_s))
+            self.particles = [self.particle_models[i] for i in dist.rvs(size=N)]
         else:
-            self.particles = self.particle_models
+            log(logger.error,"particle_pick=%s is not a valid configuration." % self.particle_variation)
+            sys.exit(0)
 
     def get_next(self):
         self._next_particles()

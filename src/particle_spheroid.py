@@ -37,12 +37,12 @@ from utils.variation import Variation
 class ParticleModelSpheroid(AbstractContinuousParticleModel):
     def __init__(self,**kwargs):
         # Check for valid set of keyword arguments
-        self.req_keys += ["flattening"]
-        self.opt_keys += ["flattening_variation","flattening_spread","flattening_variation_n"]
+        add_req_keys = ["flattening"]
+        add_opt_keys = ["flattening_variation", "flattening_spread", "flattening_variation_n"]
         # Start initialisation
-        AbstractContinuousParticleModel.__init__(self,**kwargs)
+        AbstractContinuousParticleModel.__init__(self, add_req_keys, add_opt_keys, **kwargs)
         self.flattening_mean = kwargs["flattening"]
-        self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None),flattening_spread=kwargs.get("flattening_spread",None),flattening_variation_n=kwargs.get("flattening_variation_n",None))
+        self.set_flattening_variation(flattening_variation=kwargs.get("flattening_variation",None), flattening_spread=kwargs.get("flattening_spread", None), flattening_variation_n=kwargs.get("flattening_variation_n", None))
 
     def get_next(self):
         O = AbstractContinuousParticleModel.get_next(self)

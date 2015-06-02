@@ -108,7 +108,7 @@ class Propagator:
                     A[i,:vi.shape[0],:,:] = vi[:,:,:]
                 elif d == 4:
                     A[i,:vi.shape[0],:,:,:] = vi[:,:,:,:]
-            O["sample"][k] = A 
+            O["sample"][k] = A
         for k in O["source"].keys(): O["source"][k] = numpy.array(O["source"][k])
         for k in O["detector"].keys(): O["detector"][k] = numpy.array(O["detector"][k])
         for k in [k for k in O.keys() if k not in ["source","sample","detector"]]:
@@ -204,7 +204,6 @@ class Propagator:
                 if save_map:
                     D_particle["dn"] = dn
                     D_particle["dx"] = dx
-                    D_particle["dx3"] = dx**3
                 # Rescale and shape qmap for nfft
                 qmap_scaled = dx * qmap / (2 * numpy.pi)
                 qmap_shaped = qmap_scaled.reshape(qmap_scaled.shape[0]*qmap_scaled.shape[1],3)
@@ -236,16 +235,10 @@ class Propagator:
                 mol = None
                 if D_particle["pdb_filename"] is None:
                     # Write PDB file (not given in configuration)
-                    #tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.pdb', prefix='tmp_spsim', dir=None, delete=False)
-                    #tmpf_pdb_name = tmpf_pdb.name
-                    #tmpf_pdb.close()
                     mol = spsim.alloc_mol()
                     for j,(pos0,pos1,pos2) in zip(D_particle["atomic_number"],D_particle["atomic_position"].reshape(len(D_particle["atomic_number"]),3)):
                         spsim.add_atom_to_mol(mol, int(j), pos0, pos1, pos2)
-                    #spsim.write_pdb_from_mol(tmpf_pdb_name, mol)
                     spsim.write_pdb_from_mol("mol.pdbout", mol)
-                    #spsim.free_mol(mol)
-                    #D_particle["pdb_filename"] = tmpf_pdb_name
                 # Start with default spsim configuration
                 opts = spsim.set_defaults()
                 # Create temporary file for spsim configuration

@@ -40,10 +40,10 @@ class ParticleModelMolecule(AbstractParticleModel):
             log(logger.error,"Cannot import spsim module. This module is necessary to simulate diffraction for particle model \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
             return
         # Check for valid set of keyword arguments
-        self.req_keys += [["pdb_filename",["atomic_position","atomic_number"]]]
-        self.opt_keys += []
+        add_req_keys = [["pdb_filename",["atomic_position","atomic_number"]]]
+        add_opt_keys = []
         # Start initialisation
-        AbstractParticleModel.__init__(self,**kwargs)
+        AbstractParticleModel.__init__(self, add_req_keys, add_opt_keys, **kwargs)
         self.atomic_position   = None
         self.atomic_number     = None
         self.pdb_filename      = None
@@ -85,9 +85,12 @@ def get_spsim_conf(D_source,D_particle,D_detector):
     s += "detector_binning = 1;\n"
     s += "experiment_wavelength = %.6e;\n" % D_source["wavelength"]
     s += "experiment_beam_intensity = %.6e;\n" % D_particle["intensity"]
-    s += "phi = %.6e;\n" % D_particle["euler_angle_0"]
-    s += "theta = %.6e;\n" % D_particle["euler_angle_1"]
-    s += "psi = %.6e;\n" % D_particle["euler_angle_2"]
+    #s += "phi = %.6e;\n" % D_particle["euler_angle_0"]
+    #s += "theta = %.6e;\n" % D_particle["euler_angle_1"]
+    #s += "psi = %.6e;\n" % D_particle["euler_angle_2"]
+    s += "phi = 1.0;\n"
+    s += "theta = 1.0;\n"
+    s += "psi = 1.0;\n"
     s += "random_orientation = 0;\n"
     return s
 

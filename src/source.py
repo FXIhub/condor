@@ -100,7 +100,9 @@ class Source:
     def get_next(self):
         self._next_pulse_energy()
         return {"pulse_energy":self.pulse_energy,
-                "wavelength":self.photon.get_wavelength()}
+                "wavelength":self.photon.get_wavelength(),
+                "photon_energy":self.photon.get_energy("J"),
+                "photon_energy_eV":self.photon.get_energy("eV")}
 
     def _next_pulse_energy(self):
         p = self._pulse_energy_variation.get(self.pulse_energy_mean)
@@ -173,7 +175,11 @@ class Profile:
             p = lambda r: 1. / (numpy.pi * (self.focus_diameter / 2.)**2)
         elif self._model == "top_hat":
             # focus diameter is diameter of top hat profile
-            p = lambda r: (1.  / (numpy.pi * (self.focus_diameter / 2.)**2)) if r < (self.focus_diameter / 2.) else 0.
+            def p(r):
+                if numpy.isscalar(r):
+                    return (1.  / (numpy.pi * (self.focus_diameter / 2.)**2)) if r < (self.focus_diameter / 2.) else 0.
+                else:
+                    return (1.  / (numpy.pi * (self.focus_diameter / 2.)**2)) * (r < (self.focus_diameter / 2.))
         elif self._model == "pseudo_lorentzian":
             # focus diameter is FWHM of lorentzian
             sigma = self.focus_diameter / 2.

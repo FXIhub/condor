@@ -66,25 +66,6 @@ class Material:
             logger.error("No valid arguments for Material initialization.")
             return
 
-    def get_fX(self,element,photon_wavelength):
-        """
-        Get the scattering factor for an element through linear interpolation.
-        """
-
-        r_0 = constants.value("classical electron radius")
-        h   =  constants.h
-        c   =  constants.c
-        qe   = constants.e
-
-        photon_energy_eV = h*c/photon_wavelength/qe
-
-        SF_X = config.DICT_scattering_factors[element]
-        e = constants.e
-        c = constants.c
-        h = constants.h
-        f1 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
-        f2 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
-        return complex(f1,f2) 
  
     def get_n(self,photon_wavelength):
         """
@@ -104,15 +85,15 @@ class Material:
 
         return n
 
-    def get_dn(self,photon_energy=None):
-        return (1-self.get_n(photon_energy))
+    def get_dn(self,photon_wavelength=None):
+        return (1-self.get_n(photon_wavelength))
 
     # convenience functions
     # n = 1 - delta - i beta
     def get_delta(self,photon_wavelength):
-        return (1-self.get_n(photon_wavelength).real)
+        return (1-self.get_n(photon_wavelength=photon_wavelength).real)
     def get_beta(self,photon_wavelength):
-        return (-self.get_n(photon_wavelength).imag)
+        return (-self.get_n(photon_wavelength=photon_wavelength).imag)
 
     def get_photoabsorption_cross_section(self,photon_wavelength):
 
@@ -128,7 +109,7 @@ class Material:
     def get_transmission(self,thickness,photon_wavelength):
 
         n = self.get_n(photon_wavelength)
-        mu = self.get_photoabsorption_cross_section(photon_wavelength)
+        mu = self.get_photoabsorption_cross_section(photon_wavelength=photon_wavelength)
         rho = self.get_atom_density()
 
         return numpy.exp(-rho*mu*thickness)
@@ -137,10 +118,16 @@ class Material:
     
         atomic_composition = self.get_atomic_composition_dict()
 
-        f_sum = 0
+        r_0 = constants.value("classical electron radius")
+        h   =  constants.h
+        c   =  constants.c
+        qe   = constants.e
+        photon_energy_eV = h*c/photon_wavelength/qe
+        
+        f_sum = complex(0.,0.)
         for element in atomic_composition.keys():
             # sum up average atom factor
-            f = self.get_fX(element,photon_wavelength)
+            f = get_f_element(element,photon_energy_eV)
             f_sum += atomic_composition[element] * f
         
         return f_sum
@@ -185,7 +172,7 @@ class Material:
         atomic_composition = {}
         
         for key in self.__dict__.keys():
-            if key[0] == 'c':
+            if key[0] == 'c' and key[1:] in config.DICT_atomic_number.keys():
                 exec "c_tmp = self." + key
                 atomic_composition[key[1:]] = c_tmp 
  
@@ -195,3 +182,49 @@ class Material:
         
         return atomic_composition
 
+
+
+    
+
+def get_f_element(element, photon_energy_eV):
+    """
+    Get the scattering factor for an element through linear interpolation.
+    """
+    
+    SF_X = config.DICT_scattering_factors[element]
+    f1 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
+    f2 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
+
+    return complex(f1,f2)
+
+
+class DensityMap:
+    
+    def __init__(self, shape):
+        self.density = numpy.zeros(shape=(shape[0], shape[1], shape[2], len(config.DICT_atomic_number.keys())),dtype=numpy.float64)
+
+    def get_n(self, wavelength):
+        """
+        Obtains complex refractive index.
+        Henke (1994): n = 1 - r_0/(2pi) lambda^2 sum_q rho_q f_q(0)
+        r_0: classical electron radius
+        rho_q: atomic number density of atom species q
+        f_q(0): atomic scattering factor (forward scattering) of atom species q
+        """
+
+        r_0 = constants.value("classical electron radius")
+        h   =  constants.h
+        c   =  constants.c
+        qe   = constants.e
+        photon_energy_eV = h*c/photon_wavelength/qe
+
+        s = numpy.zeros(shape=(shape[0], shape[1], shape[2]), dtype=numpy.complex128)
+        for (el, de) in zip(config.DICT_atomic_number.keys(), self.density):
+            s += de * get_f_element(el, photon_energy_eV)
+
+        n = 1 - r_0 / (2*numpy.pi) * wavelength**2 * s
+
+        return n
+
+    def get_dn(self, wavelength):
+        return (1-self.get_n(wavelength))

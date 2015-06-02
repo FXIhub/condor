@@ -33,4 +33,4 @@ from particle_abstract import AbstractContinuousParticleModel
 
 class ParticleModelSphere(AbstractContinuousParticleModel):
     def __init__(self,**kwargs):
-        AbstractContinuousParticleModel.__init__(self,**kwargs)
+        AbstractContinuousParticleModel.__init__(self,[],[],**kwargs)

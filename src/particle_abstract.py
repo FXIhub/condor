@@ -35,14 +35,14 @@ from material import Material
 from utils.variation import Variation
 
 
+
+
 class AbstractParticleModel:
-    def __init__(self, **kwargs):       
-        # Check for valid set of keyword arguments
-        self.req_keys += ["particle_model","alignment","position","concentration"]
-        self.opt_keys += ["euler_angle_0","euler_angle_1","euler_angle_2",
-                          "position_variation","position_spread","position_variation_n"] 
+    def __init__(self, add_req_keys, add_opt_keys, **kwargs):       
+        req_keys = ["particle_model","alignment","position","concentration"] + add_req_keys
+        opt_keys = ["euler_angle_0","euler_angle_1","euler_angle_2","position_variation","position_spread","position_variation_n"] + add_opt_keys 
         # Check input
-        miss_keys,ill_keys = config.check_input(kwargs.keys(),self.req_keys,self.opt_keys,verbose=True)
+        miss_keys,ill_keys = config.check_input(kwargs.keys(), req_keys, opt_keys, verbose=True)
         if len(miss_keys) > 0: 
             log(logger.error,"Cannot initialize %s because of missing keyword arguments." % self.__class__.__name__)
             sys.exit(1)
@@ -123,11 +123,11 @@ class AbstractParticleModel:
         return self._position_variation.get(self.position_mean)
 
 class AbstractContinuousParticleModel(AbstractParticleModel):
-    req_keys = ["diameter"]
-    opt_keys = ["diameter_variation","diameter_spread","diameter_variation_n","massdensity","material_type"] + ["c"+k for k in config.DICT_atomic_number.keys()]
-    def __init__(self, **kwargs):
+    def __init__(self, add_req_keys, add_opt_keys, **kwargs):
         # Argument check and initialization of inherited class
-        AbstractParticleModel.__init__(self,**kwargs)
+        add_req_keys += ["diameter"]
+        add_opt_keys += ["diameter_variation","diameter_spread","diameter_variation_n","massdensity","material_type"] + ["c"+k for k in config.DICT_atomic_number.keys()]
+        AbstractParticleModel.__init__(self, add_req_keys, add_opt_keys, **kwargs)
         # Continue initialization
         # Diameter
         self.set_diameter_variation(diameter_variation=kwargs["diameter_variation"],diameter_spread=kwargs.get("diameter_spread",None),diameter_variation_n=kwargs.get("diameter_variation_n",None))
