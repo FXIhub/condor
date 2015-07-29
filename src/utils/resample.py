@@ -76,13 +76,13 @@ def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pix
         Ny = Ny_new * factor
         A = numpy.zeros(shape=(Ny,Nx),dtype=array2d.dtype)
         A[:array2d.shape[0],:array2d.shape[1]] = array2d[:,:]
-        A = A.flat
+        A = A.flatten()
         Y,X = numpy.indices((Ny,Nx))
         Y = Y.flatten()
         X = X.flatten()
         Y /= factor
         X /= factor
-        superp = Y*Nx+X
+        superp = Y*Nx_new+X
         superp_order = superp.argsort()
         A = A[superp_order]
         A = A.reshape((Nx_new*Ny_new,factor*factor))
@@ -92,7 +92,7 @@ def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pix
         if mask2d != None:
             AM = numpy.zeros(shape=(Ny,Nx),dtype="int16")
             AM[:mask2d.shape[0],:mask2d.shape[1]] = mask2d[:,:]
-            AM = AM.flat
+            AM = AM.flatten()
             AM = AM[superp_order]
             AM = AM.reshape((Nx_new*Ny_new,factor*factor))
             if bad_bits == None:
@@ -106,5 +106,5 @@ def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pix
                 for i in range(1,factor*factor):
                     BM |= AM[:,i]
                 BM[BN >= min_N_pixels] = BM[BN >= min_N_pixels] & ~bad_bits
-            B[BN >= min_N_pixels] = B[BN >= min_N_pixels] * factor/numpy.float64(BN[BN >= min_N_pixels])
+            B[BN >= min_N_pixels] = B[BN >= min_N_pixels] * factor*factor /numpy.float64(BN[BN >= min_N_pixels])
             return [B.reshape((Ny_new,Nx_new)),BM.reshape((Ny_new,Nx_new))]

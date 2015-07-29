@@ -27,203 +27,182 @@ import h5py
 sys.path.append("utils")
 import numpy
 
-import logging
-logger = logging.getLogger("Condor")
-import utils.log
-from utils.log import log 
+import condor.utils.log
+from condor.utils.log import log 
+import condor.utils.config
+import utils.resample
+from condor.utils.tools import get_default_source_conf
+from condor.utils.variation import Variation
+from condor.utils.pixelmask import PixelMask
+from condor.utils.linalg import length
 
-import config
-from utils.variation import Variation
-from utils.pixelmask import PixelMask
-
+def load_detector(conf=None):
+    """
+    Create new Detector instance and load parameters from a Condor configuration file.
+    
+    Kwargs:
+       :conf(str): Condor configuration file (default = None)
+    """
+    C = condor.utils.config.load_configuration(condor.utils.config.load_configuration(conf), {"detector": get_default_detector_conf()})
+    detector = Detector(**C["detector"])
+    return detector
 
 class Detector:
     """
-    A subclass of the input object.
-    Defines area detector.
+    Class for area detector
     """
-    def __init__(self,**kwargs):
+    def __init__(self, distance, pixel_size,
+                 x_gap_size_in_pixel=0, y_gap_size_in_pixel=0, hole_diameter_in_pixel=0, cx_hole="middle", cy_hole="middle",
+                 noise=None, noise_spread=None, noise_variation_n=None, noise_filename=None, noise_dataset=None,
+                 cx="middle", cy="middle", center_variation=None, center_spread_x=None, center_spread_y=None, center_variation_n=None, center_spread_limit=None,
+                 saturation_level=None, mask=None, mask_filename=None, mask_dataset=None, mask_is_cxi_bitmask=False,
+                 nx=None, ny=None, binning=None):
         """
-        Function initializes Detector object.
-        =====================================
-        Arguments:
-        Keyword arguments (if not given variable is set to default value):
-
-        - distance: Distance between detector and interaction point.
-        - pixel_size: Edge length of square pixel.
-        - cx: Horizontal beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
-        - cy: Vertical beam position in pixel. If argument is \'None\' or not given center is set to the middle. [None]
-        - center_variation: Variation of the center position. Either None, \'normal\', \'uniform\' or \'range\'. [None]
-        - center_spread_x: If \'normal\', \'uniform\' or \'range\' center variation is specified spread defines width of the distribution in x.
-        - center_spread_y: If \'normal\', \'uniform\' or \'range\' center variation is specified spread defines width of the distribution in y.
-        - center_variation_n: I \'range\' center variation is specified this argument specifies the number of samples within the specified range.
-        - noise: Noise that is put on the intensities when read. Either None, \'poisson\', \'normal\', \'uniform\' or \'normal_poisson or \'file\' or \'file_poisson\''. [None]
-        - noise_spread: If \'normal\', \'uniform\' or \'normal_poisson\' noise is specified spread defines width of gaussian/uniform distribution.
-        - noise_filename: If \'file\' or \'file_poisson\' noise is specified this HDF5 file contains the dataset that is added to an image.
-        - noise_dataset:  If \'file\' or \'file_poisson\' noise is specified this HDF5 file dataset contains the signal that is added to a diffraction image. If the dataset has 3 dimensions a random frame (i.e. dataset[i_random,:,:]) is picked for every read out.
-        - saturation_level: Value at which detector pixels satutrate. [None]
-
-        EITHER (default):
-        - nx: Number of pixels in horizontal direction not including a potential gap.
-        - ny: Number of pixels in vertical direction not including a potential gap.
-        - x_gap_size_in_pixel: Width of central horizontal gap in pixel. [0]
-        - y_gap_size_in_pixel: Width of central vertical gap in pixel. [0]
-        - hole_diameter_in_pixel: Diameter of central hole in pixel. [0]
+        Initialisation of a Detector instance
         
-        OR:
-        - mask_CXI_bitmask: bool wheter or not data is stored as a CXI bitmask. [False]
-          + False: pixels with value 0 are invalid, pixels with value 1 are valid.
-          + True: (pixels & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0 are the valid pixels
+        Args:
+           :distance(float): Distance between detector and interaction point
+           :pixel_size(float): Edge length of square pixel
+
+        Kwargs:
+           :cx: Horizontal beam position in pixel (fast changing dimension). If argument is None or not given center is set to the middle (default = None)
+           :cy: Vertical beam position in pixel (slowly changing dimension). If argument is None or not given center is set to the middle (default = None)
+           :center_variation(str): Variation of the center position. Either None, \"normal\", \"uniform\" or \"range\" (default = None)
+           :center_spread_x(float): If \"normal\", \"uniform\" or \"range\" center variation is specified spread defines width of the distribution in x
+           :center_spread_y(float): If \"normal\", \"uniform\" or \"range\" center variation is specified spread defines width of the distribution in y
+           :center_variation_n(int): I \"range\" center variation is specified this argument specifies the number of samples within the specified range
+           :noise(str): Noise that is put on the intensities when read. Either None, \"poisson\", \"normal\", \"uniform\" or \"normal_poisson or \"file\" or \"file_poisson\" (default = None)
+           :noise_spread(float): If \"normal\", \"uniform\" or \"normal_poisson\" noise is specified spread defines width of gaussian/uniform distribution (default = None)
+           :noise_filename(str): If \"file\" or \"file_poisson\" noise is specified this HDF5 file contains the dataset that is added to an image (default = None)
+           :noise_dataset(str):  If \"file\" or \"file_poisson\" noise is specified this HDF5 file dataset contains the signal that is added to a diffraction image. If the dataset has 3 dimensions a random frame (i.e. dataset[i_random,:,:]) is picked for every read out (default = None)
+           :saturation_level(float): Value at which detector pixels satutrate (default = None)
+           :binning(int): Pixel binning factor, intensies are integrated over patches of \'binning\' x \'binning\' pixels (default = None)
+
+        The mask can be specified in three alternative ways:
+
+        By parametrisation
+           :nx(int): Number of pixels in horizontal direction not including a potential gap (default = None)
+           :ny(int): Number of pixels in vertical direction not including a potential gap (default = None)
+           :x_gap_size_in_pixel(int): Width of central horizontal gap in pixel (default = 0)
+           :y_gap_size_in_pixel(int): Width of central vertical gap in pixel (default = 0)
+           :hole_diameter_in_pixel(int): Diameter of central hole in pixel (default = 0)
         
-          EITHER
-          - mask: 2d mask array. In the array 1 stands for valid pixel and 0 for an invalid pixel.
-          OR:
-          - mask_filename: path to HDF5 file where the mask is stored
-          - mask_dataset: dataset path in file
+        or by specifying the mask with an array
+           :mask_filename: path to HDF5 file where the mask is stored (default = None)
+           :mask_dataset: dataset path in file (default = None)
+           :mask_CXI_bitmask(bool): Bool wheter or not data is stored as a CXI bitmask. False: pixels with value 0 are invalid, pixels with value 1 are valid. True: (pixels & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0 are the valid pixels (default = False)
+
+        or by reading the mask from a dataset in an HDF5 file
+           :mask: 2d mask as numpy array (default = None)
+           :mask_CXI_bitmask(bool): Bool wheter or not data is stored as a CXI bitmask. False: pixels with value 0 are invalid, pixels with value 1 are valid. True: (pixels & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0 are the valid pixels (default = False)
         """
 
-        # Check for valid set of keyword arguments
-        req_keys = ["distance","pixel_size","cx","cy"]
-        opt_keys = ["x_gap_size_in_pixel","y_gap_size_in_pixel","hole_diameter_in_pixel",
-                    "noise","noise_spread","noise_variation_n",
-                    "noise_filename","noise_dataset",
-                    "center_variation","center_spread_x","center_spread_y","center_variation_n","center_spread_limit",
-                    "saturation_level",
-                    "mask","mask_filename","mask_dataset","mask_is_cxi_bitmask",
-                    "nx","ny","downsampling"]
-        miss_keys,ill_keys = config.check_input(kwargs.keys(),req_keys,opt_keys)
-        if len(miss_keys) > 0: 
-            for k in miss_keys:
-                log(logger.error,"Cannot initialize Detector instance. %s is a necessary keyword." % k)
-            sys.exit(1)
-        if len(ill_keys) > 0:
-            for k in ill_keys:
-                log(logger.error,"Cannot initialize Detector instance. %s is an illegal keyword." % k)
-            sys.exit(1)
+        self.distance = distance
+        self.pixel_size = pixel_size
+        self._init_mask(mask=mask, mask_is_cxi_bitmask=mask_is_cxi_bitmask, mask_filename=mask_filename, mask_dataset=mask_dataset, nx=nx, ny=ny,
+                        x_gap_size_in_pixel=x_gap_size_in_pixel, y_gap_size_in_pixel=y_gap_size_in_pixel, cx_hole=cx_hole, cy_hole=cy_hole, hole_diameter_in_pixel=hole_diameter_in_pixel)
+        self.cx_mean = cx
+        self.cy_mean = cy
+        self.set_center_variation(center_variation=center_variation,
+                                  center_spread_x=center_spread_x,
+                                  center_spread_y=center_spread_y,
+                                  center_variation_n=center_variation_n,
+                                  center_spread_limit=center_spread_limit)
+        self.set_noise(noise=noise,
+                       noise_spread=noise_spread,
+                       noise_variation_n=noise_variation_n,
+                       noise_filename=noise_filename,
+                       noise_dataset=noise_dataset)
+        self.saturation_level = saturation_level
+        self.binning = binning
 
-        # Start initialisation            
-        self.distance = kwargs["distance"]
-        self.pixel_size = kwargs["pixel_size"]
-        gx = kwargs["x_gap_size_in_pixel"]
-        gy = kwargs["y_gap_size_in_pixel"]
-        hd = kwargs["hole_diameter_in_pixel"]
-        self.set_noise(noise=kwargs["noise"],
-                       noise_spread=kwargs.get("noise_spread",None),
-                       noise_variation_n=kwargs.get("noise_variation_n",None),
-                       noise_filename=kwargs.get("noise_filename",None),
-                       noise_dataset=kwargs.get("noise_dataset",None))
-        self.set_center_variation(center_variation=kwargs["center_variation"],
-                                  center_spread_x=kwargs.get("center_spread_x",None),
-                                  center_spread_y=kwargs.get("center_spread_y",None),
-                                  center_variation_n=kwargs.get("center_variation_n",None),
-                                  center_spread_limit=kwargs.get("center_spread_limit",None))
-        self.saturation_level = kwargs["saturation_level"]
-        if "mask" in kwargs or  ("mask_filename" in kwargs and "mask_dataset" in kwargs):
-            if "mask" in kwargs:
-                M = kwargs["mask"]
-            else:
-                with h5py.File(kwargs["mask_filename"],"r") as f:
-                    M = f[kwargs["mask_dataset"]][:,:]
-            if not kwargs.get("mask_is_cxi_bitmask",False): M = (M == 0) * PixelMask.PIXEL_IS_MISSING
-            self.init_mask(mask=M)
-        else:
-            reqk = ["nx","ny"]
-            for k in reqk:
-                if k not in kwargs.keys():
-                    log(logger.error,"Cannot initialize Detector instance. %s is a necessary keyword if no mask is given." % k)
-                    sys.exit(1)
-            self.init_mask(nx=kwargs["nx"],ny=kwargs["ny"],
-                           x_gap_size_in_pixel=gx,y_gap_size_in_pixel=gy,hole_diameter_in_pixel=hd,
-                           cx_hole=kwargs.get("cx_hole","middle"),cy_hole=kwargs.get("cy_hole","middle"))
-        self.cx_mean = kwargs.get("cx","middle")
-        self.cy_mean = kwargs.get("cy","middle")
-        self.downsampling = kwargs.get("downsampling",None)
+    def get_conf(self):
+        conf = {}
+        conf["detector"] = {}
+        conf["detector"]["distance"]           = self.distance
+        conf["detector"]["pixel_size"]         = self.pixel_size
+        conf["detector"]["cx"]                 = self.cx_mean
+        conf["detector"]["cy"]                 = self.cy_mean
+        cvar = self._center_variation.get_conf()
+        conf["detector"]["center_variation"]   = cvar["mode"]
+        conf["detector"]["center_spread_x"]    = cvar["spread"][1]
+        conf["detector"]["center_spread_y"]    = cvar["spread"][0]
+        conf["detector"]["center_variation_n"] = cvar["n"]
+        noise = self._noise.get_conf()
+        conf["detector"]["noise"]              = noise["mode"]
+        conf["detector"]["noise_spread"]       = noise["spread"]
+        conf["detector"]["noise_filename"]     = self._noise_filename
+        conf["detector"]["noise_dataset"]      = self._noise_dataset
+        conf["detector"]["saturation_level"]   = self.saturation_level
+        conf["detector"]["mask"]               = self._mask.copy()
+        conf["detector"]["mask_CXI_bitmask"]   = True
+        return conf
+        
+    def set_noise(self, noise=None, noise_spread=None, noise_variation_n=None, noise_filename=None, noise_dataset=None):
+        """
+        Set detector noise type and parameters
 
-    def set_noise(self, noise, noise_spread, noise_variation_n, noise_filename, noise_dataset):
+        Kwargs:
+           :noise(str): Noise that is put on the intensities when read. Either None, \"poisson\", \"normal\", \"uniform\" or \"normal_poisson or \"file\" or \"file_poisson\" (default = None)
+           :noise_spread(float): If \"normal\", \"uniform\" or \"normal_poisson\" noise is specified spread defines width of gaussian/uniform distribution (default = None)
+           :noise_filename(str): Location of HDF5 file that contains noise data that is added to simulated data. Specify the dataset with the argument \'noise_dataset\' (see below). The arguments \'noise_filename\' and \'noise_dataset\' only matter if noise=\"file\" or noise=\"file_poisson\" (default = None)
+           :noise_dataset(str): Dataset that contains the noise data that is added to simulated data. If the dataset has 3 dimensions a random frame (i.e. dataset[i_random,:,:]) is picked for every simulated pattern. Specify the filename with the argument \'noise_filename\' (see above). The arguments \'noise_filename\' and \'noise_dataset\' only matter if noise=\"file\" or noise=\"file_poisson\"  (default = None)
+        """
         if noise in ["file","file_poisson"]:
             self._noise_filename = noise_filename
             self._noise_dataset = noise_dataset
-            self._noise = Variation("poisson" if noise == "file_poisson" else None,noise_spread,noise_variation_n,number_of_dimensions=1,name="noise")
+            self._noise = Variation("poisson" if noise == "file_poisson" else None, noise_spread, noise_variation_n, number_of_dimensions=1, name="noise")
         else:
             self._noise_filename = None
             self._noise_dataset = None
-            self._noise = Variation(noise,noise_spread,noise_variation_n,number_of_dimensions=1,name="noise")
+            self._noise = Variation(noise, noise_spread, noise_variation_n, number_of_dimensions=1, name="noise")
 
     def set_center_variation(self, center_variation, center_spread_x, center_spread_y, center_variation_n, center_spread_limit):
         self._center_variation = Variation(center_variation,[center_spread_y,center_spread_x],center_variation_n,number_of_dimensions=2,name="center position")
         self._center_spread_limit = center_spread_limit
         
-    def init_mask(self,**kwargs):
-        """        
-        Function initializes the detector mask.
-        =======================================
-
-        Arguments:
-        
-        Keyword arguments (if not given variable is set to default value):
-        
-        EITHER
-        - mask: array that defines the mask (CXI bitmask, uint16)
-        
-        OR:
-        - nx: horizontal dimension of the mask (inside the mask, without counting any gaps)
-        - ny: vertical dimension of the mask (inside the mask, without counting any gaps)
-        - x_gap_size_in_pixel: horizontal gap is generated with given width (in unit pixel)
-        - y_gap_size_in_pixel: vertical gap is generated with given width (in unit pixel)
-        - hole_diameter_in_pixel: holeis generated with given diameter (in unit pixel)
-        - cx_hole: horizontal center coordinate of the hole
-        - cy_hole: vertical center coordinate of the hole
-
-        """
-
-        # init mask array
-        if kwargs.get('mask',None) != None: 
-            self._mask = numpy.array(kwargs['mask'],dtype=numpy.uint16)
-            self._nx = self._mask.shape[1]
-            self._ny = self._mask.shape[0]
-        elif 'nx' in kwargs and 'ny' in kwargs:
-            self._nx = kwargs["nx"]
-            self._ny = kwargs["ny"]
-            Nx = kwargs['nx']
-            Ny = kwargs['ny']
-            if 'x_gap_size_in_pixel' in kwargs:
-                x_gap = kwargs['x_gap_size_in_pixel']
-                Ny += x_gap
-            if 'y_gap_size_in_pixel' in kwargs: 
-                y_gap = kwargs['y_gap_size_in_pixel']
-                Nx += y_gap
-            self._mask = numpy.zeros(shape=(Ny,Nx),dtype=numpy.uint16)
+    def _init_mask(self, mask, mask_is_cxi_bitmask, mask_filename, mask_dataset, nx, ny, x_gap_size_in_pixel, y_gap_size_in_pixel, cx_hole, cy_hole, hole_diameter_in_pixel):
+        if mask is not None or (mask_filename is not None and mask_dataset is not None):
+            if mask is not None:
+                # Copy mask from array
+                self._mask = numpy.array(mask, dtype=numpy.uint16)
+            else:
+                # Read mask from file
+                with h5py.File(mask_filename,"r") as f:
+                    self._mask = numpy.array(f[mask_dataset][:,:], dtype=numpy.uint16)
+            if not mask_is_cxi_bitmask:
+                # Convert maskt to CXI bit format
+                self._mask = (self._mask == 0) * PixelMask.PIXEL_IS_MISSING
+        elif nx is not None and ny is not None:
+            # Initialise empty mask
+            self._mask = numpy.zeros(shape=(ny+y_gap_size_in_pixel, nx+x_gap_size_in_pixel),dtype=numpy.uint16)
         else:
-            log(logger.error,"Either \'mask_array\' or \'nx\' and \'ny\' have to be specified.")
-            return 
+            log(condor.CONDOR_logger.error,"Either \"mask\" or \"nx\" and \"ny\" have to be specified.")
+            sys.exit(1)
         self._nx = self._mask.shape[1]
         self._ny = self._mask.shape[0]
-
-        # set pixels in gap to zero
-        if 'x_gap_size_in_pixel' in kwargs:
-            if kwargs['x_gap_size_in_pixel'] != 0:
-                cy = numpy.ceil((self._ny-1)/2.)
-                self._mask[cy-kwargs['x_gap_size_in_pixel']/2:cy-kwargs['x_gap_size_in_pixel']/2+kwargs['x_gap_size_in_pixel'],:] |= PixelMask.PIXEL_IS_MISSING
-        if 'y_gap_size_in_pixel' in kwargs:
-            if kwargs['y_gap_size_in_pixel'] != 0:
-                cx = numpy.ceil((self._nx-1)/2.)
-                self._mask[:,cx-kwargs['y_gap_size_in_pixel']/2:cx-kwargs['y_gap_size_in_pixel']/2+kwargs['y_gap_size_in_pixel']] |= PixelMask.PIXEL_IS_MISSING
-        if 'hole_diameter_in_pixel' in kwargs:
-            if kwargs['hole_diameter_in_pixel'] != 0:
-                cx_hole = kwargs.get("cx_hole","middle")
-                if cx_hole == "middle":
-                    cx_hole = (self._nx-1)/2.
-                cy_hole = kwargs.get("cy_hole","middle")
-                if cy_hole == "middle":
-                    cy_hole = (self._ny-1)/2.
-                X,Y = numpy.meshgrid(numpy.arange(0,self._nx,1.0),
-                                     numpy.arange(0,self._ny,1.0))
-                X = X-cx_hole
-                Y = Y-cy_hole
-                R = numpy.sqrt(X**2 + Y**2)
-                self._mask[R<=kwargs['hole_diameter_in_pixel']/2.0] |= PixelMask.PIXEL_IS_MISSING
+        # Mask out pixels in gaps
+        if x_gap_size_in_pixel > 0:
+            cy = numpy.ceil((self._ny-1)/2.)
+            self._mask[cy-x_gap_size_in_pixel/2:cy-x_gap_size_in_pixel/2+x_gap_size_in_pixel,:] |= PixelMask.PIXEL_IS_MISSING
+        if y_gap_size_in_pixel > 0:
+            cx = numpy.ceil((self._nx-1)/2.)
+            self._mask[:,cx-y_gap_size_in_pixel/2:cx-y_gap_size_in_pixel/2+y_gap_size_in_pixel] |= PixelMask.PIXEL_IS_MISSING
+        # Mask out pixels in hole    
+        if hole_diameter_in_pixel > 0:
+            if cx_hole == "middle":
+                cx_hole = (self._nx-1)/2.
+            if cy_hole == "middle":
+                cy_hole = (self._ny-1)/2.
+            X,Y = numpy.meshgrid(numpy.arange(0,self._nx,1.0),
+                                 numpy.arange(0,self._ny,1.0))
+            X = X-cx_hole
+            Y = Y-cy_hole
+            R = numpy.sqrt(X**2 + Y**2)
+            tmp = R<=hole_diameter_in_pixel/2.0
+            if tmp.sum() > 0:
+                self._mask[tmp] |= PixelMask.PIXEL_IS_MISSING
         
-
     def get_mask(self,intensities,output_bitmask=True):
         if output_bitmask:
             return self.get_bitmask(intensities)
@@ -236,6 +215,10 @@ class Detector:
             M[intensities >= self.saturation_level] |= PixelMask.PIXEL_IS_SATURATED
         return M
 
+    def _get_c_mean_value(self):
+        c =  numpy.array([self.get_cy_mean_value(), self.get_cx_mean_value()])
+        return c
+    
     def get_cx_mean_value(self):
         if self.cx_mean == "middle":
             return (self._nx-1) / 2.
@@ -257,9 +240,10 @@ class Detector:
         while not ready:
             cy_now, cx_now = self._center_variation.get([cy_mean,cx_mean])
             ready = True
-            if self._center_spread_limit > 0:
-                if (self._center_spread_limit < abs(cx_now - cx_mean)*2) and (self._center_spread_limit < abs(cy_now - cy_mean)*2):
-                    ready = False
+            if self._center_variation._mode is not None:
+                if self._center_spread_limit > 0:
+                    if (self._center_spread_limit < abs(cx_now - cx_mean)*2) and (self._center_spread_limit < abs(cy_now - cy_mean)*2):
+                        ready = False
         O["cx"] = cx_now
         O["cy"] = cy_now
         O["solid_angle_pixel"] = self.get_pixel_solid_angle()
@@ -267,65 +251,69 @@ class Detector:
         O["ny"] = self._ny
         O["pixel_size"] = self.pixel_size
         O["distance"] = self.distance
-        if self.downsampling is not None:
-            O["cx_xxx"] = utils.resample.downsample_pos(cx_now,self._nx,self.downsampling)
-            O["cy_xxx"] = utils.resample.downsample_pos(cy_now,self._ny,self.downsampling)
+        if self.binning is not None:
+            O["cx_xxx"] = utils.resample.downsample_pos(cx_now,self._nx,self.binning)
+            O["cy_xxx"] = utils.resample.downsample_pos(cy_now,self._ny,self.binning)
         return O
 
-    def get_minimum_center_edge_distance(self,cx,cy):
-        icx = self._nx-cx
-        icy = self._ny-cy
-        return min([cx,icx,cy,icy])*self.pixel_size
-
     def get_pixel_solid_angle(self):
-        return self.pixel_size**2 / self.distance**2
-    
-    def get_absqx_max(self,wavelength,cx):
-        x_max = max([cx,self._nx-1-cx]) * self.pixel_size
-        R_Ewald = 2*numpy.pi/wavelength
-        phi = numpy.arctan2(x_max,self.distance)
-        return 2 * R_Ewald * numpy.sin(phi/2.0)
+        omega = self.pixel_size**2 / self.distance**2
+        return omega
 
-    def get_absqy_max(self,wavelength,cy):
-        y_max = max([cy,self._ny-1-cy]) * self.pixel_size
-        R_Ewald = 2*numpy.pi/wavelength
-        phi = numpy.arctan2(y_max,self.distance)
-        return 2 * R_Ewald * numpy.sin(phi/2.0)
+    def get_x_max(self, cx = None, cy = None, center_variation = False):
+        if cx is None or center_variation:
+            cx = self.get_cx_mean_value()
+        lim = self._center_spread_limit if (center_variation and self._center_spread_limit is not None) else 0
+        cx_min = cx - lim/2.
+        cx_max = cx + lim/2.
+        dist_max = max([self._nx-1-cx_min, cx_max]) * self.pixel_size
+        return dist_max
 
-    def get_absqz_max(self,wavelength,cx,cy):
-        absqx_max = self.get_absqx_max(wavelength,cx)
-        absqy_max = self.get_absqy_max(wavelength,cy)
-        R_Ewald = 2*numpy.pi/wavelength
-        phi = numpy.arcsin(numpy.sqrt(absqx_max**2+absqy_max**2)/R_Ewald)
-        return R_Ewald * (1-numpy.cos(phi))
+    def get_y_max(self, cx = None, cy = None, center_variation = False):
+        if cy is None or center_variation:
+            cy = self.get_cy_mean_value()
+        lim = self._center_spread_limit if (center_variation and self._center_spread_limit is not None) else 0
+        cy_min = cy - lim/2.
+        cy_max = cy + lim/2.
+        dist_max = max([self._ny-1-cy_min, cy_max]) * self.pixel_size
+        return dist_max
 
-    def get_absq_max(self,wavelength,cx,cy):
-        return max([self.get_absqx_max(wavelength,cx),self.get_absqy_max(wavelength,cy)])
-
-    def get_real_space_resolution_element(self,wavelength,cx,cy):
-        dX = numpy.pi / self.get_absq_max(wavelength,cx,cy)
-        return dX
-
-    def get_real_space_resolution_element_min(self,wavelength,cx,cy):
-        if self._center_spread_limit == 0:
-            return self.get_real_space_resolution_element(wavelength,cx,cy)
+    def get_p_max(self, cx = None, cy = None, pos = "corner", center_variation = False):
+        x_max = self.get_x_max(cx=cx, cy=cy, center_variation=center_variation)
+        y_max = self.get_y_max(cx=cx, cy=cy, center_variation=center_variation)
+        if pos == "corner":
+            return numpy.array([self.distance, y_max, x_max])
+        elif pos == "edge":
+            if x_max > y_max:
+                return numpy.array([self.distance, 0., x_max])
+            else:
+                return numpy.array([self.distance, y_max, 0.])
         else:
-            dx,dy = numpy.meshgrid(range(3),range(3))
-            dx -= 1
-            dy -= 1
-            cx_min = cx - self._center_spread_limit
-            cx_max = cx + self._center_spread_limit
-            cy_min = cy - self._center_spread_limit
-            cy_max = cy + self._center_spread_limit
-            cx_off = [cx_min,cx_max][numpy.array([self._nx-cx_min,cx_max]).argmax()]
-            cy_off = [cy_min,cy_max][numpy.array([self._ny-cy_min,cy_max]).argmax()]
-            return self.get_real_space_resolution_element(wavelength,cx_off,cy_off)
+            log(condor.CONDOR_logger.error, "Invalid input: pos=%s. Input must be either \"corner\" or \"edge\"." % pos)
 
-    def get_max_achievable_crystallographic_resolution(self,wavelength,cx,cy):
-        dx = 2 * numpy.pi / self.get_absqx_max(wavelength,cx)
-        dy = 2 * numpy.pi / self.get_absqy_max(wavelength,cy)
-        return [dx,dy]
+    def get_q_max(self, wavelength, cx = None, cy = None, pos = "corner", center_variation = False):
+        p = self.get_p_max(cx=cx, cy=cy, pos=pos, center_variation=center_variation)
+        q = q_from_p(p, wavelength)
+        return q
 
+    def _get_resolution_element(self, wavelength, cx = None, cy = None, center_variation = False):
+        res = numpy.pi / self.get_q_max(wavelength, cx=cx, cy=cy, pos="edge", center_variation=center_variation)
+        return res
+
+    def get_resolution_element_z(self, wavelength, cx = None, cy = None, center_variation = False):
+        return self._get_resolution_element(self, wavelength, cx=cx, cy=cy, center_variation=center_variation)[0]
+
+    def get_resolution_element_y(self, wavelength, cx = None, cy = None, center_variation = False):
+        return self._get_resolution_element(self, wavelength, cx=cx, cy=cy, center_variation=center_variation)[1]
+
+    def get_resolution_element_x(self, wavelength, cx = None, cy = None, center_variation = False):
+        return self._get_resolution_element(self, wavelength, cx=cx, cy=cy, center_variation=center_variation)[2]
+
+    def get_resolution_element_r(self, wavelength, cx = None, cy = None, center_variation = False):
+        qmax = self.get_q_max(wavelength, cx=cx, cy=cy, pos="corner", center_variation=center_variation)
+        res = numpy.pi / length(qmax)
+        return res
+        
     def detect_photons(self,I):
         I_det = self._noise.get(I)
         if self._noise_filename is not None:
@@ -339,10 +327,18 @@ class Detector:
         if self.saturation_level is not None:
             I_det = numpy.clip(I_det, -numpy.inf, self.saturation_level)
         M_det = self.get_bitmask(I_det)
-        if self.downsampling is not None:
-            IXxX_det, MXxX_det = utils.resample.downsample(I_det,self.downsampling,mode="integrate",
+        if self.binning is not None:
+            IXxX_det, MXxX_det = utils.resample.downsample(I_det,self.binning,mode="integrate",
                                                            mask2d0=M_det,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
         else:
             IXxX_det = None
             MXxX_det = None
         return I_det, M_det, IXxX_det, MXxX_det
+
+def q_from_p(p, wavelength):
+    p0 = p / length(p)
+    R_Ewald = 2*numpy.pi / wavelength
+    k0 = R_Ewald * numpy.array([0.,0.,1.])
+    k1 = R_Ewald * p0
+    q = k1 - k0
+    return q

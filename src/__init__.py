@@ -21,6 +21,49 @@
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
-from condor import Input,Output,logger
-from condor import get_default_source_conf,get_default_sample_conf,get_default_detector_conf
-from condor import get_default_particle_uniform_sphere_conf,get_default_particle_uniform_spheroid_conf,get_default_particle_map3d_conf,get_default_particle_molecule_conf
+
+from .experiment import Experiment
+from .source import Source, load_source
+from .sample import Sample, load_sample
+from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleMolecule
+from .detector import Detector, load_detector
+
+# Set global variables
+def _init():
+    # Installation directory of Condor
+    import os, logging
+    global CONDOR_directory
+    CONDOR_directory = os.path.dirname(os.path.realpath(__file__))
+
+    # Logging
+    global CONDOR_logger
+    logging.basicConfig(format='%(levelname)s: %(message)s')
+    CONDOR_logger = logging.getLogger('Condor')
+    
+    # Default PDB file
+    global CONDOR_default_pdb
+    CONDOR_default_pdb = CONDOR_directory + "/data/DNA.pdb"
+
+    # Load data into global variables
+    import _data
+    data_dir = CONDOR_directory + "/data"
+    global CONDOR_atomic_scattering_factors
+    CONDOR_atomic_scattering_factors = _data.load_atomic_scattering_factors(data_dir)
+    global CONDOR_atomic_masses
+    CONDOR_atomic_masses             = _data.load_atomic_masses(data_dir)
+    global CONDOR_atomic_numbers
+    CONDOR_atomic_numbers            = _data.load_atomic_numbers(data_dir)
+    global CONDOR_atomic_compositions
+    CONDOR_atomic_compositions       = _data.load_atomic_compositions()
+    global CONDOR_mass_densities
+    CONDOR_mass_densities            = _data.load_mass_densities()
+
+_init()
+
+# Delete references to modules for clarity on global scope
+#del experiment
+#del source
+#del sample
+#del particle
+#del detector
+#del utils

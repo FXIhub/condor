@@ -21,9 +21,11 @@
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
+
+# C-code wrapped
 import nfft
 import icosahedron
-# Native python
+# Native python code
 import bodies
 import diffraction
 import linalg

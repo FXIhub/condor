@@ -26,55 +26,141 @@ import sys,os
 import numpy
 import scipy.stats
 
-import logging
-logger = logging.getLogger("Condor")
-import utils.log
-from utils.log import log 
+import condor.utils.log
+from condor.utils.log import log
+from condor.utils.tools import get_default_sample_conf
+import condor.utils.config
+from condor.utils.variation import Variation
 
-import config
-from utils.variation import Variation
-
-
-
+def load_sample(conf):
+    """
+    Create new Sample instance and load parameters from a Condor configuration file.
+    
+    Args:
+       :conf(str): Condor configuration file
+    """        
+    C = condor.utils.config.load_configuration(condor.utils.config.load_configuration(conf), {"sample": get_default_sample_conf()})
+    sample = Sample(**C["sample"])
+        
 class Sample:
-    def __init__(self,**kwargs):
+    """
+    Class for sample
+    """
+    def __init__(self, number_of_particles=1, number_of_particles_variation=None, number_of_particles_spread=None, number_of_particles_variation_n=None, particle_pick="random"):
+        """
+        Initialisation of a Sample instance. Call load_sample(conf) for initialisation from file 
 
-        # Check for valid set of keyword arguments
-        req_keys = ["number_of_images","number_of_particles"]
-        opt_keys = ["number_of_particles_variation","number_of_particles_spread","number_of_particles_variation_n","particle_pick"]
-        miss_keys,ill_keys = config.check_input(kwargs.keys(),req_keys,opt_keys)
-        if len(miss_keys) > 0: 
-            for k in miss_keys:
-                log(logger.error,"Cannot initialize Sample instance. %s is a necessary keyword." % k)
-            sys.exit(1)
-        if len(ill_keys) > 0:
-            for k in ill_keys:
-                log(logger.error,"Cannot initialize Sample instance. %s is an illegal keyword." % k)
-            sys.exit(1)
+        Kwargs:
+           :number_of_particles(int): Number of particles present at the same time in the interaction volume (default = 1)
+           :number_of_particles_variation(str): Variation of the number of particles, either \"poisson\", \"uniform\", \"range\" or None (default = None)
+           :number_of_particles_spread(int): Statistical spread of the number of particles (default = None)
+           :numbrt_of_particles_variation_n(int): This parameter is only effective if number_of_particles_variation_n=\"range\". In that case this parameter determines the number of samples within the interval number_of_particles +/- number_of_particles_spread/2 (default = None)
+           :particle_pick(str): This parameter only takes effect if more than one particle is defined. If the number of particles in the interaction volume exceeds one particles are drawn according to the rule defined by this argument, either \"sequential\" or \"random\" (default = \"random\")
+        """
+        self.number_of_particles_mean = number_of_particles
+        self.particle_pick = particle_pick
+        self.set_number_of_particles_variation(number_of_particles_variation, number_of_particles_spread, number_of_particles_variation_n)
+        self._particle_models = []
+        self._particle_models_names = []
 
-        # Start initialisation
-        self.number_of_images = kwargs["number_of_images"]
-        self.number_of_particles_mean = kwargs["number_of_particles"]
-        self.particle_pick = kwargs.get("particle_variation","random")
-        self.set_number_of_particles_variation(kwargs["number_of_particles_variation"],kwargs.get("number_of_particles_spread",None),kwargs.get("number_of_particles_variation_n",None))
-        self.particle_models = []
+    def get_conf(self):
+        """
+        Rerieve configuration of this sample instance in form of a dictionary
+        """
+        conf = {}
+        conf["number_of_particles"]             = self.number_of_particles_mean
+        conf["number_of_particles_variation"]   = self._number_of_particles_variation.get_mode()
+        conf["number_of_particles_spread"]      = self._number_of_particles_variation.get_spread()
+        conf["number_of_particles_variation_n"] = self._number_of_particles_variation.n
+        conf["particle_pick"]                   = self.particle_pick
+        return conf
+        
+    def get_next(self):
+        """
+        Draw next
+        """
+        self._next_particles()
+        O = {}
+        #O["particle_types"] = []
+        O["particles"] = []
+        for p in self._particles:
+            O["particles"].append(p.get_next())
+        O["number_of_particles"] = len(self._particles)
+        return O
 
-    def set_number_of_particles_variation(self,mode,spread,variation_n):
-        self._number_of_particles_variation = Variation(mode,spread,variation_n)
+    def append_particle(self, particle_model, name):
+        """
+        Add a particle model to the sample
+        
+        Args:
+           :particle_model: Particle model instance
+           :name(str): Name of the new particle
+        """
+        if not isinstance(particle_model, condor.particle.ParticleSphere) and \
+           not isinstance(particle_model, condor.particle.ParticleSpheroid) and \
+           not isinstance(particle_model, condor.particle.ParticleMap) and \
+           not isinstance(particle_model, condor.particle.ParticleMolecule):
+            log(condor.CONDOR_logger.error, "The argument is not a valid particle model instance.")
+        elif name in self._particle_models_names:
+            log(condor.CONDOR_logger.error, "The given name for the particle model already exists. Please choose andother name and try again.")
+        else:
+            self._particle_models.append(particle_model)
+            self._particle_models_names.append(name)
+
+    def remove_particle(self, name):
+        """
+        Remove particle model from sample
+
+        Args:
+           :name(str): Name of the particle model that shall be removed
+        """
+        if name not in self._particle_models_names:
+            log(condor.CONDOR_logger.error, "The given name for the particle model does not exist. Please give an existing particle model name and try again.")
+        else:
+            i = self._particle_models_names.index(name)
+            self._particle_models_names.pop(i)
+            self._particle_models.pop(i)
+
+    def remove_all_particles(self):
+        """
+        Remove all particle models from sample
+        """
+        self._particle_models = []
+        self._particle_models_names = []
+
+    def get_particles(self):
+        """
+        Get all particle models and names in form of a dictionary
+        """
+        pm = {}
+        for n,p in zip(self._particle_models_names, self._particle_models):
+            pm[n] = p
+        return pm
+            
+    def set_number_of_particles_variation(self, mode, spread, variation_n):
+        """
+        Set statistical variation model for the number of particles
+
+        Args:
+           :mode(str): Either None, \"poisson\", \"normal\", \"uniform\" or \"range\"
+           :spread(float): Width of the distribution of number of particles. Only matters if mode is \"normal\", \"uniform\" or \"range\". For \'mode\'=\"normal\" \'spread\' means standard deviation, for \'mode\'=\"uniform\" and '\mode'\=\"range\" \'spread\' determines the full width of the distribution
+           :variation_n(int): If mode is \"range\" this argument specifies the number of samples within the specified range
+        """
+        self._number_of_particles_variation = Variation(mode, spread, variation_n)
 
     def _get_next_number_of_particles(self):
         N = self._number_of_particles_variation.get(self.number_of_particles_mean)
         # Non-random
         if self._number_of_particles_variation._mode in [None,"range"]:
             if N <= 0:
-                log(logger.error,"Sample number of particles smaller-equals zero. Change your configuration.")
+                log(condor.CONDOR_logger.error,"Sample number of particles smaller-equals zero. Change your configuration.")
                 sys.exit(0)
             else:
                 return N
         # Random
         else:
             if N <= 0.:
-                log(logger.info,"Sample number of particles smaller-equals zero. Trying again.")
+                log(condor.CONDOR_logger.info,"Sample number of particles smaller-equals zero. Trying again.")
                 return self._get_next_number_of_particles()
             else:
                 return N       
@@ -82,24 +168,15 @@ class Sample:
     def _next_particles(self):
         N = self._get_next_number_of_particles()
         if self.particle_pick == "sequential":
-            self.particles = [self.particle_models[i%len(self.particle_models)] for i in range(N)]
+            self._particles = [self._particle_models[i%len(self._particle_models)] for i in range(N)]
         elif self.particle_pick == "random":
-            i_s = range(len(self.particle_models))
-            c_s = numpy.array([s.concentration for s in self.particle_models])
+            i_s = range(len(self._particle_models))
+            c_s = numpy.array([p.concentration for p in self._particle_models])
             c_s = c_s / c_s.sum()
             dist = scipy.stats.rv_discrete(name='model distribution', values=(i_s, c_s))
-            self.particles = [self.particle_models[i] for i in dist.rvs(size=N)]
+            self._particles = [self._particle_models[i] for i in dist.rvs(size=N)]
         else:
-            log(logger.error,"particle_pick=%s is not a valid configuration." % self.particle_variation)
+            log(condor.CONDOR_logger.error,"particle_pick=%s is not a valid configuration." % self.particle_variation)
             sys.exit(0)
 
-    def get_next(self):
-        self._next_particles()
-        O = {}
-        #O["particle_types"] = []
-        O["particles"] = []
-        for p in self.particles:
-            O["particles"].append(p.get_next())
-        O["number_of_particles"] = len(self.particles)
-        return O
-
+        

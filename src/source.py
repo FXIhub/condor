@@ -24,63 +24,94 @@
 
 import sys,os
 import numpy
-import config
 
 import scipy.constants as constants
 
-import logging
-logger = logging.getLogger("Condor")
-import utils.log
-from utils.log import log 
+import condor.utils.log
+from condor.utils.log import log
+from condor.utils.tools import get_default_source_conf
+import condor.utils.config
+from condor.utils.variation import Variation
 
-import config
-from utils.variation import Variation
-
-
-
+def load_source(conf):
+    """
+    Create new Source instance and load parameters from a Condor configuration file.
+    
+    Args:
+       :conf(str): Condor configuration file
+    """
+    C = condor.utils.config.load_configuration(condor.utils.config.load_configuration(conf), {"source": get_default_source_conf()})
+    source = Source(**C["source"])
+    return source
+  
 class Source:
     """
-    A subclass of the input object.
-    Defines properties of the FEL x-ray pulse.
-
+    Class for the X-ray source
     """
-    def __init__(self,**kwargs):       
+    def __init__(self, wavelength, focus_diameter, pulse_energy, profile_model=None, pulse_energy_variation=None, pulse_energy_spread=None, pulse_energy_variation_n=None, number_of_shots=1):
+        """
+        Initialisation of a Source instance
 
-        # Check for valid set of keyword arguments
-        req_keys = ["wavelength", "focus_diameter", "pulse_energy"]
-        opt_keys = ["pulse_energy_variation", "pulse_energy_spread", "pulse_energy_variation_n", "profile_model"]
-        miss_keys,ill_keys = config.check_input(kwargs.keys(),req_keys,opt_keys)
-        if len(miss_keys) > 0: 
-            for k in miss_keys:
-                log(logger.error,"Cannot initialize Source instance. %s is a necessary keyword." % k)
-            sys.exit(1)
-        if len(ill_keys) > 0:
-            for k in ill_keys:
-                log(logger.error,"Cannot initialize Source instance. %s is an illegal keyword." % k)
-            sys.exit(1)
+        Args:
+            :wavelength(float): X-ray wavelength [m]
+            :focus_diameter(float): Focus diameter (characteristic transverse dimension) [m]
+            :pulse_energy(float): Pulse energy (or its statistical mean) [J]
 
-        # Start initialisation
-        self.photon = Photon(wavelength=kwargs["wavelength"])
-        if "pulse_energy" in kwargs:
-            # Maintain depreciated keyword
-            self.pulse_energy_mean = kwargs["pulse_energy"]
-        else:
-            self.pulse_energy_mean = kwargs["pulse_energy_mean"]
-        self.set_pulse_energy_variation(variation=kwargs.get("pulse_energy_variation",None),
-                                        spread=kwargs.get("pulse_energy_spread",None),
-                                        n=kwargs.get("pulse_energy_variation_n",None))
-        self.profile = Profile(model=kwargs.get("profile_model",None),focus_diameter=kwargs["focus_diameter"])
-        log(logger.debug,"Source configured")
+        Kwargs:
+            :number_of_shots(int): Number of independent shots to be simulated (default = 1)
+            :pulse_energy_variation(str): Statistical variation of the pulse energy - either \"normal\", \"uniform\", \"range\" or None (no variation of the pulse energy) (default = None)
+            :pulse_energy_spread(float): Statistical spread of the pulse energy [J] (default = None)
+            :pulse_energy_variation_n(int): This parameter is only effective if pulse_energy_variation=\"range\". In that case this parameter determines the number of samples within the interval pulse_energy +/- pulse_energy_spread/2 (default = None)
+            :profile_model(str): Model for the spatial illumination profile - either \"top_hat\", \"pseudo_lorentzian\", \"gaussian\" or None (infinite extent of the illuminatrion, intensity same as in case of \"top_hat\") (default = None)
+        """
+        self.photon = Photon(wavelength=wavelength)
+        self.pulse_energy_mean = pulse_energy
+        self.set_pulse_energy_variation(variation=pulse_energy_variation, spread=pulse_energy_spread, n=pulse_energy_variation_n)
+        self.profile = Profile(model=profile_model, focus_diameter=focus_diameter)
+        self.number_of_shots = number_of_shots
+        log(condor.CONDOR_logger.debug,"Source configured")
 
-    def set_pulse_energy_variation(self,variation=None, spread=None, n=None):
+    def get_conf(self):
+        conf = {}
+        conf["source"] = {}
+        conf["source"]["wavelength"]               = self.photon.get_wavelength()
+        conf["source"]["focus_diameter"]           = self.profile.focus_diameter
+        conf["source"]["pulse_energy"]             = self.pulse_energy_mean
+        conf["source"]["profile_model"]            = self.profile.get_model()
+        pevar = self._pulse_energy_variation.get_conf()
+        conf["source"]["pulse_energy_variation"]   = pevar["mode"]
+        conf["source"]["pulse_energy_spread"]      = pevar["spread"]
+        conf["source"]["pulse_energy_variation_n"] = pevar["n"]
+        conf["source"]["number_of_shots"]          = self.number_of_shots
+        return conf
+        
+    def set_pulse_energy_variation(self, variation = None, spread = None, n = None):
+        """
+        Specify how the pulse energy varies. If no inputs are given the pulse energy is constant
+
+        Kwargs:
+            :pulse_energy_variation(str): Statistical variation of the pulse energy - either \"normal\", \"uniform\", \"range\" or None (no variation of the pulse energy) (default = None)
+            :pulse_energy_spread(float): Statistical spread of the pulse energy [J] (default = None)
+            :pulse_energy_variation_n(int): This parameter is only effective if pulse_energy_variation=\"range\". In that case this parameter determines the number of samples within the interval pulse_energy +/- pulse_energy_spread/2 (default = None)
+        """
         self._pulse_energy_variation = Variation(variation,spread,n,number_of_dimensions=1,name="pulse energy")
 
-    def get_intensity(self,position,unit="ph/m2"):
+    def get_intensity(self, position, unit = "ph/m2", pulse_energy = None):
+        """
+        Retrieve the intensity at a given position in the beam
+
+        Args:
+           :position(list): Coordinates of the position where the intensity shall be calculated
+           
+        Kwargs:
+           :unit(str): Intensity unit - either \"ph/m2\", \"J/m2\", \"J/um2\" or \"mJ/um2\" (default = \"ph/m2\")
+           :pulse_energy(float): Pulse energy - if None the statistical mean of the pulse energy will be used [J] (default = None)
+        """
         # Assuming
         # 1) Radially symmetric profile that is invariant along the beam axis within the sample volume
         # 2) The variation of intensity are on much larger scale than the dimension of the particle size (i.e. flat wavefront)
         r = numpy.sqrt(position[1]**2 + position[2]**2)
-        I = (self.profile.get_radial())(r) * self.pulse_energy
+        I = (self.profile.get_radial())(r) * (pulse_energy if pulse_energy is not None else self.pulse_energy_mean)
         if unit == "J/m2":
             pass
         elif unit == "ph/m2":
@@ -90,45 +121,57 @@ class Source:
         elif unit == "mJ/um2":
             I *= 1.E-9
         else:
-            log(logger.error,"%s is not a valid unit." % unit)
+            log(condor.CONDOR_logger.error,"%s is not a valid unit." % unit)
             return
         return I
 
-    #def get_area(self):
-    #    return numpy.pi*(self.focus_diameter/2.0)**2
-                
     def get_next(self):
-        self._next_pulse_energy()
-        return {"pulse_energy":self.pulse_energy,
+        """
+        Iterate and return parameters in a dictionary
+        """
+        return {"pulse_energy":self._get_next_pulse_energy(),
                 "wavelength":self.photon.get_wavelength(),
                 "photon_energy":self.photon.get_energy("J"),
                 "photon_energy_eV":self.photon.get_energy("eV")}
 
-    def _next_pulse_energy(self):
+    def _get_next_pulse_energy(self):
         p = self._pulse_energy_variation.get(self.pulse_energy_mean)
         # Non-random
         if self._pulse_energy_variation._mode in [None,"range"]:
             if p <= 0:
-                log(logger.error,"Pulse energy smaller-equals zero. Change your configuration.")
+                log(condor.CONDOR_logger.error,"Pulse energy smaller-equals zero. Change your configuration.")
             else:
-                self.pulse_energy = p
+                return p
         # Random
         else:
             if p <= 0.:
-                log(logger.warning,"Pulse energy smaller-equals zero. Try again.")
-                self._next_pulse_energy()
+                log(condor.CONDOR_logger.warning,"Pulse energy smaller-equals zero. Try again.")
+                self._get_next_pulse_energy()
             else:
-                self.pulse_energy = p
+                return p
 
 
     
 class Photon:
+    """
+    Class for X-ray photon
+    """
     def __init__(self,**kwarg):
+        """
+        Initialisation of a Photon instance
+
+        The photon can be initialised either by passing the wavelength or the photon energy
+
+        Kwargs:
+           :wavelength(float): Photon wavelength [m]
+           :energy(float): Photon energy [J]
+           :energy_eV(float): Photon energy in electron volts [eV]
+        """
         if "wavelength" in kwarg.keys(): self.set_wavelength(kwarg["wavelength"])
         elif "energy" in kwarg.keys(): self.set_energy(kwarg["energy"],"J")
         elif "energy_eV" in kwarg.keys(): self.set_energy(kwarg["energy_eV"],"eV")
         else:
-            log(logger.error,"Photon could not be initialized. It needs to be initialized with either the a given photon energy or the wavelength.")
+            log(condor.CONDOR_logger.error,"Photon could not be initialized. It needs to be initialized with either the a given photon energy or the wavelength.")
             
     def get_energy(self,unit="J"):
         if unit == "J":
@@ -136,7 +179,7 @@ class Photon:
         elif unit == "eV":
             return self._energy/constants.e
         else:
-            log(logger.error,"%s is not a valid energy unit." % unit)
+            log(condor.CONDOR_logger.error,"%s is not a valid energy unit." % unit)
 
     def set_energy(self,energy,unit="J"):
         if unit == "J":
@@ -144,7 +187,7 @@ class Photon:
         elif unit == "eV":
             self._energy = energy*constants.e
         else:
-            log(logger.error,"%s is not a valid energy unit." % unit)
+            log(condor.CONDOR_logger.error,"%s is not a valid energy unit." % unit)
 
     def get_wavelength(self):
         return constants.c*constants.h/self._energy
@@ -152,10 +195,19 @@ class Photon:
     def set_wavelength(self,wavelength):
         self._energy = constants.c*constants.h/wavelength
 
-
         
 class Profile:
+    """
+    Class for spatial illumination profile
+    """
     def __init__(self, model, focus_diameter):
+        """
+        Initialisation of a Profile instance
+
+        Args:
+           :model(str): Model for the spatial illumination profile - either \"top_hat\", \"pseudo_lorentzian\", \"gaussian\" or None (infinite extent of the illuminatrion, intensity same as in case of \"top_hat\")
+           :focus_diameter(float): Focus diameter (or characteristic dimension) [m]
+        """
         self.set_model(model)
         self.focus_diameter = focus_diameter
         
@@ -163,7 +215,7 @@ class Profile:
         if model is None or model in ["top_hat","pseudo_lorentzian","gaussian"]:
             self._model = model
         else:
-            log(logger.error,"Pulse profile model %s is not implemented. Change your configuration and try again.")
+            log(condor.CONDOR_logger.error,"Pulse profile model %s is not implemented. Change your configuration and try again.")
             sys.exit(0)
 
     def get_model(self):

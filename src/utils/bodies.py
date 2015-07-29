@@ -39,11 +39,15 @@ def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
     logger.debug("Built map within %f seconds." % (t1-t0))
     return icomap
 
-def make_icosahedron_map_old(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
+def make_icosahedron_map_python(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
     na = nRmax/numpy.sqrt(10.0+2*numpy.sqrt(5))*4.
     nRmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*na # radius at faces
     logger.debug("Building icosahedral geometry")
     n_list = get_icosahedron_normal_vectors(euler1,euler2,euler3)
+    # Rotate
+    if euler1 != 0. or euler2 != 0. or euler3 != 0.:
+        for i in range(0,len(n_list)):
+            n_list[i] = linalg.rotation(n_list[i],euler1,euler2,euler3)
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     X = X - (N-1)/2.
     Y = Y - (N-1)/2.
@@ -62,11 +66,9 @@ def make_icosahedron_map_old(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
     icomap = icomap.min(0)
     return icomap
 
-def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
-    # construct normal vectors of faces
+def get_icosahedron_vertices():
+    # Weisstein, Eric W. "Icosahedral Group." From MathWorld--A Wolfram Web Resource. http://mathworld.wolfram.com/IcosahedralGroup.html
     phi = (1+numpy.sqrt(5))/2.0
-    ri = phi**2/2./numpy.sqrt(3.)
-    # normal vectors for every vertice
     x1 = numpy.array([0.0,1.0,phi])
     x2 = numpy.array([0.0,1.0,-phi])
     x3 = numpy.array([0.0,-1.0,phi])
@@ -79,36 +81,37 @@ def get_icosahedron_normal_vectors(euler_1=0.,euler_2=0.,euler_3=0.):
     x10 = numpy.array([-phi,0.0,1.0])
     x11 = numpy.array([phi,0.0,-1.0])
     x12 = numpy.array([-phi,0.0,-1.0])
-    X = [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12]
-    # angle between normals
-    an = round(numpy.dot(x5,x1))
-
+    return numpy.array([x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12])
+    
+def get_icosahedron_normal_vectors():
+    X = get_icosahedron_vertices()
+    # Inner radius of icosahedron (distance from center to each face)
+    # Weisstein, Eric W. "Icosahedral Group." From MathWorld--A Wolfram Web Resource. http://mathworld.wolfram.com/IcosahedralGroup.html
+    phi = (1+numpy.sqrt(5))/2.0
+    ri = phi**2/2./numpy.sqrt(3.)
+    # Convenience functions
+    # Check whether vector is in list
     def cont_element(el,l):
         for i in range(0,len(l)):
             if (el == l[i]).all():
                 return True
         return False
-
-    def angles_match(y1,y2,y3):
-        if round(numpy.dot(y1,y2)) == an and round(numpy.dot(y2,y3)) == an and round(numpy.dot(y3,y1)) == an:
+    # Angle between neighboring vertices
+    an = round(numpy.dot(X[4],X[0]))
+    # Check whether vertices are neighbors
+    def neighbors(v1,v2,v3):
+        if round(numpy.dot(v1,v2),1) == an and round(numpy.dot(v2,v3),1) == an and round(numpy.dot(v3,v1),1) == an:
             return True
         else:
             return False
-
     n_list = []
+    # Loop through all 3-vector permutations and build normal vector from the neighboring vertices
     for i in range(0,len(X)):
         for j in range(0,len(X)):
             for k in range(0,len(X)):
                 n = (X[i]+X[j]+X[k])/6./ri
-                if angles_match(X[i],X[j],X[k]) and not cont_element(n,n_list):
+                if neighbors(X[i],X[j],X[k]) and not cont_element(n,n_list):
                     n_list.append(n)
-
-                
-    if euler_1 != 0. or euler_2 != 0. or euler_3 != 0.:
-        for i in range(0,len(n_list)):
-            n_list[i] = linalg.rotation(n_list[i],euler_1,euler_2,euler_3)
-
-
     return n_list
 
 def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.):

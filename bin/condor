@@ -10,8 +10,9 @@ logger = logging.getLogger("Condor")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='condor - simulation of single particle X-ray diffraction patterns')
-    parser.add_argument('-v','--verbose',dest='verbose', action='store_true',help='verbose mode',default=False)
-    parser.add_argument('-d','--debug',dest='debug', action='store_true',help='debugging mode (even more output than in verbose mode)',default=False)
+    parser.add_argument('-v', '--verbose', dest='verbose',  action='store_true', help='verbose mode', default=False)
+    parser.add_argument('-d', '--debug', dest='debug',  action='store_true', help='debugging mode (even more output than in verbose mode)', default=False)
+    parser.add_argument('number_of_images', type=int, help='number of images')
     args = parser.parse_args()
     if not os.path.exists("./condor.conf"):
         parser.error("Cannot find configuration file \"condor.conf\" in current directory.")
@@ -21,7 +22,7 @@ if __name__ == "__main__":
         logger.setLevel("DEBUG")
     I = condor.Input("./condor.conf")
     O = condor.Output(I)
-    log(logger.info,"Writing output to condor.cxi")
+    log(logger.info, "Writing output to condor.cxi")
     O.write("./condor.cxi", output="all")
 
     

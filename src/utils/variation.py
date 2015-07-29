@@ -23,19 +23,34 @@
 # -----------------------------------------------------------------------------------------------------
 import numpy
 import logging
+import collections
 logger = logging.getLogger('Condor')
 
 class Variation:
     def __init__(self,mode=None,spread=None,n=None,number_of_dimensions=1,name=""):
         self.name = name
         self._number_of_dimensions = number_of_dimensions
-        self.set_mode(mode,spread,n)
+        self.set_mode(mode)
+        self.set_spread(spread)
+        self.n = n
         self.reset_counter()
 
+    def get_conf(self):
+        conf = {}
+        conf["mode"] = self.get_mode()
+        conf["spread"] = self.get_spread()
+        conf["n"] = self.n
+        conf["number_of_dimensions"] = self._number_of_dimensions
+        conf["name"] = self.name
+        return conf
+        
     def reset_counter(self):
         self._i = 0
 
-    def set_mode(self,mode,spread,n):
+    def get_number_of_dimensions(self):
+        return self._number_of_dimensions
+
+    def set_mode(self,mode):
         if mode not in [None,"normal","poisson","normal_poisson","uniform","range"]:
             logger.error("Variation object cannot be configured with illegal mode %s",mode)
             return
@@ -60,13 +75,23 @@ class Variation:
                     self._grid = numpy.array([Y.flatten(),X.flatten()])
         else:
             self._grid = None
-        if self._number_of_dimensions == 1:
-            self._spread = [spread]
-        else:
-            self._spread = spread
         self._mode = mode
-        self._n = n
-                
+
+    def get_mode(self):
+        return self._mode
+
+    def set_spread(self, spread):
+        if isinstance(spread, collections.Iterable):
+            self._spread = list(spread)
+        else:
+            self._spread = [spread]
+            
+    def get_spread(self):
+        if len(self._spread) > 1:
+            return self._spread
+        else:
+            return self._spread[0]
+    
     def get(self,v0):
         if self._number_of_dimensions == 1:
             v1 = self._get_values_for_one_dim(v0,0)

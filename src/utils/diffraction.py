@@ -42,15 +42,14 @@ def random_euler_angles():
     e3 = math.atan2(2.0*(q1*q4+q2*q3), 1.0-2.0*(q3**2+q4**2))
     return (e1,e2,e3)
 
-def get_max_crystallographic_resolution(wavelength,min_detector_center_edge_distance,detector_distance):
+def crystallographic_resolution(wavelength, pixel_center_distance, detector_distance):
     """
     Returns crystallographic resolution (full-period resolution at the closest edge)
     """
-    return wavelength/numpy.sin(numpy.arctan(min_detector_center_edge_distance/detector_distance))
+    return wavelength / numpy.sin( numpy.arctan( pixel_center_distance / detector_distance ) )
     
-def get_nyquist_pixel_size(detector_distance,wavelength,particle_area):
+def nyquist_pixel_size(wavelength, detector_distance, particle_size):
     """
     Returns size of one Nyquist pixel on the detector in meter.
     """
-    particle_radius = numpy.sqrt(particle_area/numpy.pi)
-    return detector_distance * wavelength / (2*particle_radius)
+    return detector_distance * wavelength / particle_size

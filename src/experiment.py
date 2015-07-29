@@ -22,49 +22,52 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-import sys
-import numpy
 
-import tempfile, os
-   
-import logging
-logger = logging.getLogger("Condor")
-import utils.log
-from utils.log import log 
-from utils.pixelmask import PixelMask
+# TO DO:
+# Take into account illumination profile
 
-import utils
-import utils.sphere_diffraction
-import utils.spheroid_diffraction
-import utils.scattering_vector
-import utils.resample
-from particle_sphere import ParticleModelSphere
-from particle_spheroid import ParticleModelSpheroid
-from particle_map import ParticleModelMap
-from particle_molecule import ParticleModelMolecule, get_spsim_conf
+import numpy, os, sys
 
-class Propagator:
-    def __init__(self,source,sample,detector):
+import sample
+from condor.utils.log import log
+import condor.utils.config
+from condor.utils.pixelmask import PixelMask
+import condor.utils.sphere_diffraction
+import condor.utils.spheroid_diffraction
+import condor.utils.scattering_vector
+import condor.utils.resample
+import condor.sample
+import condor.particle
+
+class Experiment:
+    def __init__(self, source, sample, detector):
         self.source   = source
         self.sample   = sample
         self.detector = detector
         self._qmap_cache = {}
 
-    def propagate(self,**kwargs):
-        N = self.sample.number_of_images
-        O = {"source":{},"sample":{},"detector":{}}
+    def get_conf(self):
+        conf = {}
+        conf.update(self.source.get_conf())
+        conf.update(self.sample.get_conf())
+        conf.update(self.detector.get_conf())
+        return conf
+        
+    def propagate(self, save_map3d = False, save_qmap = True):
+        N = self.source.number_of_shots
+        O = {"source":{}, "sample":{}, "detector":{}}
         O_particles = {}
         N_particles_max = 0
 
         for i in range(N):
-            log(logger.info,"Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1,N))
+            log(condor.CONDOR_logger.info, "Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1, N))
 
-            Os = self._propagate_single(**kwargs)
+            Os = self._propagate_single(save_map3d=save_map3d, save_qmap=save_qmap)
 
             N_particles = len(Os["sample"]["particles"])
-            print "%i/%i (%i particle%s)" % (i+1,N,N_particles,"s" if N_particles > 1 else "")
+            print "%i/%i (%i particle%s)" % (i+1, N, N_particles, "s" if N_particles > 1 else "")
 
-            for k in [k for k in Os.keys() if k not in ["source","sample","detector"]]:
+            for k in [k for k in Os.keys() if k not in ["source", "sample", "detector"]]:
                 if k not in O:
                     O[k] = [None for _ in range(N)]
                 O[k][i] = Os[k]
@@ -78,12 +81,12 @@ class Propagator:
                 if k not in O["sample"]:
                     O["sample"][k] = [None for _ in range(N)]
                 O["sample"][k][i] = Os["sample"][k]
-            for j,p in zip(range(len(Os["sample"]["particles"])),Os["sample"]["particles"]):
+            for j,p in zip(range(len(Os["sample"]["particles"])), Os["sample"]["particles"]):
                 for k,v in p.items():
                     if k not in O_particles:
                         O_particles[k] = [[] for _ in range(N)]
                     O_particles[k][i].append(v)
-            N_particles_max = max([N_particles_max,N_particles])
+            N_particles_max = max([N_particles_max, N_particles])
             # Detector
             for k,v in Os["detector"].items():
                 if k not in O["detector"]:
@@ -91,12 +94,12 @@ class Propagator:
                 O["detector"][k][i] = Os["detector"][k]
         # Make arrays for particle parameters
         for k,v in O_particles.items():
-            s = [N,N_particles_max]
+            s = [N, N_particles_max]
             v0 = numpy.array(v[0])
             s_item = list(v0.shape)
             s_item.pop(0)
             s = s + s_item
-            A = numpy.zeros(shape=s,dtype=v0.dtype)
+            A = numpy.zeros(shape=s, dtype=v0.dtype)
             for i in range(len(v)):
                 vi = numpy.array(v[i])
                 d = len(vi.shape)
@@ -111,14 +114,12 @@ class Propagator:
             O["sample"][k] = A
         for k in O["source"].keys(): O["source"][k] = numpy.array(O["source"][k])
         for k in O["detector"].keys(): O["detector"][k] = numpy.array(O["detector"][k])
-        for k in [k for k in O.keys() if k not in ["source","sample","detector"]]:
+        for k in [k for k in O.keys() if k not in ["source", "sample", "detector"]]:
             O[k] = numpy.array(O[k])
         return O
 
-    def _propagate_single(self,**kwargs):
-        save_map = kwargs.get("save_map",False)
-        save_qmap = kwargs.get("save_qmap",True)
-
+    def _propagate_single(self, save_map3d = False, save_qmap = True):
+        
         # Iterate objects
         D_source   = self.source.get_next()
         D_sample   = self.sample.get_next()
@@ -140,7 +141,7 @@ class Propagator:
             p  = D_particle["_class_instance"]
             # Intensity at interaction point
             pos  = D_particle["position"]
-            D_particle["intensity"] = self.source.get_intensity(pos,"ph/m2")
+            D_particle["intensity"] = self.source.get_intensity(pos, "ph/m2", pulse_energy=D_source["pulse_energy"])
             I_0 = D_particle["intensity"]
             # Calculate primary wave amplitude
             # F0 = sqrt(I_0 Omega_p) 2pi/wavelength^2
@@ -152,7 +153,7 @@ class Propagator:
             e2 = D_particle["euler_angle_2"]
 
             # UNIFORM SPHERE
-            if isinstance(p,ParticleModelSphere):
+            if isinstance(p, condor.particle.ParticleSphere):
                 # Refractive index
                 dn = p.material.get_dn(wavelength)
                 # Scattering vectors
@@ -164,10 +165,10 @@ class Propagator:
                 V = 4/3.*numpy.pi*R**3
                 K = (F0*V*abs(dn))**2
                 # Pattern
-                F = utils.sphere_diffraction.F_sphere_diffraction(K,q,R)
+                F = condor.utils.sphere_diffraction.F_sphere_diffraction(K, q, R)
 
             # UNIFORM SPHEROID
-            elif isinstance(p,ParticleModelSpheroid):
+            elif isinstance(p, condor.particle.ParticleSpheroid):
                 # Refractive index
                 dn = p.material.get_dn(wavelength)
                 # Scattering vectors
@@ -179,16 +180,16 @@ class Propagator:
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
                 K = (F0*V*abs(dn))**2
-                a = utils.spheroid_diffraction.to_spheroid_semi_diameter_a(D_particle["diameter"],D_particle["flattening"])
-                c = utils.spheroid_diffraction.to_spheroid_semi_diameter_c(D_particle["diameter"],D_particle["flattening"])
+                a = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_a(D_particle["diameter"], D_particle["flattening"])
+                c = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_c(D_particle["diameter"], D_particle["flattening"])
                 # Pattern
                 # (Rotation is taken into account directly in the diffraction formula (much faster))
-                theta = utils.spheroid_diffraction.to_spheroid_theta(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
-                phi = utils.spheroid_diffraction.to_spheroid_phi(euler_angle_0=e0,euler_angle_1=e1,euler_angle_2=e2)
-                F = utils.spheroid_diffraction.F_spheroid_diffraction(K,qx,qy,a,c,theta,phi)
+                theta = condor.utils.spheroid_diffraction.to_spheroid_theta(euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
+                phi   = condor.utils.spheroid_diffraction.to_spheroid_phi(euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
+                F     = condor.utils.spheroid_diffraction.F_spheroid_diffraction(K, qx, qy, a, c, theta, phi)
 
             # MAP
-            elif isinstance(p,ParticleModelMap):
+            elif isinstance(p, condor.particle.ParticleMap):
                 # Refractive index
                 dn = p.material.get_dn(wavelength)
                 # Scattering vectors
@@ -198,88 +199,61 @@ class Propagator:
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
                 # Generate map
-                dx_required  = self.detector.get_real_space_resolution_element(wavelength,cx,cy) / numpy.sqrt(2)
-                dx_suggested = self.detector.get_real_space_resolution_element_min(wavelength,cx,cy) / numpy.sqrt(2)
-                dn, dx = p.get_map3d(D_particle,dx_required,dx_suggested,dn)
-                if save_map:
+                dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)
+                dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)
+                print dx_required, dx_suggested
+                dn, dx = p.get_map3d(D_particle, dx_required, dx_suggested, dn)
+                if save_map3d:
                     D_particle["dn"] = dn
                     D_particle["dx"] = dx
                 # Rescale and shape qmap for nfft
                 qmap_scaled = dx * qmap / (2 * numpy.pi)
-                qmap_shaped = qmap_scaled.reshape(qmap_scaled.shape[0]*qmap_scaled.shape[1],3)
-                    #D_particle["qmap3d"] = detector.generate_qmap_ori(nfft_scaled=True)
+                qmap_shaped = qmap_scaled.reshape(qmap_scaled.shape[0]*qmap_scaled.shape[1], 3)
+                # For Jing:
+                #D_particle["qmap3d"] = detector.generate_qmap_ori(nfft_scaled=True)
                 # Check inputs
                 invalid_mask = (abs(qmap_shaped)>0.5)
                 if (invalid_mask).sum() > 0:
                     qmap_shaped[invalid_mask] = 0.
-                    log(logger.debug,"%i invalid pixel positions." % invalid_mask.sum())
-                log(logger.debug,"Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn.shape[0],dn.shape[1],dn.shape[2],len(list(dn.shape)),abs(dn).sum()))
+                    log(condor.CONDOR_logger.debug, "%i invalid pixel positions." % invalid_mask.sum())
+                log(condor.CONDOR_logger.debug, "Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn.shape[0], dn.shape[1], dn.shape[2], len(list(dn.shape)), abs(dn).sum()))
                 if (numpy.isfinite(abs(dn))==False).sum() > 0:
-                    log(logger.warning,"There are infinite values in the dn map of the object.")
-                log(logger.debug,"Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (qmap_shaped.shape[0],qmap_shaped.shape[1],len(list(qmap_shaped.shape))))
+                    log(condor.CONDOR_logger.warning, "There are infinite values in the dn map of the object.")
+                log(condor.CONDOR_logger.debug, "Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (qmap_shaped.shape[0], qmap_shaped.shape[1], len(list(qmap_shaped.shape))))
                 if (numpy.isfinite(qmap_shaped)==False).sum() > 0:
-                    log(logger.warning,"There are infinite values in the scattering vectors.")
+                    log(condor.CONDOR_logger.warning, "There are infinite values in the scattering vectors.")
                 # NFFT
-                fourier_pattern = utils.nfft.nfft(dn,qmap_shaped)
+                fourier_pattern = condor.utils.nfft.nfft(dn, qmap_shaped)
                 # Check output - masking in case of invalid values
                 if (invalid_mask).sum() > 0:
                     fourier_pattern[numpy.any(invalid_mask)] = numpy.nan
                 # reshaping
-                fourier_pattern = numpy.reshape(fourier_pattern,(qmap_scaled.shape[0],qmap_scaled.shape[1]))
-                log(logger.debug,"Got pattern of %i x %i pixels." % (fourier_pattern.shape[1],fourier_pattern.shape[0]))
+                fourier_pattern = numpy.reshape(fourier_pattern, (qmap_scaled.shape[0], qmap_scaled.shape[1]))
+                log(condor.CONDOR_logger.debug, "Got pattern of %i x %i pixels." % (fourier_pattern.shape[1], fourier_pattern.shape[0]))
                 F = F0 * fourier_pattern * dx**3
 
             # MOLECULE
-            elif isinstance(p,ParticleModelMolecule):
+            elif isinstance(p, condor.particle.ParticleMolecule):
+                # Import only here (otherwise errors if spsim library not installed)
                 import spsim
-                mol = None
-                if D_particle["pdb_filename"] is None:
-                    # Write PDB file (not given in configuration)
-                    mol = spsim.alloc_mol()
-                    for j,(pos0,pos1,pos2) in zip(D_particle["atomic_number"],D_particle["atomic_position"].reshape(len(D_particle["atomic_number"]),3)):
-                        spsim.add_atom_to_mol(mol, int(j), pos0, pos1, pos2)
-                    spsim.write_pdb_from_mol("mol.pdbout", mol)
-                # Start with default spsim configuration
-                opts = spsim.set_defaults()
-                # Create temporary file for spsim configuration
-                tmpf = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
-                # Write string sequence from configuration dicts
-                spsim_conf = get_spsim_conf(D_source, D_particle, D_detector)
-                # Write string sequence to file
-                tmpf.writelines(spsim_conf)
-                # Close temporary file
-                tmpf_name = tmpf.name
-                tmpf.close()
-                # Read configuration into options struct
-                spsim.read_options_file(tmpf_name, opts)
-                # This deletes the temporary file
-                os.unlink(tmpf_name)
-                #spsim.write_options_file("./spsim.confout",opts)
+                # Create options struct
+                opts = condor.utils.config.conf_to_opts(D_source, D_particle, D_detector)
+                spsim.write_options_file("./spsim.confout",opts)
                 # Create molecule struct
-                if mol is None:
-                    mol = spsim.get_molecule(opts)
-                if D_particle["atomic_position"] is None:
-                    # Get atomic positions and model (extracted from PDB file)
-                    pos_img = spsim.sp_image_alloc(mol.natoms,3,1)
-                    spsim.array_to_image(mol.pos,pos_img)
-                    D_particle["atomic_position"] = pos_img.image.real[:,:].copy()
-                    spsim.sp_image_free(pos_img)
-                    anum_img = spsim.sp_image_alloc(mol.natoms,1,1)
-                    spsim.iarray_to_image(mol.atomic_number,anum_img)
-                    D_particle["atomic_number"] = numpy.int32(anum_img.image.real[:,:].copy())
-                    spsim.sp_image_free(anum_img)
+                mol = spsim.get_molecule_from_atoms(D_particle["atomic_numbers"], D_particle["atomic_positions"])
+                spsim.write_pdb_from_mol("./mol.pdbout", mol)
                 # Calculate diffraction pattern
                 pat = spsim.simulate_shot(mol, opts)
                 # Extract complex Fourier values from spsim output
-                F_img = spsim.make_cimage(pat.F,pat.rot,opts)
-                phot_img = spsim.make_image(opts.detector.photons_per_pixel,pat.rot,opts)
+                F_img = spsim.make_cimage(pat.F, pat.rot, opts)
+                phot_img = spsim.make_image(opts.detector.photons_per_pixel, pat.rot, opts)
                 F = numpy.sqrt(abs(phot_img.image[:])) * numpy.exp(1.j * numpy.angle(F_img.image[:]))
                 spsim.sp_image_free(F_img)
                 spsim.sp_image_free(phot_img)
                 # Extract qmap from spsim output
-                qmap_img = spsim.sp_image_alloc(D_detector["ny"],D_detector["nx"],3)
+                qmap_img = spsim.sp_image_alloc(D_detector["ny"], D_detector["nx"], 3)
                 spsim.array_to_image(pat.HKL_list, qmap_img)
-                qmap = numpy.zeros(shape=(D_detector["ny"],D_detector["nx"],3))
+                qmap = numpy.zeros(shape=(D_detector["ny"], D_detector["nx"], 3))
                 qmap[:,:,0] = qmap_img.image.real[0,:,:]
                 qmap[:,:,1] = qmap_img.image.real[1,:,:]
                 qmap[:,:,2] = qmap_img.image.real[2,:,:]
@@ -288,7 +262,7 @@ class Propagator:
                 spsim.free_output_in_options(opts)
                 
             else:
-                log(logger.error,"No valid particles initialized.")
+                log(condor.CONDOR_logger.error, "No valid particles initialized.")
                 sys.exit(0)
 
             if save_qmap:
@@ -298,13 +272,13 @@ class Propagator:
 
         F_tot = numpy.zeros_like(F)
         # Superimpose patterns
-        for D_particle,F in zip(D_sample["particles"],F_singles):
+        for D_particle,F in zip(D_sample["particles"], F_singles):
             v = D_particle["position"]
             F_tot = F_tot + F * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
         I_tot, M_tot, IXxX_tot, MXxX_tot = self.detector.detect_photons(abs(F_tot)**2)
-        if self.detector.downsampling is not None:
-            FXxX_tot, MXxX_tot = utils.resample.downsample(F_tot,self.detector.downsampling,mode="integrate",
-                                                           mask2d0=M_tot,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
+        if self.detector.binning is not None:
+            FXxX_tot, MXxX_tot = condor.utils.resample.downsample(F_tot, self.detector.binning, mode="integrate", 
+                                                                  mask2d0=M_tot, bad_bits=PixelMask.PIXEL_IS_IN_MASK, min_N_pixels=1)
         M_tot_binary = M_tot == 0
         MXxX_tot_binary = None if MXxX_tot is None else (MXxX_tot == 0)
         
@@ -318,7 +292,7 @@ class Propagator:
         O["mask_binary"]       = M_tot_binary
         O["mask"]              = M_tot
 
-        if self.detector.downsampling is not None:
+        if self.detector.binning is not None:
             O["fourier_pattern_xxx"]   = FXxX_tot
             O["intensity_pattern_xxx"] = IXxX_tot
             O["mask_xxx"]              = MXxX_tot
@@ -328,32 +302,85 @@ class Propagator:
         
     def get_qmap(self, nx, ny, cx, cy, pixel_size, detector_distance, wavelength, euler_angle_0, euler_angle_1, euler_angle_2):
         calculate = False
-        keys = ["nx","ny","cx","cy","pixel_size","detector_distance","wavelength","euler_angle_0","euler_angle_1","euler_angle_2"]
+        keys = ["nx", "ny", "cx", "cy", "pixel_size", "detector_distance", "wavelength", "euler_angle_0", "euler_angle_1", "euler_angle_2"]
         if self._qmap_cache == {}:
             calculate = True
         else:
             for k in keys:
                 exec "if self._qmap_cache[\"%s\"] != %s: calculate = True" % (k,k)
         if calculate:
-            log(logger.info,"Calculating qmap.")
-            self._qmap_cache["qmap"] = generate_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength,
-                                                     euler_angle_0=euler_angle_0,euler_angle_1=euler_angle_1,euler_angle_2=euler_angle_2)
+            log(condor.CONDOR_logger.info,  "Calculating qmap.")
+            X,Y = numpy.meshgrid(numpy.arange(nx),
+                                 numpy.arange(ny))
+            # THIS CAST IS VERY IMPORTANT, in python A += B is not the same as A = A + B
+            X = numpy.float64(X)
+            Y = numpy.float64(Y)
+            X -= cx
+            Y -= cy
+            self._qmap_cache["qmap"] = condor.utils.scattering_vector.generate_qmap(X, Y, pixel_size, detector_distance, wavelength, euler_angle_0, euler_angle_1, euler_angle_2)
             for k in keys:
                 exec "self._qmap_cache[\"%s\"] =  %s" % (k,k)
         return self._qmap_cache["qmap"]          
+
+    def get_resolution(self, wavelength = None, cx = None, cy = None, pos="corner", convention="full_period"):
+        if wavelength is None:
+            wavelength = self.source.photon.get_wavelength()
+        dx = self.detector.get_resolution_element(wavelength, cx=cx, cy=cy, pos=pos)
+        if convention == "full_period":
+            return dx*2
+        elif convention == "half_period":
+            return dx
+        else:
+            log(condor.CONDOR_logger.error, "Invalid input: convention=%s. Must be either \"full_period\" or \"half_period\"." % convention)
+            return
+
+    def get_linear_sampling_ratio(self, wavelength = None, particle_diameter = None):
+        """
+        Returns the linear sampling ratio :math:`o` of the diffraction pattern:
+
+        | :math:`o=\\frac{D\\lambda}{dp}` 
+
+        | :math:`D`: Detector distance
+        | :math:`p`: Detector pixel size (edge length)
+        | :math:`\\lambda`: Photon wavelength 
+        | :math:`d`: Particle diameter
+
+        """
+        if wavelength is None:
+            wavelength = self.source.photon.get_wavelength()
+        detector_distance = self.detector.distance
+        if particle_diameter is None:
+            pm = self.sample.get_particle_models()
+            N = len(pm.keys()) 
+            if N == 0:
+                log(condor.CONDOR_logger.error, "You need to specify a particle_diameter because no particle model is defined.")
+                return
+            elif N > 1:
+                log(condor.CONDOR_logger.error, "The particle_diameter is ambiguous because more than one particle model is defined.")
+                return
+            else:
+                particle_diameter = pm.values()[0]
+        pN = utils.diffraction.nyquist_pixel_size(wavelength, detector_distance, particle_diameter)
+        pD = self.detector.pixel_size
+        ratio = pN/pD
+        return ratio
+        
+    def get_fresnel_number(self, wavelength):
+        pass
+                           
     
     # ------------------------------------------------------------------------------------------------
     # Caching of map3d might be interesting to implement again in the future
     #def get_map3d(self, map3d, dx, dx_req):
     #    map3d = None
     #    if dx > dx_req:
-    #        logger.error("Finer real space sampling required for chosen geometry.")
+    #        condor.CONDOR_logger.error("Finer real space sampling required for chosen geometry.")
     #        return
     #    # has map3d_fine the required real space grid?
     #    if map3d == None and abs(self.dX_fine/self.dX-1) < 0.001:
     #        # ok, we'll take the fine map
     #        map3d = self.map3d_fine
-    #        logger.debug("Using the fine map for propagtion.")
+    #        condor.CONDOR_logger.debug("Using the fine map for propagtion.")
     #        self._map3d = self.map3d_fine
     #    # do we have an interpolated map?
     #    if map3d == None and self._dX != None:
@@ -367,7 +394,7 @@ class Propagator:
     #                    if numpy.all(self.map3d_fine==self._map3d_fine):
     #                        # ok, we take the cached map!
     #                        map3d = self._map3d
-    #                        logger.debug("Using the cached interpolated map for propagtion.")
+    #                        condor.CONDOR_logger.debug("Using the cached interpolated map for propagtion.")
     #    # do we have to do interpolation?
     #    if map3d == None and self.dX_fine < self.dX:
     #        from scipy import ndimage
@@ -384,26 +411,6 @@ class Propagator:
     #        # Cace fine data for later decision whether or not the interpolated map can be used again
     #        self._map3d_fine = self.map3d_fine
     #        self._dX_fine = self.dX_fine
-    #        logger.debug("Using a newly interpolated map for propagtion.")
+    #        condor.CONDOR_logger.debug("Using a newly interpolated map for propagtion.")
     #    return map3d
     # ------------------------------------------------------------------------------------------------
-
-def generate_absqmap(nx,ny,cx,cy,pixel_size,detector_distance,wavelength):
-    X,Y = numpy.meshgrid(numpy.arange(nx),
-                         numpy.arange(ny))
-    # THIS CAST IS VERY IMPORTANT, in python A += B is not the same as A = A + B
-    X = numpy.float64(X)
-    Y = numpy.float64(Y)
-    X -= cx
-    Y -= cy
-    return utils.scattering_vector.generate_absqmap(X,Y,pixel_size,detector_distance,wavelength)
-
-def generate_qmap(nx,ny,cx,cy,pixel_size,detector_distance,wavelength,euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.):
-    X,Y = numpy.meshgrid(numpy.arange(nx),
-                         numpy.arange(ny))
-    # THIS CAST IS VERY IMPORTANT, in python A += B is not the same as A = A + B
-    X = numpy.float64(X)
-    Y = numpy.float64(Y)
-    X -= cx
-    Y -= cy
-    return utils.scattering_vector.generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0,euler_angle_1,euler_angle_2)

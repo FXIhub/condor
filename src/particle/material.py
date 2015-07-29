@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------------------------------
-# CONDOR
+# CONOR
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
 # http://xfel.icm.uu.se/condor/
 # -----------------------------------------------------------------------------------------------------
@@ -22,50 +22,36 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-import sys,numpy
+# System packages
+import sys, numpy
+
+# Logging
 import logging
 logger = logging.getLogger("Condor")
-if "utils" not in sys.path: sys.path.append("utils")
+import condor
+import condor.utils.log
+from condor.utils.log import log 
+
+# Constants
 from scipy import constants
-import config
 
 class Material:
-    """
-    A class of a sample object.
-    Sample material.
-
-    """
-    def __init__(self,**kwargs):
-        # Check for valid keyword arguments
-        allk = ["massdensity","material_type"]
-        self._unproc_kws = [k for k in kwargs.keys() if (k not in allk and k[0] != "c" and len(k) > 3)]
-        if len(self._unproc_kws) > 0:
-            print self._unproc_kws
-            logger.error("Material object initialisation failed due to illegal keyword arguments.")
-            return
-        # Start intialisation
-        if "massdensity" in kwargs:
-            self.materialtype = "custom"
-            for key in kwargs:
-                if key[0] == 'c' or key == 'massdensity':
-                    exec "self." + key + " = kwargs[key]"
-                else:
-                    logger.error("%s is no valid argument for custom initialization of Material." % key)
-                    return
-        elif "material_type" in kwargs:
-            self.material_type = kwargs['material_type']
-            self.massdensity = config.DICT_massdensity[self.material_type]
-            self.cH = config.DICT_atomic_composition[self.material_type][0]
-            self.cC = config.DICT_atomic_composition[self.material_type][1]
-            self.cN = config.DICT_atomic_composition[self.material_type][2]
-            self.cO = config.DICT_atomic_composition[self.material_type][3]
-            self.cP = config.DICT_atomic_composition[self.material_type][4]
-            self.cS = config.DICT_atomic_composition[self.material_type][5]
-            self.cAu = config.DICT_atomic_composition[self.material_type][6]
+    def __init__(self, massdensity = None, material_type = None, **atomic_composition):
+        if massdensity is not None:
+            cel_keys = [("c"+k) for k in condor.CONDOR_atomic_numbers.keys()]
+            elements = [k for k in atomic_composition.keys() if k in cel_keys]
+            if len(elements) == 0 or len(elements) != len(atomic_composition.keys()):
+                logger.error("No valid arguments for Material initialization.")
+                return
+            for k in elements:
+                exec "self." + key + " = atomic_composition[key]"
+        elif  "material_type" is not None:
+            self.massdensity = condor.CONDOR_mass_densities[material_type]
+            for key,val in condor.CONDOR_atomic_compositions[material_type].items():
+                exec "self.c" + key + " = val"
         else:
             logger.error("No valid arguments for Material initialization.")
             return
-
  
     def get_n(self,photon_wavelength):
         """
@@ -142,7 +128,7 @@ class Material:
         M = 0
         for element in atomic_composition.keys():
             # sum up mass
-            M += atomic_composition[element]*config.DICT_atomic_mass[element]*u
+            M += atomic_composition[element]*condor.CONDOR_atomic_masses[element]*u
 
         number_density = self.massdensity/M
         
@@ -159,8 +145,8 @@ class Material:
         Q = 0
         for element in atomic_composition.keys():
             # sum up electrons
-            M += atomic_composition[element]*config.DICT_atomic_mass[element]*u
-            Q += atomic_composition[element]*config.DICT_atomic_number[element]
+            M += atomic_composition[element]*condor.CONDOR_atomic_masses[element]*u
+            Q += atomic_composition[element]*condor.CONDOR_atomic_numbers[element]
 
         electron_density = Q*self.massdensity/M
         
@@ -172,7 +158,7 @@ class Material:
         atomic_composition = {}
         
         for key in self.__dict__.keys():
-            if key[0] == 'c' and key[1:] in config.DICT_atomic_number.keys():
+            if key[0] == 'c' and key[1:] in condor.CONDOR_atomic_numbers.keys():
                 exec "c_tmp = self." + key
                 atomic_composition[key[1:]] = c_tmp 
  
@@ -191,7 +177,7 @@ def get_f_element(element, photon_energy_eV):
     Get the scattering factor for an element through linear interpolation.
     """
     
-    SF_X = config.DICT_scattering_factors[element]
+    SF_X = condor.CONDOR_atomic_scattering_factors[element]
     f1 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
     f2 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
 
@@ -201,7 +187,7 @@ def get_f_element(element, photon_energy_eV):
 class DensityMap:
     
     def __init__(self, shape):
-        self.density = numpy.zeros(shape=(shape[0], shape[1], shape[2], len(config.DICT_atomic_number.keys())),dtype=numpy.float64)
+        self.density = numpy.zeros(shape=(shape[0], shape[1], shape[2], len(condor.CONDOR_atomic_numbers.keys())),dtype=numpy.float64)
 
     def get_n(self, wavelength):
         """
@@ -219,7 +205,7 @@ class DensityMap:
         photon_energy_eV = h*c/photon_wavelength/qe
 
         s = numpy.zeros(shape=(shape[0], shape[1], shape[2]), dtype=numpy.complex128)
-        for (el, de) in zip(config.DICT_atomic_number.keys(), self.density):
+        for (el, de) in zip(condor.CONDOR_atomic_numbers.keys(), self.density):
             s += de * get_f_element(el, photon_energy_eV)
 
         n = 1 - r_0 / (2*numpy.pi) * wavelength**2 * s

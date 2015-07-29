@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -----------------------------------------------------------------------------------------------------
 # CONDOR
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
@@ -23,51 +22,47 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-import sys, numpy, types, time, os
-
-this_dir = os.path.dirname(os.path.realpath(__file__))
-
-sys.path.insert(0,os.path.join(this_dir, "utils"))
-
+import numpy, sys, numpy, types, pickle, time, math
+import icosahedron
+ 
 import logging
 logger = logging.getLogger("Condor")
-import utils
-import utils.log
-from utils.log import log 
+from log import log
 
-# Initial configuration and importing Condor modules
-import config
-config.init_configuration()
-from source import Source
-from sample import Sample
-from detector import Detector
-from propagator import Propagator 
-from particle_sphere import ParticleModelSphere
-from particle_spheroid import ParticleModelSpheroid
-from particle_map import ParticleModelMap
-from particle_molecule import ParticleModelMolecule
+def print_material_xray_properties(wavelength,thickness=1.0E-06,**margs):
+    #r_0 = constants.value("classical electron radius")
+    h =  constants.h
+    c =  constants.c
+    qe = constants.e
 
+    photon_energy_eV = h*c/wavelength/qe
+    M = Material(photon_energy_eV,**margs)
+    n = M.get_n(photon_energy_eV)
+    print n
+    f = M.get_f(photon_energy_eV)
+    dn = n-1
+    delta = -dn.real
+    beta = -dn.imag
+    phase_shift = 2*numpy.pi*thickness*delta/wavelength
+    #mu_a = 2*re*wavelength*f2
+    #s = 1/mu_a/n
+    T = numpy.exp(-4*numpy.pi*beta/wavelength*thickness)
+    print "BEAM:"
+    print "Wavelength = %.2f nm ; Energy = %.0f eV" % (wavelength/1.0E-09,photon_energy_eV)
+    print "SAMPLE DENSITY:"
+    print "Mass denstity: %.3f mg/cm^3" % M.massdensity
+    print "SAMPLE SCATTERING AND ABSORPTION PARAMETERS:"
+    print "Scattering factor (real part) f1 = %e" % f.real
+    print "Scattering factor (imag part) f2 = %e" % f.imag
+    print "Refraction coefficient n = 1 - delta - i beta"
+    print "delta = %f" % delta
+    print "beta = %f" % beta
+    print "Phaseshift / %.2f um = %f pi" % (thickness/1.0E-6,phase_shift/numpy.pi)
+    #print "Atomic photoabsorption cross section: mu_a = %f re^2" % (mu_a/re**2)
+    #print "Attenuation length (drop off to 1/e): s = %f um" % (s/1.0E-6)
+    print "Transmission after %.2f um sample: T = %.1f percent " % (thickness/1.0E-06,T*100)
+    #atomic photoabsorption cross section
 
-def get_default_source_conf():
-    return config.Configuration(this_dir+"/data/source.conf").confDict["source"]    
-
-def get_default_sample_conf():
-    return config.Configuration(this_dir+"/data/sample.conf").confDict["sample"]    
-
-def get_default_detector_conf():
-    return config.Configuration(this_dir+"/data/detector.conf").confDict["detector"]    
-
-def get_default_particle_uniform_sphere_conf():
-    return config.Configuration(this_dir+"/data/particle_uniform_sphere.conf").confDict["particle"]    
-
-def get_default_particle_uniform_spheroid_conf():
-    return config.Configuration(this_dir+"/data/particle_uniform_spheroid.conf").confDict["particle"]    
-
-def get_default_particle_map3d_conf():
-    return config.Configuration(this_dir+"/data/particle_map3d.conf").confDict["particle"]    
-
-def get_default_particle_molecule_conf():
-    return config.Configuration(this_dir+"/data/particle_molecule.conf").confDict["particle"]    
 
 
 class Input:
@@ -78,7 +73,7 @@ class Input:
     
     """
     
-    def __init__(self,configuration={}):
+    def __init__(self,configuration=None):
         C_raw = config.Configuration(configuration).confDict
         self.confDict = {}
 
@@ -91,33 +86,33 @@ class Input:
         self.sample = Sample(**self.confDict["sample"])
 
         # Particles
-        for k in [k for k in C_raw.keys() if "particle" in k]:
-            if "particle_model" not in C_raw[k]:
-                log(logger.error,"No particle model defined for %s" % k)
-                sys.exit(1)
-            t = C_raw[k]["particle_model"]
-            if t == "uniform_sphere":
+        for k in [k for k in C_raw.keys() if k.startswith("particle")]:
+            if k.endswith("sphere"):
                 self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_uniform_sphere_conf()}).confDict["particle"]
                 P = ParticleModelSphere(**self.confDict[k])
-            elif t == "uniform_spheroid":
+            elif k.endswith("spheroid"):
                 self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_uniform_spheroid_conf()}).confDict["particle"]
                 P = ParticleModelSpheroid(**self.confDict[k])
-            elif t == "map3d":
-                self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_map3d_conf()}).confDict["particle"]
+            elif k.endswith("map"):
+                self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_map_conf()}).confDict["particle"]
                 P = ParticleModelMap(**self.confDict[k])
-            elif t == "molecule":
+            elif k.endswith("molecule"):
                 self.confDict[k] = config.Configuration({"particle":C_raw[k]}, {"particle": get_default_particle_molecule_conf()}).confDict["particle"]
                 P = ParticleModelMolecule(**self.confDict[k])
             else:
-                log(logger.error,"ParticleModel class for particle_model=%s is not implemented." % t)
+                log(logger.error,"Particle model for %s is not implemented." % k)
                 sys.exit(1)
             self.sample.particle_models.append(P)
             
         # Detector
         self.confDict["detector"] = config.Configuration(C_raw, {"detector": get_default_detector_conf()}).confDict["detector"]
         self.detector = Detector(**self.confDict["detector"])
-        
-        
+
+    def _write_conf(self, filename):
+        log(logger.debug,"Writing configuration to: %s" % filename) 
+        C = config.Configuration(self.confDict)
+        C.write_to_file(filename)
+
 class Output:
     """
     An instance of the Output object is initialized with an instance of the Input object and initiates the simulation of the diffraction data.
@@ -129,10 +124,10 @@ class Output:
             log(logger.error,"Illegal input. Argument has to be of instance Input.")
             sys.exit(1)
         self.input_object = input 
-        self.propagator = Propagator(input.source,input.sample,input.detector)
+        self.experiment = Experiment(input.source,input.sample,input.detector)
         log(logger.debug,"Propagation started.")
         t_start = time.time()
-        self.outdict = self.propagator.propagate()
+        self.outdict = self.experiment.propagate()
         # General variables
         self.fourier_pattern   = self.outdict["fourier_pattern"]
         self.intensity_pattern = self.outdict["intensity_pattern"]
@@ -142,13 +137,8 @@ class Output:
         t_stop = time.time()
         log(logger.debug,"Propagation finished (time = %f sec)" % (t_stop-t_start))
         confout = "./condor.confout"
-        self._write_conf(confout)
-        
-    def _write_conf(self, filename):
-        log(logger.debug,"Writing configuration to: %s" % filename) 
-        C = config.Configuration(self.input_object.confDict)
-        C.write_to_file(filename)
-        
+        self.input_object._write_conf(confout)
+                
     def get_mask(self,i=0,output_bitmask=False):
         """
         Returns 2-dimensional array with bit mask values (binned).
@@ -207,19 +197,6 @@ class Output:
             pN = utils.diffraction.get_nyquist_pixel_size(self.input_object.detector.distance,self.input_object.source.photon.get_wavelength(),numpy.pi*self.input_object.sample.radius**2)
             pD = self.input_object.detector.get_pixel_size("binned")
             return pN/pD
-            
-    def get_full_period_edge_resolution(self):
-        """
-        Returns the full-period resolution :math:`R` at the edge of the detector in meter.
-
-        | :math:`R=\\lambda / \\sin(\\arctan(Y/D))`
-
-        | :math:`\\lambda`: Photon wavelength
-        | :math:`Y`: Minimum distance between the beam axis and an edge of the detector.
-        | :math:`D`: Detector distance
-
-        """
-        return utils.diffraction.get_max_crystallographic_resolution(self.input_object.source.photon.get_wavelength(),self.input_object.detector.get_minimum_center_edge_distance(),self.input_object.detector.distance)
 
     def write(self,filename="out.cxi",output="all"):
         if filename[-len(".cxi"):] != ".cxi":
@@ -251,3 +228,23 @@ class Output:
         W.close()
 
 
+def get_default_source_conf():
+    return config.Configuration(this_dir+"/data/source.conf").confDict["source"]    
+
+def get_default_sample_conf():
+    return config.Configuration(this_dir+"/data/sample.conf").confDict["sample"]    
+
+def get_default_detector_conf():
+    return config.Configuration(this_dir+"/data/detector.conf").confDict["detector"]    
+
+def get_default_particle_uniform_sphere_conf():
+    return config.Configuration(this_dir+"/data/particle_uniform_sphere.conf").confDict["particle"]    
+
+def get_default_particle_uniform_spheroid_conf():
+    return config.Configuration(this_dir+"/data/particle_uniform_spheroid.conf").confDict["particle"]    
+
+def get_default_particle_map_conf():
+    return config.Configuration(this_dir+"/data/particle_map.conf").confDict["particle"]    
+
+def get_default_particle_molecule_conf():
+    return config.Configuration(this_dir+"/data/particle_molecule.conf").confDict["particle"]    
