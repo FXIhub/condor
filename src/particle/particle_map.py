@@ -233,7 +233,7 @@ class ParticleMap(AbstractContinuousParticle):
         N = int(numpy.ceil(2.3*(nRmax)))
         log(condor.CONDOR_logger.info,"Building icosahedron with radius %e (%i pixel) in %i x %i x %i voxel cube." % (radius,nRmax,N,N,N))
         icomap = condor.utils.bodies.make_icosahedron_map(N,nRmax,e0,e1,e2)
-        self._put_custom_map(icomap, n)
+        self._put_custom_map(icomap)
 
     def _put_cube(self, a, e0=0., e1=0., e2=0.):
         # edge_length in pixels
@@ -255,7 +255,7 @@ class ParticleMap(AbstractContinuousParticle):
         temp = (Dmax<0.5)*(cubemap==0.)
         d = Dmax[temp]
         cubemap[temp] = 0.5-d
-        self._put_custom_map(cubemap, n)        
+        self._put_custom_map(cubemap)        
 
     def plot_map3d(self,mode='surface'):
         try:
