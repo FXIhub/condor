@@ -221,3 +221,5 @@ class AbstractContinuousParticle(AbstractParticle):
 
     def set_material(self, material_type = None, massdensity = None, **atomic_composition):
         self.material = Material(material_type=material_type, massdensity=massdensity, **atomic_composition)
+
+

@@ -336,9 +336,11 @@ class Detector:
         return I_det, M_det, IXxX_det, MXxX_det
 
 def q_from_p(p, wavelength):
+    print "p",p
     p0 = p / length(p)
+    print "p0",p0
     R_Ewald = 2*numpy.pi / wavelength
-    k0 = R_Ewald * numpy.array([0.,0.,1.])
+    k0 = R_Ewald * numpy.array([1.,0.,0.])
     k1 = R_Ewald * p0
     q = k1 - k0
     return q

@@ -48,55 +48,14 @@ class ParticleMap(AbstractContinuousParticle):
                  position = None, position_variation = None, position_spread = None, position_variation_n = None,
                  material_type = None, massdensity = None, **atomic_composition):
         """
-        Function initializes ParticleMap object:
-        =============================================
-
-        Arguments:
-
-        Keyword arguments (if not given variable \'X\' is set to default value \'[X_default]\'):
-        
-        EITHER (default):
-
-        - N_fine: Edge length in number of voxels [1]
-
-        OR:
-        - map3d_fine: Cubic 3d map.
-          EITHER:
-
-          - dx_fine: Real space sampling distance.
-          OR:
-          - oversampling_fine: Real space oversampling in relation to detector/source configuration. [1]
-        
-        OR:
-        - geometry: Geometry that shall be generated (icosahedron, sphere, spheroid, cube)
-          - oversampling_fine: Additional oversampling for the initial map self.map3d_fine [1.]
-          ADDITIONAL (spheroid):
-          - flattening
-
-        ADDITIONAL:
-        - euler_angle_0, euler_angle_1, euler_angle_2: Euler angles defining orientation of 3D grid in the experimental reference frame (beam axis). [0.0,0.0,0.0]
-        - size: Characteristic size of the object in meters. [1]
-        - parent: Input object that this SampleMap object shall be linked to. [None]
-        - SAMPLING:
-          EITHER:
-          - dX_fine: Real space sampling distance.
-          OR:
-          - oversampling_fine: Real space oversampling in relation to detector/source configuration. [1]
-        - MATERIAL:
-          (For more documentation look at the help of the Material class.)
-          - material_type: predefined material type. 
-          OR
-          - massdensity: massdensity of the component
-          - cX, cY, ... : atomic composition
-
         """
         # Initialise base class
         AbstractContinuousParticle.__init__(self,
-                                                 diameter=diameter, diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n,
-                                                 alignment=alignment, euler_angle_0=euler_angle_0, euler_angle_1=euler_angle_1, euler_angle_2=euler_angle_2,
-                                                 concentration=concentration,
-                                                 position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n,
-                                                 material_type=material_type, massdensity=massdensity, **atomic_composition)
+                                            diameter=diameter, diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n,
+                                            alignment=alignment, euler_angle_0=euler_angle_0, euler_angle_1=euler_angle_1, euler_angle_2=euler_angle_2,
+                                            concentration=concentration,
+                                            position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n,
+                                            material_type=material_type, massdensity=massdensity, **atomic_composition)
         
         # Check for valid geometry
         if geometry not in ["icosahedron", "cube", "sphere", "spheroid", "custom"]:
@@ -126,12 +85,12 @@ class ParticleMap(AbstractContinuousParticle):
                 self.set_custom_geometry_by_array(map3d, dx)
             elif filename is not None:
                 self.set_custom_geometry_by_file(filename, dx)
-                    
-        # Init chache
-        self._old_map3d_diameter               = None
-        self._old_map3d_geometry               = None
-        self._old_map3d_dx                     = None
-        self._old_map3d                        = None
+        else:
+            # Init chache
+            self._old_map3d_diameter               = None
+            self._old_map3d_geometry               = None
+            self._old_map3d_dx                     = None
+            self._old_map3d                        = None
 
     def get_conf(self):
         conf = {}
@@ -190,48 +149,58 @@ class ParticleMap(AbstractContinuousParticle):
 
     def get_map3d(self, O = None, dx_required = None, dx_suggested = None, dn = None):
         if O is not None:
-            self._build_map(O, dx_required, dx_suggested, dn)
-        dx = self._old_map3d_dx
-        m = self._old_map3d
+            m,dx = self.get_new_map(O, dx_required, dx_suggested, dn)
+        else:
+            dx = self._old_map3d_dx
+            m = self._old_map3d
         return m, dx
             
-    def _build_map(self, O, dx_required, dx_suggested, dn):
-        build_map = False
-        if self._old_map3d is None:
-            build_map = True
-        if self._old_map3d_diameter is None:
-            build_map = True
-        else:
-            if abs(self._old_map3d_diameter - O["diameter"]) > 1E-10:
-                build_map = True
-        if self._old_map3d_dx > dx_required:
-            build_map = True
-            self._old_map3d = None
-        if not build_map:
-            return
-
-        self._old_map3d = None
-        self._old_map3d_dx = dx_suggested
-        self._old_map3d_diameter = O["diameter"]
-        
+    def get_new_map(self, O, dx_required, dx_suggested, dn):
         if O["geometry"] is not "custom":
-            if O["geometry"] == "icosahedron":
-                self._put_icosahedron(O["diameter"]/2., dn)
-            elif O["geometry"] == "spheroid":
-                a = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
-                c = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
-                self._put_spheroid(a, c, dn)
-            elif O["geometry"] == "sphere":
-                self._put_sphere(O["diameter"]/2., dn)
-            elif O["geometry"] == "cube":
-                self._put_cube(O["diameter"]/2., dn)
+            # Decide whether we need to build a new map
+            build_map = False
+            if self._old_map3d is None:
+                build_map = True
+            if self._old_map3d_diameter is None:
+                build_map = True
             else:
-                log(condor.CONDOR_logger.error,"Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
-                sys.exit(1)
+                if abs(self._old_map3d_diameter - O["diameter"]) > 1E-10:
+                    build_map = True
+            if self._old_map3d_dx > dx_required:
+                build_map = True
+                self._old_map3d = None
+                
+            if build_map:
+                self._old_map3d = None
+                self._old_map3d_dx = dx_suggested
+                if O["geometry"] == "icosahedron":
+                    self._put_icosahedron(O["diameter"]/2., dn)
+                elif O["geometry"] == "spheroid":
+                    a = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
+                    c = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
+                    self._put_spheroid(a, c, dn)
+                elif O["geometry"] == "sphere":
+                    self._put_sphere(O["diameter"]/2., dn)
+                elif O["geometry"] == "cube":
+                    self._put_cube(O["diameter"]/2., dn)
+                else:
+                    log(condor.CONDOR_logger.error, "Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
+                    sys.exit(1)
+            m = self._old_map3d
+            dx = self._old_map3d_dx
+            
         else:
-            s = numpy.array(self._old_map3d.shape)
-            self._old_map3d_dx = O["diameter"]/float(s[0])
-
+            if dx_required < self._old_map3d_dx:
+                log(condor.CONDOR_logger.error, "Resolution of custom map is not sufficient for simulation.")
+                sys.exit(1)
+            m = self._old_map3d
+            print "ERR",O["diameter"],self.diameter_mean,self._old_map3d_dx
+            dx = O["diameter"]/self.diameter_mean * self._old_map3d_dx
+            self._old_map3d_diameter    = self.diameter_mean
+        self._old_map3d_geometry = "custom"
+        self._old_map3d_diameter = O["diameter"]
+        return m,dx
+            
     def _put_custom_map(self, map_add, n):
         self._old_map3d = numpy.array(map_add, dtype=numpy.complex128) * n
     

@@ -54,6 +54,7 @@ class Experiment:
         return conf
         
     def propagate(self, save_map3d = False, save_qmap = True):
+        print "Getting started"
         N = self.source.number_of_shots
         O = {"source":{}, "sample":{}, "detector":{}}
         O_particles = {}
@@ -201,10 +202,9 @@ class Experiment:
                 # Generate map
                 dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)
                 dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)
-                print dx_required, dx_suggested
-                dn, dx = p.get_map3d(D_particle, dx_required, dx_suggested, dn)
+                map3d_dn, dx = p.get_map3d(D_particle, dx_required, dx_suggested, dn)
                 if save_map3d:
-                    D_particle["dn"] = dn
+                    D_particle["map3d_dn"] = map3d_dn
                     D_particle["dx"] = dx
                 # Rescale and shape qmap for nfft
                 qmap_scaled = dx * qmap / (2 * numpy.pi)
@@ -216,14 +216,14 @@ class Experiment:
                 if (invalid_mask).sum() > 0:
                     qmap_shaped[invalid_mask] = 0.
                     log(condor.CONDOR_logger.debug, "%i invalid pixel positions." % invalid_mask.sum())
-                log(condor.CONDOR_logger.debug, "Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (dn.shape[0], dn.shape[1], dn.shape[2], len(list(dn.shape)), abs(dn).sum()))
-                if (numpy.isfinite(abs(dn))==False).sum() > 0:
+                log(condor.CONDOR_logger.debug, "Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (map3d_dn.shape[0], map3d_dn.shape[1], map3d_dn.shape[2], len(list(map3d_dn.shape)), abs(map3d_dn).sum()))
+                if (numpy.isfinite(abs(map3d_dn))==False).sum() > 0:
                     log(condor.CONDOR_logger.warning, "There are infinite values in the dn map of the object.")
                 log(condor.CONDOR_logger.debug, "Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (qmap_shaped.shape[0], qmap_shaped.shape[1], len(list(qmap_shaped.shape))))
                 if (numpy.isfinite(qmap_shaped)==False).sum() > 0:
                     log(condor.CONDOR_logger.warning, "There are infinite values in the scattering vectors.")
                 # NFFT
-                fourier_pattern = condor.utils.nfft.nfft(dn, qmap_shaped)
+                fourier_pattern = condor.utils.nfft.nfft(map3d_dn, qmap_shaped)
                 # Check output - masking in case of invalid values
                 if (invalid_mask).sum() > 0:
                     fourier_pattern[numpy.any(invalid_mask)] = numpy.nan
