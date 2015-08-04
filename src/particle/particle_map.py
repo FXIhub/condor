@@ -62,7 +62,7 @@ class ParticleMap(AbstractContinuousParticle):
             log(condor.CONDOR_logger.error,"Cannot initialize %s because \'%s\' is not a valid argument for \'geometry\'." % (kwargs["geometry"], self.__class__.__name__))
             sys.exit(1)
         self.geometry = geometry
-
+        
         if geometry != "spheroid":
             if flattening != 1. or flattening_variation is not None or flattening_spread is not None or flattening_variation_n is not None:
                 log(condor.CONDOR_logger.warning, "At least one flattening keyword argument is not None - although geometry != \"spheroid\". The flattening keywords will have no effect.")
@@ -70,7 +70,12 @@ class ParticleMap(AbstractContinuousParticle):
         self.flattening_mean = flattening
         self.set_flattening_variation(flattening_variation=flattening_variation, flattening_spread=flattening_spread, flattening_variation_n=flattening_variation_n)
 
-                
+        # Init chache
+        self._old_map3d_geometry               = None
+        self._old_map3d_dx                     = None
+        self._old_map3d                        = None
+        self._old_map3d_diameter               = None
+
         if geometry == "custom":
             if filename is not None and map3d is not None:
                 log(condor.CONDOR_logger.error, "Cannot initialize geometry because the keyword arguments for both \'filename\' and \'map3d\' are not None.")
@@ -84,14 +89,9 @@ class ParticleMap(AbstractContinuousParticle):
             elif map3d is not None:
                 self.set_custom_geometry_by_array(map3d, dx)
             elif filename is not None:
-                self.set_custom_geometry_by_file(filename, dx)
-        else:
-            # Init chache
-            self._old_map3d_diameter               = None
-            self._old_map3d_geometry               = None
-            self._old_map3d_dx                     = None
-            self._old_map3d                        = None
-
+                self.set_custom_geometry_by_h5file(filename, dx)
+            
+            
     def get_conf(self):
         conf = {}
         conf.update(AbstractContinuousParticle.get_conf(self))
@@ -121,7 +121,7 @@ class ParticleMap(AbstractContinuousParticle):
         
     def set_custom_geometry_by_h5file(self, filename, dx):
         import h5py
-        with h5py.File(O["filename"],"r") as f:
+        with h5py.File(filename,"r") as f:
             if len(f.items()) == 1:
                 map3d = numpy.array(f.items()[0][1][:,:,:], dtype="float")
             else:
@@ -147,16 +147,16 @@ class ParticleMap(AbstractContinuousParticle):
             else:
                 return f
 
-    def get_map3d(self, O = None, dx_required = None, dx_suggested = None, dn = None):
+    def get_map3d(self, O = None, dx_required = None, dx_suggested = None):
         if O is not None:
-            m,dx = self.get_new_map(O, dx_required, dx_suggested, dn)
+            m,dx = self.get_new_map(O, dx_required, dx_suggested)
         else:
             dx = self._old_map3d_dx
             m = self._old_map3d
         return m, dx
             
-    def get_new_map(self, O, dx_required, dx_suggested, dn):
-        if O["geometry"] is not "custom":
+    def get_new_map(self, O, dx_required, dx_suggested):
+        if O["geometry"] != "custom":
             # Decide whether we need to build a new map
             build_map = False
             if self._old_map3d is None:
@@ -174,15 +174,15 @@ class ParticleMap(AbstractContinuousParticle):
                 self._old_map3d = None
                 self._old_map3d_dx = dx_suggested
                 if O["geometry"] == "icosahedron":
-                    self._put_icosahedron(O["diameter"]/2., dn)
+                    self._put_icosahedron(O["diameter"]/2.)
                 elif O["geometry"] == "spheroid":
                     a = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
                     c = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
-                    self._put_spheroid(a, c, dn)
+                    self._put_spheroid(a, c)
                 elif O["geometry"] == "sphere":
-                    self._put_sphere(O["diameter"]/2., dn)
+                    self._put_sphere(O["diameter"]/2.)
                 elif O["geometry"] == "cube":
-                    self._put_cube(O["diameter"]/2., dn)
+                    self._put_cube(O["diameter"]/2.)
                 else:
                     log(condor.CONDOR_logger.error, "Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
                     sys.exit(1)
@@ -190,27 +190,26 @@ class ParticleMap(AbstractContinuousParticle):
             dx = self._old_map3d_dx
             
         else:
-            if dx_required < self._old_map3d_dx:
-                log(condor.CONDOR_logger.error, "Resolution of custom map is not sufficient for simulation.")
+            dx = O["diameter"]/self.diameter_mean * self._old_map3d_dx
+            if dx_required < dx:
+                log(condor.CONDOR_logger.error, "Resolution of custom map is not sufficient for simulation. %e, %e" % (dx_required, self._old_map3d_dx))
                 sys.exit(1)
             m = self._old_map3d
-            print "ERR",O["diameter"],self.diameter_mean,self._old_map3d_dx
-            dx = O["diameter"]/self.diameter_mean * self._old_map3d_dx
             self._old_map3d_diameter    = self.diameter_mean
-        self._old_map3d_geometry = "custom"
+        self._old_map3d_geometry = O["geometry"]
         self._old_map3d_diameter = O["diameter"]
         return m,dx
             
-    def _put_custom_map(self, map_add, n):
-        self._old_map3d = numpy.array(map_add, dtype=numpy.complex128) * n
+    def _put_custom_map(self, map_add):
+        self._old_map3d = numpy.array(map_add, dtype=numpy.float64)
     
-    def _put_sphere(self, radius, n):
+    def _put_sphere(self, radius):
         nR = radius/self._old_map3d_dx
         N = int(round((nR*1.2)*2))
         spheremap = condor.utils.bodies.make_sphere_map(N,nR)
-        self._put_custom_map(spheremap, n)
+        self._put_custom_map(spheremap)
  
-    def _put_spheroid(self, a, c, n, e0=0., e1=0., e2=0.):
+    def _put_spheroid(self, a, c, e0=0., e1=0., e2=0.):
         # maximum radius
         Rmax = max([a,c])
         # maximum radius in pixel
@@ -221,9 +220,9 @@ class ParticleMap(AbstractContinuousParticle):
         # leaving a bit of free space around spheroid
         N = int(round((nRmax*1.2)*2))
         spheromap = condor.utils.bodies.make_spheroid_map(N,nA,nC,e0,e1,e2)
-        self._put_custom_map(spheromap, n)
+        self._put_custom_map(spheromap)
 
-    def _put_icosahedron(self, radius, n, e0=0., e1=0., e2=0.):
+    def _put_icosahedron(self, radius, e0=0., e1=0., e2=0.):
         # icosahedon size parameter
         a = radius*(16*numpy.pi/5.0/(3+numpy.sqrt(5)))**(1/3.0)
         # radius at corners in meter
@@ -236,7 +235,7 @@ class ParticleMap(AbstractContinuousParticle):
         icomap = condor.utils.bodies.make_icosahedron_map(N,nRmax,e0,e1,e2)
         self._put_custom_map(icomap, n)
 
-    def _put_cube(self, a, n, e0=0., e1=0., e2=0.):
+    def _put_cube(self, a, e0=0., e1=0., e2=0.):
         # edge_length in pixels
         nel = a/self._old_map3d_dx 
         # leaving a bit of free space around

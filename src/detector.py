@@ -31,7 +31,6 @@ import condor.utils.log
 from condor.utils.log import log 
 import condor.utils.config
 import utils.resample
-from condor.utils.tools import get_default_source_conf
 from condor.utils.variation import Variation
 from condor.utils.pixelmask import PixelMask
 from condor.utils.linalg import length
@@ -43,7 +42,7 @@ def load_detector(conf=None):
     Kwargs:
        :conf(str): Condor configuration file (default = None)
     """
-    C = condor.utils.config.load_configuration(condor.utils.config.load_configuration(conf), {"detector": get_default_detector_conf()})
+    C = condor.utils.config.load_config({"detector": condor.utils.config.load_config(conf)["detector"]}, {"detector": condor.utils.config.get_default_conf()["detector"]})
     detector = Detector(**C["detector"])
     return detector
 
@@ -336,9 +335,7 @@ class Detector:
         return I_det, M_det, IXxX_det, MXxX_det
 
 def q_from_p(p, wavelength):
-    print "p",p
     p0 = p / length(p)
-    print "p0",p0
     R_Ewald = 2*numpy.pi / wavelength
     k0 = R_Ewald * numpy.array([1.,0.,0.])
     k1 = R_Ewald * p0

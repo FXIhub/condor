@@ -37,9 +37,21 @@ import condor
 from material import Material
 from condor.utils.variation import Variation
 
-def load_particle(conf, name=None):
-    C = condor.utils.config.load_configuration(conf)
+import condor.utils.config
+import condor.utils.diffraction
+
+def load_particles(conf):
+    C = condor.utils.config.load_config(conf)
     names = [k for k in C.keys() if k.startswith("particle")]
+    particles = {}
+    for n in names:
+        particles[n] = load_particle(conf, n)
+    return particles
+
+def load_particle(conf, name=None):
+    C = condor.utils.config.load_config(conf)
+    names = [k for k in C.keys() if k.startswith("particle")]
+    default = condor.utils.config.get_default_conf()
     if len(names) > 1 and name is None:
         log(condor.CONDOR_logger.error, "There is more than one particle defined in configuration and no \'name\' is given to decide which one to load.")
         return
@@ -48,21 +60,17 @@ def load_particle(conf, name=None):
     else:
         k = name
     if k.startswith("particle_sphere"):
-        CP_def["particle_sphere"] = get_default_particle_uniform_sphere_conf()
-        CP = condor.utils.config.load_configuration({"particle_sphere", C[k]}, CP_def)
-        particle = ParticleSphere(**CP["particle_sphere"])
+        CP = condor.utils.config.load_config({"particle": C[k]}, {"particle": default["particle_sphere"]})
+        particle = condor.ParticleSphere(**CP["particle"])
     elif k.startswith("particle_spheroid"):
-        CP_def["particle_spheroid"] = get_default_particle_uniform_spheroid_conf()
-        CP = condor.utils.config.load_configuration(CP, CP_def)
-        particle = ParticleSpheroid(**CP["particle_spheroid"])
+        CP = condor.utils.config.load_config({"particle": C[k]}, {"particle": default["particle_spheroid"]})
+        particle = condor.ParticleSpheroid(**CP["particle"])
     elif k.startswith("particle_map"):
-        CP_def["particle_map"] = get_default_particle_map_conf()
-        CP = condor.utils.config.load_configuration(CP, CP_def)
-        particle = ParticleMap(**CP["particle_map"])
+        CP = condor.utils.config.load_config({"particle": C[k]}, {"particle": default["particle_map"]})
+        particle = condor.ParticleMap(**CP["particle"])
     elif k.startswith("particle_molecule"):
-        CP_def["particle_molecule"] = get_default_particle_molecule_conf()
-        CP = condor.utils.config.load_configuration(CP, CP_def)
-        particle = ParticleMolecule(**CP["particle_molecule"])
+        CP = condor.utils.config.load_config({"particle": C[k]}, {"particle": default["particle_molecule"]})
+        particle = condor.ParticleMolecule(**CP["particle"])
     else:
         log(condor.CONDOR_logger.error,"Particle model for %s is not implemented." % k)
         sys.exit(1)
@@ -131,7 +139,7 @@ class AbstractParticle:
             if self._euler_angle_0 is not None or self._euler_angle_1 is not None or self._euler_angle_2 is not None:
                 log(condor.CONDOR_logger.error,"Conflict of arguments: Specified random alignment and also specified set of euler angles. This does not make sense.")
                 exit(1)
-            (euler_angle_0,euler_angle_1,euler_angle_2) = utils.diffraction.random_euler_angles()
+            (euler_angle_0,euler_angle_1,euler_angle_2) = condor.utils.diffraction.random_euler_angles()
         elif self._alignment == "euler_angles":
             # Many orientations (lists of euler angles)
             if isinstance(self._euler_angle_0,list):

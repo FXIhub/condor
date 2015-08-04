@@ -28,7 +28,7 @@ import scipy.stats
 
 import condor.utils.log
 from condor.utils.log import log
-from condor.utils.tools import get_default_sample_conf
+import condor.utils.tools
 import condor.utils.config
 from condor.utils.variation import Variation
 
@@ -39,8 +39,9 @@ def load_sample(conf):
     Args:
        :conf(str): Condor configuration file
     """        
-    C = condor.utils.config.load_configuration(condor.utils.config.load_configuration(conf), {"sample": get_default_sample_conf()})
+    C = condor.utils.config.load_config({"sample": condor.utils.config.load_config(conf)["sample"]}, {"sample": condor.utils.config.get_default_conf()["sample"]})
     sample = Sample(**C["sample"])
+    return sample
         
 class Sample:
     """

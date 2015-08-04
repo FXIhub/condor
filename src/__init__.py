@@ -25,7 +25,7 @@
 from .experiment import Experiment
 from .source import Source, load_source
 from .sample import Sample, load_sample
-from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleMolecule
+from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleMolecule, load_particle, load_particles
 from .detector import Detector, load_detector
 
 # Set global variables

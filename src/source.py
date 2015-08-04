@@ -29,7 +29,6 @@ import scipy.constants as constants
 
 import condor.utils.log
 from condor.utils.log import log
-from condor.utils.tools import get_default_source_conf
 import condor.utils.config
 from condor.utils.variation import Variation
 
@@ -40,7 +39,7 @@ def load_source(conf):
     Args:
        :conf(str): Condor configuration file
     """
-    C = condor.utils.config.load_configuration(condor.utils.config.load_configuration(conf), {"source": get_default_source_conf()})
+    C = condor.utils.config.load_config({"source": condor.utils.config.load_config(conf)["source"]}, {"source": condor.utils.config.get_default_conf()["source"]})
     source = Source(**C["source"])
     return source
   

@@ -54,9 +54,10 @@ except:
 print 'Clean up data directory'
 os.system("mkdir -p ./src/data/")
 
-# Copy default configuration file there
+# Copy default configuration files there
 print 'Copy default configuration file'
 os.system("cp ./data/default/condor.conf ./src/data/")
+os.system("cp ./data/default/DNA.pdb ./src/data/")
 
 # Atomic scattering factors from the Henke tables
 # B.L. Henke, E.M. Gullikson, and J.C. Davis. X-ray interactions: photoabsorption, scattering, transmission, and reflection at E=50-30000 eV, Z=1-92

@@ -54,7 +54,6 @@ class Experiment:
         return conf
         
     def propagate(self, save_map3d = False, save_qmap = True):
-        print "Getting started"
         N = self.source.number_of_shots
         O = {"source":{}, "sample":{}, "detector":{}}
         O_particles = {}
@@ -202,7 +201,8 @@ class Experiment:
                 # Generate map
                 dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)
                 dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)
-                map3d_dn, dx = p.get_map3d(D_particle, dx_required, dx_suggested, dn)
+                map3d, dx = p.get_map3d(D_particle, dx_required, dx_suggested)
+                map3d_dn = numpy.array(map3d, dtype=numpy.complex128) * dn
                 if save_map3d:
                     D_particle["map3d_dn"] = map3d_dn
                     D_particle["dx"] = dx

@@ -24,7 +24,10 @@
 
 import os, numpy, logging, ConfigParser, tempfile
 
-def load_configuration(config = None, default = None, logger = None):
+_this_dir = os.path.dirname(os.path.realpath(__file__))
+import condor
+
+def load_config(config = None, default = None, logger = None):
     if config is None:
         config = {}
     if default is None:
@@ -47,16 +50,19 @@ def load_configuration(config = None, default = None, logger = None):
                 logger.info("Add section %s with as section does not exist." % (sectionName))
         for variableName in [n for n in defDict[sectionName].keys() if n not in confDict[sectionName].keys()]:
             confDict[sectionName][variableName] = defDict[sectionName][variableName]
-            logger.info("Add variable %s with default value %s to configuration section %s as variable does not exist." % (variableName,str(defDict[sectionName][variableName]),sectionName))
+            if logger is not None:
+                logger.info("Add variable %s with default value %s to configuration section %s as variable does not exist." % (variableName,str(defDict[sectionName][variableName]),sectionName))
 
     # set condor variables
     for sectionName,section in confDict.items():
         for variableName,variable in section.items():
             if isinstance(variable, basestring):
                 if variable[:len("CONDOR_")] == "CONDOR_":
-                    exec("confDict[sectionName][variableName] = %s" % variable)
+                    exec("confDict[sectionName][variableName] = condor.%s" % variable)
 
-def write_configuration(confDict, filename):
+    return confDict
+
+def write_config(confDict, filename):
     ls = ["# Configuration file\n# Automatically written by Configuration instance\n\n"]
     for section_name,section in confDict.items():
         if isinstance(section,dict):
@@ -185,3 +191,6 @@ def conf_to_opts(D_source,D_particle,D_detector):
     os.unlink(tmpf_conf_name)
     return opts
 
+
+def get_default_conf():
+    return load_config(_this_dir+"/../data/condor.conf")
