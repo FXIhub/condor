@@ -25,6 +25,7 @@
 import sys
 import numpy
 import scipy.stats
+from scipy.interpolate import RegularGridInterpolator
 
 import condor
 import condor.utils.log
@@ -71,10 +72,12 @@ class ParticleMap(AbstractContinuousParticle):
         self.set_flattening_variation(flattening_variation=flattening_variation, flattening_spread=flattening_spread, flattening_variation_n=flattening_variation_n)
 
         # Init chache
-        self._old_map3d_geometry               = None
-        self._old_map3d_dx                     = None
-        self._old_map3d                        = None
-        self._old_map3d_diameter               = None
+        self._geometry               = None
+        self._dx                     = None
+        self._dx_orig                = None
+        self._map3d                  = None
+        self._map3d_orig             = None
+        self._diameter               = None
 
         if geometry == "custom":
             if filename is not None and map3d is not None:
@@ -116,8 +119,10 @@ class ParticleMap(AbstractContinuousParticle):
         if not numpy.all(s==s[0]):
             log(condor.CONDOR_logger.error,"Condor only accepts maps with equal dimensions.")
             return
-        self._old_map3d = map3d
-        self._old_map3d_dx = dx
+        self._map3d_orig = map3d
+        self._dx_orig = dx
+        self._map3d = map3d
+        self._dx = dx
         
     def set_custom_geometry_by_h5file(self, filename, dx):
         import h5py
@@ -151,28 +156,28 @@ class ParticleMap(AbstractContinuousParticle):
         if O is not None:
             m,dx = self.get_new_map(O, dx_required, dx_suggested)
         else:
-            dx = self._old_map3d_dx
-            m = self._old_map3d
+            dx = self._dx
+            m = self._map3d
         return m, dx
             
     def get_new_map(self, O, dx_required, dx_suggested):
         if O["geometry"] != "custom":
             # Decide whether we need to build a new map
             build_map = False
-            if self._old_map3d is None:
+            if self._map3d is None:
                 build_map = True
-            if self._old_map3d_diameter is None:
+            if self._diameter is None:
                 build_map = True
             else:
-                if abs(self._old_map3d_diameter - O["diameter"]) > 1E-10:
+                if abs(self._diameter - O["diameter"]) > 1E-10:
                     build_map = True
-            if self._old_map3d_dx > dx_required:
+            if self._dx > dx_required:
                 build_map = True
-                self._old_map3d = None
+                self._map3d = None
                 
             if build_map:
-                self._old_map3d = None
-                self._old_map3d_dx = dx_suggested
+                self._map3d = None
+                self._dx = dx_suggested
                 if O["geometry"] == "icosahedron":
                     self._put_icosahedron(O["diameter"]/2.)
                 elif O["geometry"] == "spheroid":
@@ -186,25 +191,44 @@ class ParticleMap(AbstractContinuousParticle):
                 else:
                     log(condor.CONDOR_logger.error, "Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
                     sys.exit(1)
-            m = self._old_map3d
-            dx = self._old_map3d_dx
+            m = self._map3d
+            dx = self._dx
             
         else:
-            dx = O["diameter"]/self.diameter_mean * self._old_map3d_dx
-            if dx_required < dx:
-                log(condor.CONDOR_logger.error, "Resolution of custom map is not sufficient for simulation. %e, %e" % (dx_required, self._old_map3d_dx))
-                sys.exit(1)
-            m = self._old_map3d
-            self._old_map3d_diameter    = self.diameter_mean
-        self._old_map3d_geometry = O["geometry"]
-        self._old_map3d_diameter = O["diameter"]
+            dx = O["diameter"] / self.diameter_mean * self._dx
+            # Map fine enough?
+            if dx/dx_required >= 1.:
+                # Original map fine enough?
+                if self._dx_orig/dx_required >= 1.:
+                    # Not fine enough -> exit
+                    log(condor.CONDOR_logger.error, "Resolution of custom map is not sufficient for simulation. %e, %e" % (dx_required, self._dx))
+                    sys.exit(1)
+                else:
+                    # Change back to original fine mask
+                    self._map3d = self._map3d_orig
+            # Can we downsample current mask?
+            if (dx/dx_suggested < 0.4) and (self._dx_orig/dx_suggested < 0.4):
+                factor = (dx_suggested/self._dx_orig).round()
+                N_old = self._map3d_orig.shape[0]
+                N_new = N_old / factor
+                log(condor.CONDOR_logger.info, "Interpolating mask from (%i,%i,%i) to (%i,%i,%i)." % (N_old,N_old,N_old,N_new,N_new,N_new))
+                x = numpy.arange(N_old)
+                G = RegularGridInterpolator((x,x,x), self._map3d_orig)
+                x,y,z = numpy.mgrid[0:N_new,0:N_new,0:N_new] * factor
+                self._map3d = G((x,y,z)).reshape((len(z),len(y),len(x)))
+                self._dx = self._dx_orig*factor
+            dx = O["diameter"] / self.diameter_mean * self._dx
+            m = self._map3d
+
+        self._geometry = O["geometry"]
+        self._diameter = O["diameter"]
         return m,dx
             
     def _put_custom_map(self, map_add):
-        self._old_map3d = numpy.array(map_add, dtype=numpy.float64)
+        self._map3d = numpy.array(map_add, dtype=numpy.float64)
     
     def _put_sphere(self, radius):
-        nR = radius/self._old_map3d_dx
+        nR = radius/self._dx
         N = int(round((nR*1.2)*2))
         spheremap = condor.utils.bodies.make_sphere_map(N,nR)
         self._put_custom_map(spheremap)
@@ -213,10 +237,10 @@ class ParticleMap(AbstractContinuousParticle):
         # maximum radius
         Rmax = max([a,c])
         # maximum radius in pixel
-        nRmax = Rmax/self._old_map3d_dx
+        nRmax = Rmax/self._dx
         # dimensions in pixel
-        nA = a/self._old_map3d_dx
-        nC = c/self._old_map3d_dx
+        nA = a/self._dx
+        nC = c/self._dx
         # leaving a bit of free space around spheroid
         N = int(round((nRmax*1.2)*2))
         spheromap = condor.utils.bodies.make_spheroid_map(N,nA,nC,e0,e1,e2)
@@ -228,7 +252,7 @@ class ParticleMap(AbstractContinuousParticle):
         # radius at corners in meter
         Rmax = numpy.sqrt(10.0+2*numpy.sqrt(5))*a/4.0 
         # radius at corners in pixel
-        nRmax = Rmax/self._old_map3d_dx 
+        nRmax = Rmax/self._dx 
         # leaving a bit of free space around icosahedron 
         N = int(numpy.ceil(2.3*(nRmax)))
         log(condor.CONDOR_logger.info,"Building icosahedron with radius %e (%i pixel) in %i x %i x %i voxel cube." % (radius,nRmax,N,N,N))
@@ -237,7 +261,7 @@ class ParticleMap(AbstractContinuousParticle):
 
     def _put_cube(self, a, e0=0., e1=0., e2=0.):
         # edge_length in pixels
-        nel = a/self._old_map3d_dx 
+        nel = a/self._dx 
         # leaving a bit of free space around
         N = int(numpy.ceil(2.3*nel))
         # make map
@@ -263,22 +287,22 @@ class ParticleMap(AbstractContinuousParticle):
         except:
             from mayavi import mlab
         if mode=='planes':
-            s = mlab.pipeline.scalar_field(abs(self._old_map3d))
+            s = mlab.pipeline.scalar_field(abs(self._map3d))
             plane_1 = mlab.pipeline.image_plane_widget(s,plane_orientation='x_axes',
-                                                       slice_index=self._old_map3d.shape[2]/2)
+                                                       slice_index=self._map3d.shape[2]/2)
             plane_2 = mlab.pipeline.image_plane_widget(s,plane_orientation='y_axes',
-                                                       slice_index=self._old_map3d.shape[1]/2)
+                                                       slice_index=self._map3d.shape[1]/2)
             mlab.show()
         elif mode=='surface':
-            mlab.contour3d(abs(self._old_map3d))
+            mlab.contour3d(abs(self._map3d))
         else:
             log(condor.CONDOR_logger.error,"No valid mode given.")
             
     def plot_fmap3d(self):
         from enthought.mayavi import mlab
         import spimage
-        M = spimage.sp_image_alloc(self._old_map3d.shape[0],self._old_map3d.shape[1],self._old_map3d.shape[2])
-        M.image[:,:,:] = self._old_map3d[:,:,:]
+        M = spimage.sp_image_alloc(self._map3d.shape[0],self._map3d.shape[1],self._map3d.shape[2])
+        M.image[:,:,:] = self._map3d[:,:,:]
         M.mask[:,:,:] = 1
         fM = spimage.sp_image_fftw3(M)
         fM.mask[:,:,:] = 1
@@ -307,9 +331,9 @@ class ParticleMap(AbstractContinuousParticle):
         if filename[-3:] == '.h5':
             import h5py
             f = h5py.File(filename,'w')
-            map3d = f.create_dataset('data', self._old_map3d.shape, self._old_map3d.dtype)
-            map3d[:,:,:] = self._old_map3d[:,:,:]
-            f['voxel_dimensions_in_m'] = self._old_map3d_dx
+            map3d = f.create_dataset('data', self._map3d.shape, self._map3d.dtype)
+            map3d[:,:,:] = self._map3d[:,:,:]
+            f['voxel_dimensions_in_m'] = self._dx
             f.close()
         else:
             log(condor.CONDOR_logger.error,"Invalid filename extension, has to be \'.h5\'.")

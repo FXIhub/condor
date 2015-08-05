@@ -295,18 +295,18 @@ class Detector:
         q = q_from_p(p, wavelength)
         return q
 
-    def _get_resolution_element(self, wavelength, cx = None, cy = None, center_variation = False):
-        res = numpy.pi / self.get_q_max(wavelength, cx=cx, cy=cy, pos="edge", center_variation=center_variation)
+    def _get_resolution_element(self, wavelength, cx = None, cy = None, center_variation = False, pos="edge"):
+        res = numpy.pi / self.get_q_max(wavelength, cx=cx, cy=cy, pos=pos, center_variation=center_variation)
         return res
 
     def get_resolution_element_z(self, wavelength, cx = None, cy = None, center_variation = False):
-        return self._get_resolution_element(self, wavelength, cx=cx, cy=cy, center_variation=center_variation)[0]
+        return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[0]
 
     def get_resolution_element_y(self, wavelength, cx = None, cy = None, center_variation = False):
-        return self._get_resolution_element(self, wavelength, cx=cx, cy=cy, center_variation=center_variation)[1]
+        return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[1]
 
     def get_resolution_element_x(self, wavelength, cx = None, cy = None, center_variation = False):
-        return self._get_resolution_element(self, wavelength, cx=cx, cy=cy, center_variation=center_variation)[2]
+        return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[2]
 
     def get_resolution_element_r(self, wavelength, cx = None, cy = None, center_variation = False):
         qmax = self.get_q_max(wavelength, cx=cx, cy=cy, pos="corner", center_variation=center_variation)
