@@ -26,20 +26,23 @@ import sys,os
 import numpy
 import scipy.stats
 
+import logging
+logger = logging.getLogger(__name__)
+
 import condor.utils.log
-from condor.utils.log import log
+from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 import condor.utils.tools
-import condor.utils.config
+from condor.utils.config import load_config
 from condor.utils.variation import Variation
 
 def load_sample(conf):
     """
-    Create new Sample instance and load parameters from a Condor configuration file.
+    Create new Sample instance and load parameters from a Condor configuration file or dictionary.
     
-    Args:
-       :conf(str): Condor configuration file
-    """        
-    C = condor.utils.config.load_config({"sample": condor.utils.config.load_config(conf)["sample"]}, {"sample": condor.utils.config.get_default_conf()["sample"]})
+    Kwargs:
+       :conf(str): Condor configuration file or dictionary (default = None)
+    """
+    C = condor.utils.config.load_config({"sample": load_config(conf)["sample"]}, {"sample": load_config(condor.CONDOR_default_conf)["sample"]})
     sample = Sample(**C["sample"])
     return sample
         
@@ -101,9 +104,9 @@ class Sample:
            not isinstance(particle_model, condor.particle.ParticleSpheroid) and \
            not isinstance(particle_model, condor.particle.ParticleMap) and \
            not isinstance(particle_model, condor.particle.ParticleMolecule):
-            log(condor.CONDOR_logger.error, "The argument is not a valid particle model instance.")
+            log_and_raise_error(logger, "The argument is not a valid particle model instance.")
         elif name in self._particle_models_names:
-            log(condor.CONDOR_logger.error, "The given name for the particle model already exists. Please choose andother name and try again.")
+            log_and_raise_error(logger, "The given name for the particle model already exists. Please choose andother name and try again.")
         else:
             self._particle_models.append(particle_model)
             self._particle_models_names.append(name)
@@ -116,7 +119,7 @@ class Sample:
            :name(str): Name of the particle model that shall be removed
         """
         if name not in self._particle_models_names:
-            log(condor.CONDOR_logger.error, "The given name for the particle model does not exist. Please give an existing particle model name and try again.")
+            log_and_raise_error(logger, "The given name for the particle model does not exist. Please give an existing particle model name and try again.")
         else:
             i = self._particle_models_names.index(name)
             self._particle_models_names.pop(i)
@@ -154,14 +157,14 @@ class Sample:
         # Non-random
         if self._number_of_particles_variation._mode in [None,"range"]:
             if N <= 0:
-                log(condor.CONDOR_logger.error,"Sample number of particles smaller-equals zero. Change your configuration.")
+                log_and_raise_error(logger, "Sample number of particles smaller-equals zero. Change your configuration.")
                 sys.exit(0)
             else:
                 return N
         # Random
         else:
             if N <= 0.:
-                log(condor.CONDOR_logger.info,"Sample number of particles smaller-equals zero. Trying again.")
+                log_warning(logger, "Sample number of particles smaller-equals zero. Trying again.")
                 return self._get_next_number_of_particles()
             else:
                 return N       
@@ -177,7 +180,7 @@ class Sample:
             dist = scipy.stats.rv_discrete(name='model distribution', values=(i_s, c_s))
             self._particles = [self._particle_models[i] for i in dist.rvs(size=N)]
         else:
-            log(condor.CONDOR_logger.error,"particle_pick=%s is not a valid configuration." % self.particle_variation)
+            log_and_raise_error(logger, "particle_pick=%s is not a valid configuration." % self.particle_variation)
             sys.exit(0)
 
         

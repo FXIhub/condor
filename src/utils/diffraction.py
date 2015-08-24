@@ -24,24 +24,6 @@
 
 import numpy, math
  
-import logging
-logger = logging.getLogger("Condor")
-from log import log
-
-def random_euler_angles():
-    """
-    Generates a triplet (phi, theta, psi) of random Euler angles.
-    """
-    r1,r2,r3 = numpy.random.random(3)
-    q1 = numpy.sqrt(1.0-r1)*numpy.sin(2.0*numpy.pi*r2)
-    q2 = numpy.sqrt(1.0-r1)*numpy.cos(2.0*numpy.pi*r2)
-    q3 = numpy.sqrt(r1)*numpy.sin(2.0*numpy.pi*r3)
-    q4 = numpy.sqrt(r1)*numpy.cos(2.0*numpy.pi*r3)
-    e1 = math.atan2(2.0*(q1*q2+q3*q4), 1.0-2.0*(q2**2+q3**2))
-    e2 = math.asin(2.0*(q1*q3-q4*q2))
-    e3 = math.atan2(2.0*(q1*q4+q2*q3), 1.0-2.0*(q3**2+q4**2))
-    return (e1,e2,e3)
-
 def crystallographic_resolution(wavelength, pixel_center_distance, detector_distance):
     """
     Returns crystallographic resolution (full-period resolution at the closest edge)

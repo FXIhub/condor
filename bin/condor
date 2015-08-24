@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 import argparse
-import numpy
 import os
 import condor
 import condor.utils
-from condor.utils.log import log
+from condor.utils.log import log_info
 import condor.utils.tools
 import logging
-logger = logging.getLogger("Condor")
+logger = logging.getLogger("condor")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='condor - simulation of single particle X-ray diffraction patterns')
+    parser = argparse.ArgumentParser(description='Condor - simulation of single particle X-ray diffraction patterns')
     parser.add_argument('-v', '--verbose', dest='verbose',  action='store_true', help='verbose mode', default=False)
     parser.add_argument('-d', '--debug', dest='debug',  action='store_true', help='debugging mode (even more output than in verbose mode)', default=False)
     args = parser.parse_args()
@@ -20,9 +19,23 @@ if __name__ == "__main__":
         logger.setLevel("INFO")
     if args.debug:
         logger.setLevel("DEBUG")
+
     I = condor.utils.tools.Input("./condor.conf")
+
+    # FOR BENCHMARKING
+    #from pycallgraph import PyCallGraph
+    #from pycallgraph.output import GraphvizOutput
+    #from pycallgraph import Config
+    #from pycallgraph import GlobbingFilter
+    #config = Config()
+    #config.trace_filter = GlobbingFilter(exclude=[
+    #'pycallgraph.*',
+    #'numpy.*',
+    #])
+    #with PyCallGraph(output=GraphvizOutput(),config=config):
+
     O = condor.utils.tools.Output(I)
-    log(logger.info, "Writing output to condor.cxi")
+    log_info(logger, "Writing output to condor.cxi")
     O.write("./condor.cxi", output="all")
 
     

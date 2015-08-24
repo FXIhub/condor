@@ -24,22 +24,68 @@
 
 import h5py, os, numpy, time, sys, inspect
 
+import condor
+
 import logging
-logger = logging.getLogger("Condor")
+logger = logging.getLogger(__name__)
 
-def log(logcall,message):
-    "Automatically log the current function details."
-    # Get the previous frame in the stack, otherwise it would
-    # be this function!!!
-    func = inspect.currentframe().f_back.f_code
-    # Dump the message + the name of this function to the log.
-    logcall("%s: %s in %s:%i" % (
-        message, 
-        func.co_name, 
-        func.co_filename, 
-        func.co_firstlineno
-    ))
+log_and_raise_error = lambda logger, message: log(logger, message, lvl="ERROR", exception=RuntimeError, rollback=2)
+log_warning = lambda logger, message: log(logger, message, lvl="WARNING", exception=None, rollback=2)
+log_info = lambda logger, message: log(logger, message, lvl="INFO", exception=None, rollback=2)
+log_debug = lambda logger, message: log(logger, message, lvl="DEBUG", exception=None, rollback=2)
 
+def log(logger, message, lvl, exception=None, rollback=1):
+    logcalls = {"ERROR": logger.error,
+                "WARNING": logger.warning,
+                "DEBUG": logger.debug,
+                "INFO": logger.info}
+    if lvl not in logcalls:
+        print "%s is an invalid logger level." % lvl
+        sys.exit(1)
+    logcall = logcalls[lvl]
+    #logger_condor = logging.getLogger("condor")
+    # This should maybe go into a handler
+    if (logger.getEffectiveLevel() >= logging.INFO) or rollback is None:
+        # Short output
+        msg = "%s" % message
+    else:
+        # Detailed output only in debug mode
+        func = inspect.currentframe()
+        for r in range(rollback):
+            # Rolling back in the stack, otherwise it would be this function
+            func = func.f_back
+        code = func.f_code
+        msg = "%s\n\t=> in \'%s\' function \'%s\' [%s:%i]" % (message,
+                                                              func.f_globals["__name__"],
+                                                              code.co_name, 
+                                                              code.co_filename, 
+                                                              code.co_firstlineno)
+    logcall("%s:\t%s" % (lvl,msg))
+    if exception is not None:
+        raise exception(message)
+        
+def log_execution_time(logger):
+    def st_time(func):
+        def st_func(*args, **keyArgs):
+            t1 = time.time()
+            r = func(*args, **keyArgs)
+            t2 = time.time()
+            try:
+                filename = inspect.getsourcefile(func)
+                module = inspect.getmodule(func)
+                line = inspect.getsourcelines(func)[1]
+                loc = "\'%s\' [%s:%i]" % (func.__name__,
+                                         filename,
+                                         line)
+            except TypeError:
+                loc = "\'%s\'" % func.__name__
+            msg = "Execution time = %.4f sec\n\t=> in function %s" % (t2 - t1,loc)
+            log(logger, msg, "DEBUG", exception=None, rollback=None)
+            return r        
+        return st_func
+    return st_time
+
+        
 class CXIWriter:
     def __init__(self,filename,N):
         self.filename = os.path.expandvars(filename)
@@ -48,7 +94,7 @@ class CXIWriter:
     def write(self,d,prefix="",i=-1):
         for k in d.keys():
             name = prefix+"/"+k
-            log(logger.debug, "Writing dataest %s" % name)
+            log_debug(logger, "Writing dataest %s" % name)
             if isinstance(d[k],dict):
                 if name not in self.f:
                     self.f.create_group(name)
@@ -56,7 +102,7 @@ class CXIWriter:
             elif k != "i":
                 self.write_to_dataset(name,d[k],d.get("i",i))
     def write_to_dataset(self,name,data,i):
-        log(logger.debug, "Write dataset %s of event %i." % (name,i))
+        log_debug(logger, "Write dataset %s of event %i." % (name,i))
         if name not in self.f:
             #print name
             t0 = time.time()
@@ -83,7 +129,7 @@ class CXIWriter:
             self.f.create_dataset(name,s,t)
             self.f[name].attrs.modify("axes",[axes])
             t1 = time.time()
-            log(logger.debug, "Create dataset %s within %.1f sec." % (name,t1-t0))
+            log_debug(logger, "Create dataset %s within %.6f sec." % (name,t1-t0))
         if i == -1:
             if numpy.isscalar(data):
                 self.f[name][0] = data

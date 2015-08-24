@@ -29,13 +29,13 @@ class ParticleSphere(AbstractContinuousParticle):
                  diameter, diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
                  concentration = 1.,
                  position = None, position_variation = None, position_spread = None, position_variation_n = None,
-                 material_type = None, massdensity = None, **atomic_composition):
+                 material_type = None, massdensity = None, atomic_composition = None): 
 
         # Initialise base class
         AbstractContinuousParticle.__init__(self,
                                             diameter=diameter, diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n,
-                                            alignment=None, euler_angle_0=None, euler_angle_1=None, euler_angle_2=None,
+                                            rotation_values=None, rotation_formalism=None, rotation_mode="extrinsic",
                                             concentration=concentration,
                                             position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n,
-                                            material_type=material_type, massdensity=massdensity, **atomic_composition)
+                                            material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
         

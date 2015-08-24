@@ -26,16 +26,21 @@
 # TO DO:
 # Take into account illumination profile
 
-import numpy, os, sys
+import numpy, os, sys, copy
+
+import logging
+logger = logging.getLogger(__name__)
 
 import sample
-from condor.utils.log import log
+from condor.utils.log import log,log_execution_time
+from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 import condor.utils.config
 from condor.utils.pixelmask import PixelMask
 import condor.utils.sphere_diffraction
 import condor.utils.spheroid_diffraction
 import condor.utils.scattering_vector
 import condor.utils.resample
+from condor.utils.rotation import Rotation
 import condor.sample
 import condor.particle
 
@@ -52,20 +57,21 @@ class Experiment:
         conf.update(self.sample.get_conf())
         conf.update(self.detector.get_conf())
         return conf
-        
-    def propagate(self, save_map3d = False, save_qmap = True):
+
+    @log_execution_time(logger)
+    def propagate(self, save_map3d = False, save_qmap = False):
         N = self.source.number_of_shots
         O = {"source":{}, "sample":{}, "detector":{}}
         O_particles = {}
         N_particles_max = 0
 
         for i in range(N):
-            log(condor.CONDOR_logger.info, "Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1, N))
+            log_debug(logger, "Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1, N))
 
             Os = self._propagate_single(save_map3d=save_map3d, save_qmap=save_qmap)
 
             N_particles = len(Os["sample"]["particles"])
-            print "%i/%i (%i particle%s)" % (i+1, N, N_particles, "s" if N_particles > 1 else "")
+            log_info(logger, "%i/%i (%i particle%s)" % (i+1, N, N_particles, "s" if N_particles > 1 else ""))
 
             for k in [k for k in Os.keys() if k not in ["source", "sample", "detector"]]:
                 if k not in O:
@@ -118,7 +124,8 @@ class Experiment:
             O[k] = numpy.array(O[k])
         return O
 
-    def _propagate_single(self, save_map3d = False, save_qmap = True):
+    @log_execution_time(logger)
+    def _propagate_single(self, save_map3d = False, save_qmap = False):
         
         # Iterate objects
         D_source   = self.source.get_next()
@@ -135,7 +142,8 @@ class Experiment:
         Omega_p             = D_detector["solid_angle_pixel"]
         wavelength          = D_source["wavelength"]
 
-        F_singles = []
+        F_singles    = []
+        qmap_singles = []
         # Calculate patterns of all single particles individually
         for D_particle in D_sample["particles"]:
             p  = D_particle["_class_instance"]
@@ -148,17 +156,14 @@ class Experiment:
             F0 = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2
             D_particle["F0"] = F0
             # 3D Orientation
-            e0 = D_particle["euler_angle_0"]
-            e1 = D_particle["euler_angle_1"]
-            e2 = D_particle["euler_angle_2"]
-
+            extrinsic_rotation = Rotation(values=D_particle["extrinsic_quaternion"], formalism="quaternion")
+            
             # UNIFORM SPHERE
             if isinstance(p, condor.particle.ParticleSphere):
                 # Refractive index
                 dn = p.material.get_dn(wavelength)
                 # Scattering vectors
-                qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
-                                     euler_angle_0=0., euler_angle_1=0., euler_angle_2=0.)
+                qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, extrinsic_rotation=None)
                 q = numpy.sqrt(qmap[:,:,1]**2+qmap[:,:,2]**2)
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
@@ -172,9 +177,8 @@ class Experiment:
                 # Refractive index
                 dn = p.material.get_dn(wavelength)
                 # Scattering vectors
-                qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, 
-                                     euler_angle_0=0., euler_angle_1=0., euler_angle_2=0.)
-                qx = qmap[:,:,2]
+                qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, extrinsic_rotation=None, order="xyz")
+                qx = qmap[:,:,0]
                 qy = qmap[:,:,1]
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
@@ -183,53 +187,56 @@ class Experiment:
                 a = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_a(D_particle["diameter"], D_particle["flattening"])
                 c = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_c(D_particle["diameter"], D_particle["flattening"])
                 # Pattern
-                # (Rotation is taken into account directly in the diffraction formula (much faster))
-                theta = condor.utils.spheroid_diffraction.to_spheroid_theta(euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
-                phi   = condor.utils.spheroid_diffraction.to_spheroid_phi(euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
-                F     = condor.utils.spheroid_diffraction.F_spheroid_diffraction(K, qx, qy, a, c, theta, phi)
+                # Spheroid axis before rotation
+                v0 = numpy.array([0.,1.,0.])
+                v1 = extrinsic_rotation.rotate_vector(v0)
+                theta = numpy.arcsin(v1[2])
+                phi   = numpy.arctan2(-v1[0],v1[1])
+                F = condor.utils.spheroid_diffraction.F_spheroid_diffraction(K, qx, qy, a, c, theta, phi)
 
             # MAP
             elif isinstance(p, condor.particle.ParticleMap):
                 # Refractive index
                 dn = p.material.get_dn(wavelength)
-                # Scattering vectors
-                qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength,
-                                     euler_angle_0=e0, euler_angle_1=e1, euler_angle_2=e2)
+                # Scattering vectors (the nfft requires order z,y,x)
+                qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, extrinsic_rotation=extrinsic_rotation, order="zyx")
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
                 # Generate map
-                dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)
-                dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)
+                # We multiply by 0.99 to prevent numerical issues
+                dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False) * 0.99
+                dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True) * 0.99
                 map3d, dx = p.get_map3d(D_particle, dx_required, dx_suggested)
+                log_debug(logger, "Sampling of map: dx_required = %e m, dx_suggested = %e m, dx = %e m" % (dx_required, dx_suggested, dx))
                 map3d_dn = numpy.array(map3d, dtype=numpy.complex128) * dn
                 if save_map3d:
                     D_particle["map3d_dn"] = map3d_dn
                     D_particle["dx"] = dx
                 # Rescale and shape qmap for nfft
-                qmap_scaled = dx * qmap / (2 * numpy.pi)
+                qmap_scaled = dx * qmap / (2. * numpy.pi)
                 qmap_shaped = qmap_scaled.reshape(qmap_scaled.shape[0]*qmap_scaled.shape[1], 3)
                 # For Jing:
                 #D_particle["qmap3d"] = detector.generate_qmap_ori(nfft_scaled=True)
                 # Check inputs
-                invalid_mask = (abs(qmap_shaped)>0.5)
+                invalid_mask = ((qmap_shaped>=-0.5) * (qmap_shaped<0.5)) == False
                 if (invalid_mask).sum() > 0:
                     qmap_shaped[invalid_mask] = 0.
-                    log(condor.CONDOR_logger.debug, "%i invalid pixel positions." % invalid_mask.sum())
-                log(condor.CONDOR_logger.debug, "Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (map3d_dn.shape[0], map3d_dn.shape[1], map3d_dn.shape[2], len(list(map3d_dn.shape)), abs(map3d_dn).sum()))
+                    log_warning(logger, "%i invalid pixel positions." % invalid_mask.sum())
+                log_debug(logger, "Map3d input shape: (%i,%i,%i), number of dimensions: %i, sum %f" % (map3d_dn.shape[0], map3d_dn.shape[1], map3d_dn.shape[2], len(list(map3d_dn.shape)), abs(map3d_dn).sum()))
                 if (numpy.isfinite(abs(map3d_dn))==False).sum() > 0:
-                    log(condor.CONDOR_logger.warning, "There are infinite values in the dn map of the object.")
-                log(condor.CONDOR_logger.debug, "Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (qmap_shaped.shape[0], qmap_shaped.shape[1], len(list(qmap_shaped.shape))))
+                    log_warning(logger, "There are infinite values in the dn map of the object.")
+                log_debug(logger, "Scattering vectors shape: (%i,%i); Number of dimensions: %i" % (qmap_shaped.shape[0], qmap_shaped.shape[1], len(list(qmap_shaped.shape))))
                 if (numpy.isfinite(qmap_shaped)==False).sum() > 0:
-                    log(condor.CONDOR_logger.warning, "There are infinite values in the scattering vectors.")
+                    log_warning(logger, "There are infinite values in the scattering vectors.")
                 # NFFT
-                fourier_pattern = condor.utils.nfft.nfft(map3d_dn, qmap_shaped)
+                fourier_pattern = log_execution_time(logger)(condor.utils.nfft.nfft)(map3d_dn, qmap_shaped)
                 # Check output - masking in case of invalid values
                 if (invalid_mask).sum() > 0:
                     fourier_pattern[numpy.any(invalid_mask)] = numpy.nan
                 # reshaping
                 fourier_pattern = numpy.reshape(fourier_pattern, (qmap_scaled.shape[0], qmap_scaled.shape[1]))
-                log(condor.CONDOR_logger.debug, "Got pattern of %i x %i pixels." % (fourier_pattern.shape[1], fourier_pattern.shape[0]))
+                log_debug(logger, "Got pattern of %i x %i pixels." % (fourier_pattern.shape[1], fourier_pattern.shape[0]))
                 F = F0 * fourier_pattern * dx**3
 
             # MOLECULE
@@ -251,22 +258,22 @@ class Experiment:
                 spsim.sp_image_free(F_img)
                 spsim.sp_image_free(phot_img)
                 # Extract qmap from spsim output
-                qmap_img = spsim.sp_image_alloc(D_detector["ny"], D_detector["nx"], 3)
+                qmap_img = spsim.sp_image_alloc(3,D_detector["nx"], D_detector["ny"])
                 spsim.array_to_image(pat.HKL_list, qmap_img)
                 qmap = numpy.zeros(shape=(D_detector["ny"], D_detector["nx"], 3))
-                qmap[:,:,0] = qmap_img.image.real[0,:,:]
-                qmap[:,:,1] = qmap_img.image.real[1,:,:]
-                qmap[:,:,2] = qmap_img.image.real[2,:,:]
+                qmap[:,:,0] = qmap_img.image.real[:,:,0]
+                qmap[:,:,1] = qmap_img.image.real[:,:,1]
+                qmap[:,:,2] = qmap_img.image.real[:,:,2]
                 spsim.sp_image_free(qmap_img)
                 spsim.free_diffraction_pattern(pat)
                 spsim.free_output_in_options(opts)
                 
             else:
-                log(condor.CONDOR_logger.error, "No valid particles initialized.")
+                log_and_raise_error(logger, "No valid particles initialized.")
                 sys.exit(0)
 
             if save_qmap:
-                D_particle["qmap"] = qmap
+                qmap_singles.append(qmap)
 
             F_singles.append(F)
 
@@ -292,6 +299,8 @@ class Experiment:
         O["mask_binary"]       = M_tot_binary
         O["mask"]              = M_tot
 
+        #O["qmap"] = qmap_singles
+        
         if self.detector.binning is not None:
             O["fourier_pattern_xxx"]   = FXxX_tot
             O["intensity_pattern_xxx"] = IXxX_tot
@@ -299,27 +308,39 @@ class Experiment:
             O["mask_xxx_binary"]       = MXxX_tot_binary
             
         return O
-        
-    def get_qmap(self, nx, ny, cx, cy, pixel_size, detector_distance, wavelength, euler_angle_0, euler_angle_1, euler_angle_2):
+
+    @log_execution_time(logger)
+    def get_qmap(self, nx, ny, cx, cy, pixel_size, detector_distance, wavelength, extrinsic_rotation=None, order="xyz"):
         calculate = False
-        keys = ["nx", "ny", "cx", "cy", "pixel_size", "detector_distance", "wavelength", "euler_angle_0", "euler_angle_1", "euler_angle_2"]
         if self._qmap_cache == {}:
             calculate = True
         else:
-            for k in keys:
-                exec "if self._qmap_cache[\"%s\"] != %s: calculate = True" % (k,k)
+            calculate = calculate or nx != self._qmap_cache["nx"]
+            calculate = calculate or ny != self._qmap_cache["ny"]
+            calculate = calculate or cx != self._qmap_cache["cx"]
+            calculate = calculate or cy != self._qmap_cache["cy"]
+            calculate = calculate or pixel_size != self._qmap_cache["pixel_size"]
+            calculate = calculate or detector_distance != self._qmap_cache["detector_distance"]
+            calculate = calculate or wavelength != self._qmap_cache["wavelength"]
+            calculate = calculate or not extrinsic_rotation.similar(self._qmap_cache["extrinsic_rotation"])
         if calculate:
-            log(condor.CONDOR_logger.info,  "Calculating qmap.")
-            X,Y = numpy.meshgrid(numpy.arange(nx),
-                                 numpy.arange(ny))
-            # THIS CAST IS VERY IMPORTANT, in python A += B is not the same as A = A + B
+            log_debug(logger,  "Calculating qmap")
+            Y,X = numpy.meshgrid(numpy.arange(ny), numpy.arange(nx), indexing="ij")
             X = numpy.float64(X)
             Y = numpy.float64(Y)
             X -= cx
             Y -= cy
-            self._qmap_cache["qmap"] = condor.utils.scattering_vector.generate_qmap(X, Y, pixel_size, detector_distance, wavelength, euler_angle_0, euler_angle_1, euler_angle_2)
-            for k in keys:
-                exec "self._qmap_cache[\"%s\"] =  %s" % (k,k)
+            self._qmap_cache = {
+                "qmap"              : condor.utils.scattering_vector.generate_qmap(X, Y, pixel_size, detector_distance, wavelength, extrinsic_rotation=extrinsic_rotation, order=order),
+                "nx"                : nx,
+                "ny"                : ny,
+                "cx"                : cx,
+                "cy"                : cy,
+                "pixel_size"        : pixel_size,
+                "detector_distance" : detector_distance,
+                "wavelength"        : wavelength,
+                "extrinsic_rotation": copy.deepcopy(extrinsic_rotation),
+            }            
         return self._qmap_cache["qmap"]          
 
     def get_resolution(self, wavelength = None, cx = None, cy = None, pos="corner", convention="full_period"):
@@ -331,7 +352,7 @@ class Experiment:
         elif convention == "half_period":
             return dx
         else:
-            log(condor.CONDOR_logger.error, "Invalid input: convention=%s. Must be either \"full_period\" or \"half_period\"." % convention)
+            log_and_raise_error(logger, "Invalid input: convention=%s. Must be either \"full_period\" or \"half_period\"." % convention)
             return
 
     def get_linear_sampling_ratio(self, wavelength = None, particle_diameter = None):
@@ -353,10 +374,10 @@ class Experiment:
             pm = self.sample.get_particle_models()
             N = len(pm.keys()) 
             if N == 0:
-                log(condor.CONDOR_logger.error, "You need to specify a particle_diameter because no particle model is defined.")
+                log_and_raise_error(logger, "You need to specify a particle_diameter because no particle model is defined.")
                 return
             elif N > 1:
-                log(condor.CONDOR_logger.error, "The particle_diameter is ambiguous because more than one particle model is defined.")
+                log_and_raise_error(logger, "The particle_diameter is ambiguous because more than one particle model is defined.")
                 return
             else:
                 particle_diameter = pm.values()[0]
@@ -380,7 +401,7 @@ class Experiment:
     #    if map3d == None and abs(self.dX_fine/self.dX-1) < 0.001:
     #        # ok, we'll take the fine map
     #        map3d = self.map3d_fine
-    #        condor.CONDOR_logger.debug("Using the fine map for propagtion.")
+    #        condor.CONDOR_logger.debug("Using the fine map for proagtion.")
     #        self._map3d = self.map3d_fine
     #    # do we have an interpolated map?
     #    if map3d == None and self._dX != None:

@@ -5,6 +5,12 @@ this_dir = os.path.dirname(os.path.realpath(__file__))
 
 import condor
 
+import logging
+logger = logging.getLogger("condor")
+#logger.setLevel("DEBUG")
+#logger.setLevel("WARNING")
+logger.setLevel("INFO")
+
 # Source
 src = condor.Source(wavelength=0.1E-9, pulse_energy=1E-3, focus_diameter=1E-6)
 # Sample
@@ -12,10 +18,9 @@ sam = condor.Sample()
 # Detector
 det = condor.Detector(distance=0.05, pixel_size=110E-6, nx=1000, ny=1000)
 
-
 # Sphere
 print "Simulating sphere"
-par = condor.ParticleSphere(diameter=1E-9, material_type="water", )
+par = condor.ParticleSphere(diameter=1E-9, material_type="water")
 s = "sphere"
 sam.append_particle(par, s)
 P = condor.Experiment(src, sam, det)
@@ -27,7 +32,7 @@ sam.remove_all_particles()
 
 # Spheroid
 print "Simulating spheroid"
-par = condor.ParticleSpheroid(diameter=1E-9, material_type="water", flattening=0.9, alignment="random_euler_angle_0")
+par = condor.ParticleSpheroid(diameter=1E-9, material_type="water", flattening=0.9, rotation_formalism="random_z")
 s = "spheroid"
 sam.append_particle(par, s)
 P = condor.Experiment(src, sam, det)

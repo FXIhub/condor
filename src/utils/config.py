@@ -22,12 +22,15 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-import os, numpy, logging, ConfigParser, tempfile
+import os, numpy, ConfigParser, tempfile, copy
 
-_this_dir = os.path.dirname(os.path.realpath(__file__))
+import logging
+logger = logging.getLogger(__name__)
+
+from log import log_and_raise_error,log_warning,log_info,log_debug
 import condor
 
-def load_config(config = None, default = None, logger = None):
+def load_config(config = None, default = None):
     if config is None:
         config = {}
     if default is None:
@@ -46,18 +49,16 @@ def load_config(config = None, default = None, logger = None):
     for sectionName in defDict.keys():
         if sectionName not in confDict.keys():
             self.confDict[sectionName] = {}
-            if logger is not None:
-                logger.info("Add section %s with as section does not exist." % (sectionName))
+            log_info(logger, "Add section %s with as section does not exist." % (sectionName))
         for variableName in [n for n in defDict[sectionName].keys() if n not in confDict[sectionName].keys()]:
             confDict[sectionName][variableName] = defDict[sectionName][variableName]
-            if logger is not None:
-                logger.info("Add variable %s with default value %s to configuration section %s as variable does not exist." % (variableName,str(defDict[sectionName][variableName]),sectionName))
+            log_info(logger, "Add variable %s with default value %s to configuration section %s as variable does not exist." % (variableName,str(defDict[sectionName][variableName]),sectionName))
 
     # set condor variables
     for sectionName,section in confDict.items():
         for variableName,variable in section.items():
             if isinstance(variable, basestring):
-                if variable[:len("CONDOR_")] == "CONDOR_":
+                if variable.startswith("CONDOR_"):
                     exec("confDict[sectionName][variableName] = condor.%s" % variable)
 
     return confDict
@@ -112,19 +113,38 @@ def read_configfile(configfile):
             for (key,value) in c:
                 v = estimate_type(value)
                 if isinstance(v,str):
-                    if "[" == v[0] and "]" == v[-1]:
+                    v = v.replace(" ","")
+                    if v.startswith("[") and v.endswith("]"):
+                        v = str_to_list(v)
+                        for i in range(len(v)):
+                            v[i] = os.path.expandvars(v[i]) if isinstance(v[i], str) else v[i] 
+                    elif v.startswith("{") and v.endswith("}"):
                         v = v[1:-1].split(",")
                         v = [w for w in v if len(w) > 0]
-                        for i in range(len(v)):
-                            if '$' in v[i]:
-                                v[i] = os.path.expandvars(v[i])
-                            v[i] = estimate_type(v[i]) 
+                        d = {}
+                        for w in v:
+                            key,value = w.split(":")
+                            value = estimate_type(value)
+                            if value.startswith("$"):
+                                value = os.path.expandvars(value)
+                            d[key] = value
+                        v = d
                     else:
-                        if '$' in v:
+                        if v.startswith("$"):
                             v = os.path.expandvars(v)
                 confDict[section][key] = v
     return confDict
 
+def str_to_list(s):
+    if s.startswith("[") and s.endswith("]"):
+        if s[1:-1].startswith("[") and s[1:-1].endswith("]"):
+            return str_to_list(s[1:-1])
+        else:
+            l = s[1:-1].split(",")
+            l = [estimate_type(w) for w in l if len(w) > 0]
+            return l
+    else:
+        return s
        
 def list_to_str(L):
     if (hasattr(L, '__len__') and (not isinstance(L, str))) or isinstance(L, list):
@@ -172,12 +192,12 @@ def conf_to_opts(D_source,D_particle,D_detector):
     s += "detector_binning = 1;\n"
     s += "experiment_wavelength = %.6e;\n" % D_source["wavelength"]
     s += "experiment_beam_intensity = %.6e;\n" % D_particle["intensity"]
-    s += "phi = %.6e;\n" % D_particle["euler_angle_0"]
-    s += "theta = %.6e;\n" % D_particle["euler_angle_1"]
-    s += "psi = %.6e;\n" % D_particle["euler_angle_2"]
-    #s += "phi = 1.0;\n"
-    #s += "theta = 1.0;\n"
-    #s += "psi = 1.0;\n"
+    intrinsic_rotation = copy.deepcopy(D_particle["extrinsic_rotation"])
+    intrinsic_rotation.invert()
+    e0, e1, e2 = intrinsic_rotation.get_as_euler_angles("zxz")
+    s += "phi = %.6e;\n" % e0
+    s += "theta = %.6e;\n" % e1
+    s += "psi = %.6e;\n" % e2
     s += "random_orientation = 0;\n"
     # Write string sequence to file
     tmpf_conf.writelines(s)
@@ -187,10 +207,10 @@ def conf_to_opts(D_source,D_particle,D_detector):
     # Read configuration into options struct
     spsim.read_options_file(tmpf_conf_name, opts)
     # This deletes the temporary files
+
+    os.system("cp %s /Users/hantke/foo.pdb" % tmpf_pdb_name)
     os.unlink(tmpf_pdb_name)
     os.unlink(tmpf_conf_name)
     return opts
 
 
-def get_default_conf():
-    return load_config(_this_dir+"/../data/condor.conf")

@@ -24,9 +24,12 @@
 
 import numpy
 
+import logging
+logger = logging.getLogger(__name__)
+
 import condor
 import condor.utils.log
-from condor.utils.log import log 
+from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
 from particle_abstract import AbstractContinuousParticle
 
@@ -38,18 +41,18 @@ class ParticleSpheroid(AbstractContinuousParticle):
                  diameter,
                  diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
                  flattening = 1., flattening_variation = None, flattening_spread = None, flattening_variation_n = None,
-                 alignment = None, euler_angle_0 = None, euler_angle_1 = None, euler_angle_2 = None,
+                 rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
                  concentration = 1.,
                  position = None, position_variation = None, position_spread = None, position_variation_n = None,
-                 material_type = None, massdensity = None, **atomic_composition):
+                 material_type = None, massdensity = None, atomic_composition = None):
 
         # Initialise base class
         AbstractContinuousParticle.__init__(self,
                                             diameter=diameter, diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n,
-                                            alignment=alignment, euler_angle_0=euler_angle_0, euler_angle_1=euler_angle_1, euler_angle_2=euler_angle_2,
+                                            rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode,
                                             concentration=concentration,
                                             position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n,
-                                            material_type=material_type, massdensity=massdensity, **atomic_composition)
+                                            material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
         self.flattening_mean = flattening
         self.set_flattening_variation(flattening_variation=flattening_variation, flattening_spread=flattening_spread, flattening_variation_n=flattening_variation_n)
 
@@ -76,13 +79,13 @@ class ParticleSpheroid(AbstractContinuousParticle):
         # Non-random 
         if self._flattening_variation._mode in [None, "range"]:
             if f <= 0:
-                log(condor.CONDOR_logger.error, "Spheroid flattening smaller-equals zero. Change your configuration.")
+                log_and_raise_error(logger, "Spheroid flattening smaller-equals zero. Change your configuration.")
             else:
                 return f
         # Random 
         else:
             if f <= 0.:
-                log(condor.CONDOR_logger.warning, "Spheroid flattening smaller-equals zero. Try again.")
+                log_warning(logger, "Spheroid flattening smaller-equals zero. Try again.")
                 return self._get_next_flattening()
             else:
                 return f

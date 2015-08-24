@@ -5,9 +5,10 @@
 #include <math.h>
 #include <stdio.h>
 
+
 //#include "nfftclassmodule.h"
 
-PyDoc_STRVAR(nfft__doc__, "nfft(real_space, coordinates)\n\nCalculate nfft from arbitrary dimensional array.\n\real_space should be an array (or any object that can trivially be converted to one.\ncoordinates should be a NxD array where N is the number of points where the Fourier transform should be evaluated and D is the dimensionality of the input array\ndirect (optional) requires the use of the more accurate but slower ndft (default is False)");
+PyDoc_STRVAR(nfft__doc__, "nfft(real_space, coordinates)\n\nCalculate nfft from arbitrary dimensional array.\nreal_space should be an array (or any object that can trivially be converted to one.\ncoordinates should be a NxD array where N is the number of points where the Fourier transform should be evaluated and D is the dimensionality of the input array\nThe keword argumnt use_direct (optional) requires the use of the more accurate but slower ndft (default is False)");
 static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   PyObject *in_obj, *coord_obj;
@@ -73,6 +74,7 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   nfft_finalize(&my_plan);
   return out_array;
 }
+
 
 PyDoc_STRVAR(nfft_inplace__doc__, "nfft_inplace(real_space, coordinates)\n\nCalculate nfft from arbitrary dimensional array.\n\real_space should be an array (or any object that can trivially be converted to one.\ncoordinates should be a NxD array where N is the number of points where the Fourier transform should be evaluated and D is the dimensionality of the input array\noutput_array should be ndarray of type complex128. The is written to here, if the array is a continuous block in memory this can speed up the calculation.\ndirect (optional) requires the use of the more accurate but slower ndft (default is False).");
 static PyObject *nfft_inplace(PyObject *self, PyObject *args, PyObject *kwargs)

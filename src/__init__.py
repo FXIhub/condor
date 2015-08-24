@@ -31,19 +31,15 @@ from .detector import Detector, load_detector
 # Set global variables
 def _init():
     # Installation directory of Condor
-    import os, logging
+    import os
     global CONDOR_directory
     CONDOR_directory = os.path.dirname(os.path.realpath(__file__))
 
-    # Logging
-    global CONDOR_logger
-    logging.basicConfig(format='%(levelname)s: %(message)s')
-    CONDOR_logger = logging.getLogger('Condor')
+    # Log to stdout
+    import logging, sys
+    h = logging.StreamHandler(sys.stdout)
+    logging.getLogger('condor').addHandler(h)
     
-    # Default PDB file
-    global CONDOR_default_pdb
-    CONDOR_default_pdb = CONDOR_directory + "/data/DNA.pdb"
-
     # Load data into global variables
     import _data
     data_dir = CONDOR_directory + "/data"
@@ -57,6 +53,13 @@ def _init():
     CONDOR_atomic_compositions       = _data.load_atomic_compositions()
     global CONDOR_mass_densities
     CONDOR_mass_densities            = _data.load_mass_densities()
+
+    # Default configuration files
+    global CONDOR_default_pdb
+    CONDOR_default_pdb = data_dir + "/DNA.pdb"
+    global CONDOR_default_conf
+    CONDOR_default_conf = data_dir + "/condor.conf"
+
 
 _init()
 

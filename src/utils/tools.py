@@ -23,12 +23,14 @@
 # -----------------------------------------------------------------------------------------------------
 
 import numpy, sys, numpy, types, pickle, time, math
-import icosahedron
-import condor.utils.config
  
 import logging
-logger = logging.getLogger("Condor")
-from log import log
+logger = logging.getLogger(__name__)
+
+import icosahedron
+import condor.utils.config
+import condor.utils.log
+from log import log_and_raise_error,log_warning,log_info,log_debug
 
 def print_material_xray_properties(wavelength,thickness=1.0E-06,**margs):
     #r_0 = constants.value("classical electron radius")
@@ -104,11 +106,11 @@ class Output:
     """
     def __init__(self,input):
         if not isinstance(input,Input):
-            log(logger.error,"Illegal input. Argument has to be of instance Input.")
+            log_and_raise_error(logger, "Illegal input. Argument has to be of instance Input.")
             sys.exit(1)
         self.input_object = input 
         self.experiment = condor.Experiment(input.source,input.sample,input.detector)
-        log(logger.debug,"Propagation started.")
+        log_debug(logger, "Propagation started.")
         t_start = time.time()
         self.outdict = self.experiment.propagate()
         # General variables
@@ -116,9 +118,10 @@ class Output:
         self.intensity_pattern = self.outdict["intensity_pattern"]
         self.mask              = self.outdict["mask_binary"]
         self.bitmask           = self.outdict["mask"]
+        #self.qmap              = self.outdict["qmap"]
         self.N = len(self.fourier_pattern)
         t_stop = time.time()
-        log(logger.debug,"Propagation finished (time = %f sec)" % (t_stop-t_start))
+        log_debug(logger, "Propagation finished (time = %f sec)" % (t_stop-t_start))
         #confout = "./condor.confout"
         #self.input_object._write_conf(confout)
                 
@@ -135,7 +138,7 @@ class Output:
 
     def write(self,filename="out.cxi",output="all"):
         if filename[-len(".cxi"):] != ".cxi":
-            log(logger.error,"Illegal file format chosen.")
+            log_and_raise_error(logger, "Illegal file format chosen.")
             return
         allout = output == "all"
         W = condor.utils.log.CXIWriter(filename,self.N)

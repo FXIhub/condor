@@ -22,9 +22,12 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 import numpy
-import logging
 import collections
-logger = logging.getLogger('Condor')
+
+import logging
+logger = logging.getLogger(__name__)
+
+from log import log_and_raise_error,log_warning,log_info,log_debug
 
 class Variation:
     def __init__(self,mode=None,spread=None,n=None,number_of_dimensions=1,name=""):
@@ -52,26 +55,26 @@ class Variation:
 
     def set_mode(self,mode):
         if mode not in [None,"normal","poisson","normal_poisson","uniform","range"]:
-            logger.error("Variation object cannot be configured with illegal mode %s",mode)
+            log_and_raise_error(logger, "Variation object cannot be configured with illegal mode %s" % mode)
             return
         if mode in ["normal","normal_poisson","uniform","range"] and spread is None:
-            logger.error("Variation object cannot be configured because mode \'%s\' requires valid keyword for \'spread\'",mode)
+            log_and_raise_error(logger, "Variation object cannot be configured because mode \'%s\' requires valid keyword for \'spread\'" % mode)
             return
         if mode in ["range"]:
             if n is None:
-                logger.error("Variation object cannot be configured because mode \'%s\' requires valid keyword for \'n\'",mode)
+                log_and_raise_error(logger, "Variation object cannot be configured because mode \'%s\' requires valid keyword for \'n\'" % mode)
                 return
             else:
                 if self._number_of_dimensions < 1:
-                    logger.error("Variation object does not accept values smaller 1 for \'number_of_dimensions\'.")
+                    log_and_raise_error(logger, "Variation object does not accept values smaller 1 for \'number_of_dimensions\'.")
                     return
                 elif self._number_of_dimensions > 2:
-                    logger.error("Variation object does not accept values greater 2 for \'number_of_dimensions\'.")
+                    log_and_raise_error(logger, "Variation object does not accept values greater 2 for \'number_of_dimensions\'.")
                     return
                 elif self._number_of_dimensions == 1:
                     self._grid = numpy.array([numpy.linspace(-spread/2.,spread/2.,n)])
                 elif self._number_of_dimensions == 2:
-                    X,Y = numpy.meshgrid(numpy.linspace(-spread[1]/2.,spread[1]/2.,n),numpy.linspace(-spread[0]/2.,spread[0]/2.,n))
+                    Y,X = numpy.meshgrid(numpy.linspace(-spread[0]/2.,spread[0]/2.,n),numpy.linspace(-spread[1]/2.,spread[1]/2.,n),indexing="ij")
                     self._grid = numpy.array([Y.flatten(),X.flatten()])
         else:
             self._grid = None

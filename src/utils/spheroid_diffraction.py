@@ -25,7 +25,7 @@
 import numpy
 
 from scattering_vector import generate_qmap
-from linalg import rotation
+import rotation
 
 # scattering amplitude from homogeneous spheroid:
 # -----------------------------------------------
@@ -35,8 +35,9 @@ from linalg import rotation
 #
 # a: radius perpendicular to the rotation axis of the ellipsoid (a)
 # c: radius along the rotation axis of the ellipsoid (c)
-# theta: rotation around x-axis (1st)
-# phi: rotation around z-axis (2nd)
+# Before applying rotations by theta and phi the rotation axis is parallel to the the y-axis
+# theta: extrinisc rotation around x-axis (1st, counter clockwise / right hand rule)
+# phi: extrinsic rotation around z-axis (2nd, counter clockwise / right hand rule)
 #
 # F = sqrt(I_0) rho_e p/D r_0 4/3 pi a^2 c [ 3 { sin(qH) - qH cos(qH) } / (qH)^3 ]
 #   = sqrt(I_0) rho_e p/D r_0 V f(a,c,theta,phi,qx,qy)
@@ -48,14 +49,15 @@ from linalg import rotation
 # ============================================================================================
 # I = K [ f(asq,csq,theta,phi,qx,qy) ]^2
 # ============================================================================================
-_q_spheroid_diffraction = lambda qX,qY: numpy.sqrt(qX**2+qY**2)
-_g_spheroid_diffraction = lambda qX,qY,theta,phi: numpy.arccos((-qX*numpy.cos(theta)*numpy.sin(phi)+qY*numpy.cos(theta)*numpy.cos(phi))/(_q_spheroid_diffraction(qX,qY)+numpy.finfo("float64").eps))
-_H_spheroid_diffraction = lambda qX,qY,a,c,theta,phi: numpy.sqrt(a**2*numpy.sin(_g_spheroid_diffraction(qX,qY,theta,phi))**2+c**2*numpy.cos(_g_spheroid_diffraction(qX,qY,theta,phi))**2)
-_qH_spheroid_diffraction = lambda qX,qY,a,c,theta,phi: _q_spheroid_diffraction(qX,qY)*_H_spheroid_diffraction(qX,qY,a,c,theta,phi)
-_F_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: numpy.sqrt(abs(K))*3.*(numpy.sin(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi))-_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)*numpy.cos(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)))/(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**3+numpy.finfo("float64").eps)
-F_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < numpy.finfo("float64").resolution)*numpy.sqrt(abs(K)) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= numpy.finfo("float64").resolution)*_F_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
-_I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: abs(K)*(3.*(numpy.sin(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi))-_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)*numpy.cos(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)))/(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**3+numpy.finfo("float64").eps))**2
-I_spheroid_diffraction = lambda K,qX,qY,a,c,theta,phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < numpy.finfo("float64").resolution)*abs(K) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= numpy.finfo("float64").resolution)*_I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+_q_spheroid_diffraction = lambda qX, qY: numpy.sqrt(qX**2+qY**2)
+_g_spheroid_diffraction = lambda qX, qY, theta, phi: numpy.arccos((numpy.cos(theta)*(1-numpy.finfo("float64").eps))*(-qX*numpy.sin(phi)+qY*numpy.cos(phi))/(_q_spheroid_diffraction(qX,qY)+numpy.finfo("float64").eps))
+_H_spheroid_diffraction = lambda qX, qY, a, c,theta, phi: numpy.sqrt(a**2*numpy.sin(_g_spheroid_diffraction(qX,qY,theta,phi))**2+c**2*numpy.cos(_g_spheroid_diffraction(qX,qY,theta,phi))**2)
+_qH_spheroid_diffraction = lambda qX, qY ,a, c,theta, phi: _q_spheroid_diffraction(qX,qY)*_H_spheroid_diffraction(qX,qY,a,c,theta,phi)
+_F_spheroid_diffraction = lambda K, qX, qY, a, c, theta, phi: numpy.sqrt(abs(K))*3.*(numpy.sin(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi))-_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)*numpy.cos(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)))/(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**3+numpy.finfo("float64").eps)
+F_spheroid_diffraction = lambda K, qX, qY, a, c, theta, phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < numpy.finfo("float64").resolution)*numpy.sqrt(abs(K)) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= numpy.finfo("float64").resolution)*_F_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+_I_spheroid_diffraction = lambda K, qX, qY, a, c, theta, phi: abs(K)*(3.*(numpy.sin(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi))-_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)*numpy.cos(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)))/(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**3+numpy.finfo("float64").eps))**2
+I_spheroid_diffraction = lambda K, qX, qY, a, c, theta, phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < numpy.finfo("float64").resolution)*abs(K) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= numpy.finfo("float64").resolution)*_I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+
 
 def get_spheroid_diffraction_formula(p,D,wavelength,X=None,Y=None):
     if X != None and Y != None:
@@ -74,20 +76,20 @@ to_spheroid_semi_diameter_c = lambda diameter,flattening: flattening**(-2/3.)*di
 to_spheroid_diameter = lambda a,c: 2*(a**2*c)**(1/3.)
 to_spheroid_flattening = lambda a,c: a/c
 
-def to_spheroid_theta(euler_angle_0,euler_angle_1,euler_angle_2):
-    v_z = numpy.array([1.0,0.0,0.0])
-    v_y = numpy.array([0.0,1.0,0.0])
-    v_rot = rotation(v_y,euler_angle_0,euler_angle_1,euler_angle_2)
-    theta = numpy.arcsin(numpy.dot(v_rot,v_z))
-    return theta
+#def to_spheroid_theta(euler_angle_0,euler_angle_1,euler_angle_2):
+#    v_z = numpy.array([1.0,0.0,0.0])
+#    v_y = numpy.array([0.0,1.0,0.0])
+#    v_rot = rotation(v_y,euler_angle_0,euler_angle_1,euler_angle_2)
+#    theta = numpy.arcsin(numpy.dot(v_rot,v_z))
+#    return theta
 
-def to_spheroid_phi(euler_angle_0,euler_angle_1,euler_angle_2):
-    v_y = numpy.array([0.0,1.0,0.0])
-    v_rot = rotation(v_y,euler_angle_0,euler_angle_1,euler_angle_2)
-    v_rot[0] = 0.0
-    v_rot = v_rot / numpy.sqrt(v_rot[0]**2+v_rot[1]**2+v_rot[2]**2)       
-    phi = numpy.arccos(numpy.dot(v_rot,v_y))
-    return phi
+#def to_spheroid_phi(euler_angle_0,euler_angle_1,euler_angle_2):
+#    v_y = numpy.array([0.0,1.0,0.0])
+#    v_rot = rotation(v_y,euler_angle_0,euler_angle_1,euler_angle_2)
+#    v_rot[0] = 0.0
+#    v_rot = v_rot / numpy.sqrt(v_rot[0]**2+v_rot[1]**2+v_rot[2]**2)       
+#    phi = numpy.arccos(numpy.dot(v_rot,v_y))
+#    return phi
 
 def mask_fringe_spheroid(qX,qY,a,c,theta,phi,i_fringe):
     s_mins = get_sphere_diffraction_extrema_positions(i_fringe+1)[0]

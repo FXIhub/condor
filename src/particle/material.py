@@ -27,32 +27,35 @@ import sys, numpy
 
 # Logging
 import logging
-logger = logging.getLogger("Condor")
+logger = logging.getLogger(__name__)
 import condor
 import condor.utils.log
-from condor.utils.log import log 
+from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
 # Constants
 from scipy import constants
 
 class Material:
-    def __init__(self, massdensity = None, material_type = None, **atomic_composition):
-        if massdensity is not None:
-            cel_keys = [("c"+k) for k in condor.CONDOR_atomic_numbers.keys()]
-            elements = [k for k in atomic_composition.keys() if k in cel_keys]
-            if len(elements) == 0 or len(elements) != len(atomic_composition.keys()):
-                logger.error("No valid arguments for Material initialization.")
-                return
-            for k in elements:
-                exec "self." + key + " = atomic_composition[key]"
-        elif  "material_type" is not None:
+    def __init__(self, material_type = None, massdensity = None, atomic_composition = None):
+
+        self.clear_atomic_composition()
+        
+        if atomic_composition is not None and massdensity is not None and (material_type is None or material_type == "custom"):
+            for element,quantity in atomic_composition.items():
+                self.add_atomic_species(element, quantity)
+            self.massdensity = massdensity
+
+        elif material_type is not None and atomic_composition is None and massdensity is None:
+            for element,quantity in condor.CONDOR_atomic_compositions[material_type].items():
+                self.add_atomic_species(element,quantity)
             self.massdensity = condor.CONDOR_mass_densities[material_type]
-            for key,val in condor.CONDOR_atomic_compositions[material_type].items():
-                exec "self.c" + key + " = val"
+
         else:
-            logger.error("No valid arguments for Material initialization.")
-            return
- 
+            log_and_raise_error(logger, "Invalid arguments in Material initialization.")
+
+    def clear_atomic_composition(self):
+        self._atomic_composition = {}
+            
     def get_n(self,photon_wavelength):
         """
         Obtains complex refractive index.
@@ -102,7 +105,7 @@ class Material:
 
     def get_f(self,photon_wavelength):
     
-        atomic_composition = self.get_atomic_composition_dict()
+        atomic_composition = self.get_atomic_composition(normed=True)
 
         r_0 = constants.value("classical electron radius")
         h   =  constants.h
@@ -123,7 +126,7 @@ class Material:
                 
         u = constants.value("atomic mass constant")
 
-        atomic_composition = self.get_atomic_composition_dict()
+        atomic_composition = self.get_atomic_composition(normed=True)
 
         M = 0
         for element in atomic_composition.keys():
@@ -139,7 +142,7 @@ class Material:
 
         u = constants.value("atomic mass constant")
 
-        atomic_composition = self.get_atomic_composition_dict()
+        atomic_composition = self.get_atomic_composition(normed=True)
 
         M = 0
         Q = 0
@@ -152,20 +155,21 @@ class Material:
         
         return electron_density
         
-        
-    def get_atomic_composition_dict(self):
 
-        atomic_composition = {}
+    def add_atomic_species(self, element, quantity):
+        if element not in condor.CONDOR_atomic_numbers:
+            log_and_raise_error(logger, "Cannot add element \"%s\". Invalid name." % element)
+        self._atomic_composition[element] = quantity
+    
+    def get_atomic_composition(self, normed=False):
         
-        for key in self.__dict__.keys():
-            if key[0] == 'c' and key[1:] in condor.CONDOR_atomic_numbers.keys():
-                exec "c_tmp = self." + key
-                atomic_composition[key[1:]] = c_tmp 
- 
-        tmp_sum = float(sum(atomic_composition.values()))
-        for element in atomic_composition.keys():
-            atomic_composition[element] /= tmp_sum 
-        
+        atomic_composition = self._atomic_composition.copy()
+
+        if normed:
+            s = numpy.array(atomic_composition.values(), dtype=numpy.float64).sum()
+            for element in atomic_composition.keys():
+                atomic_composition[element] /= s 
+
         return atomic_composition
 
 

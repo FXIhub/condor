@@ -27,9 +27,12 @@ import numpy
 
 import scipy.constants as constants
 
+import logging
+logger = logging.getLogger(__name__)
+
 import condor.utils.log
-from condor.utils.log import log
-import condor.utils.config
+from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
+from condor.utils.config import load_config
 from condor.utils.variation import Variation
 
 def load_source(conf):
@@ -39,7 +42,7 @@ def load_source(conf):
     Args:
        :conf(str): Condor configuration file
     """
-    C = condor.utils.config.load_config({"source": condor.utils.config.load_config(conf)["source"]}, {"source": condor.utils.config.get_default_conf()["source"]})
+    C = condor.utils.config.load_config({"source": load_config(conf)["source"]}, {"source": load_config(condor.CONDOR_default_conf)["source"]})
     source = Source(**C["source"])
     return source
   
@@ -68,7 +71,7 @@ class Source:
         self.set_pulse_energy_variation(variation=pulse_energy_variation, spread=pulse_energy_spread, n=pulse_energy_variation_n)
         self.profile = Profile(model=profile_model, focus_diameter=focus_diameter)
         self.number_of_shots = number_of_shots
-        log(condor.CONDOR_logger.debug,"Source configured")
+        log_debug(logger, "Source configured")
 
     def get_conf(self):
         conf = {}
@@ -120,7 +123,7 @@ class Source:
         elif unit == "mJ/um2":
             I *= 1.E-9
         else:
-            log(condor.CONDOR_logger.error,"%s is not a valid unit." % unit)
+            log_and_raise_error(logger, "%s is not a valid unit." % unit)
             return
         return I
 
@@ -138,13 +141,13 @@ class Source:
         # Non-random
         if self._pulse_energy_variation._mode in [None,"range"]:
             if p <= 0:
-                log(condor.CONDOR_logger.error,"Pulse energy smaller-equals zero. Change your configuration.")
+                log_and_raise_error(logger, "Pulse energy smaller-equals zero. Change your configuration.")
             else:
                 return p
         # Random
         else:
             if p <= 0.:
-                log(condor.CONDOR_logger.warning,"Pulse energy smaller-equals zero. Try again.")
+                log_warning(logger, "Pulse energy smaller-equals zero. Try again.")
                 self._get_next_pulse_energy()
             else:
                 return p
@@ -155,22 +158,28 @@ class Photon:
     """
     Class for X-ray photon
     """
-    def __init__(self,**kwarg):
+    def __init__(self, wavelength=None, energy=None, energy_eV=None):
         """
         Initialisation of a Photon instance
 
-        The photon can be initialised either by passing the wavelength or the photon energy
+        The photon can be initialised either by passing the wavelength, the photon energy in unit Joule or the photon energy in unit eV
 
         Kwargs:
            :wavelength(float): Photon wavelength [m]
            :energy(float): Photon energy [J]
            :energy_eV(float): Photon energy in electron volts [eV]
         """
-        if "wavelength" in kwarg.keys(): self.set_wavelength(kwarg["wavelength"])
-        elif "energy" in kwarg.keys(): self.set_energy(kwarg["energy"],"J")
-        elif "energy_eV" in kwarg.keys(): self.set_energy(kwarg["energy_eV"],"eV")
+        if (wavelength is not None and energy is not None) or (wavelength is not None and energy_eV is not None) or (energy is not None and energy_eV is not None):
+            log_and_raise_error(logger, "Invalid arguments during initialisation of Photon instance. More than one of the arguments is not None.")
+            return
+        if wavelength is not None:
+            self.set_wavelength(wavelength)
+        elif energy is not None:
+            self.set_energy(energy,"J")
+        elif energy_eV is not None:
+            self.set_energy(energy_eV,"eV")
         else:
-            log(condor.CONDOR_logger.error,"Photon could not be initialized. It needs to be initialized with either the a given photon energy or the wavelength.")
+            log_and_raise_error(logger, "Photon could not be initialized. It needs to be initialized with either the wavelength, the photon energy in unit Joule or the photon energy in unit eV.")
             
     def get_energy(self,unit="J"):
         if unit == "J":
@@ -178,7 +187,7 @@ class Photon:
         elif unit == "eV":
             return self._energy/constants.e
         else:
-            log(condor.CONDOR_logger.error,"%s is not a valid energy unit." % unit)
+            log_and_raise_error(logger, "%s is not a valid energy unit." % unit)
 
     def set_energy(self,energy,unit="J"):
         if unit == "J":
@@ -186,7 +195,7 @@ class Photon:
         elif unit == "eV":
             self._energy = energy*constants.e
         else:
-            log(condor.CONDOR_logger.error,"%s is not a valid energy unit." % unit)
+            log_and_raise_error(logger, "%s is not a valid energy unit." % unit)
 
     def get_wavelength(self):
         return constants.c*constants.h/self._energy
@@ -214,7 +223,7 @@ class Profile:
         if model is None or model in ["top_hat","pseudo_lorentzian","gaussian"]:
             self._model = model
         else:
-            log(condor.CONDOR_logger.error,"Pulse profile model %s is not implemented. Change your configuration and try again.")
+            log_and_raise_error(logger, "Pulse profile model %s is not implemented. Change your configuration and try again.")
             sys.exit(0)
 
     def get_model(self):

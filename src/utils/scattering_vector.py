@@ -22,49 +22,40 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-import numpy, sys, numpy, types, pickle, time, math
- 
-import logging
-logger = logging.getLogger("Condor")
-from log import log
+import numpy, copy
 
-def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,euler_angle_0=0.,euler_angle_1=0.,euler_angle_2=0.):
-    log(logger.debug,"Allocating qmap.")
+import logging
+logger = logging.getLogger(__name__)
+
+from log import log_and_raise_error,log_warning,log_info,log_debug
+import rotation
+
+def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation=None, order="xyz"):
+    log_debug(logger, "Allocating qmap (%i,%i,%i)" % (X.shape[0],X.shape[1],3))
     R_Ewald = 2*numpy.pi/wavelength
-    qx = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*X,detector_distance)/2.)
-    qy = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*Y,detector_distance)/2.)
-    phi = numpy.arctan2(pixel_size*numpy.sqrt(X**2+Y**2),detector_distance)
-    qz = R_Ewald*(1-numpy.cos(phi))
-    qmap = numpy.zeros(shape=(X.shape[0],Y.shape[1],3))
-    qmap[:,:,0] = qz[:,:]
-    qmap[:,:,1] = qy[:,:]
-    qmap[:,:,2] = qx[:,:]
-    if euler_angle_0 != 0. or euler_angle_1 != 0. or euler_angle_2 != 0.:
-        log(logger.debug,"Applying qmap rotation with angles %f, %f, %f." % (euler_angle_0,euler_angle_1,euler_angle_2))
-        # Old and slow
-        #for iy in numpy.arange(0,qmap.shape[0]):
-        #    for ix in numpy.arange(0,qmap.shape[1]):
-        #        qmap[iy,ix,:] = rotation(qmap[iy,ix,:],euler_angle_0,euler_angle_1,euler_angle_2)
-        cos = numpy.cos
-        sin = numpy.sin
-        E0 = euler_angle_0
-        E1 = euler_angle_1
-        E2 = euler_angle_2
-        M = numpy.array([[cos(E1)*cos(E2),
-                          -cos(E0)*sin(E2)+sin(E0)*sin(E1)*cos(E2),
-                          sin(E0)*sin(E2)+cos(E0)*sin(E1)*cos(E2)],
-                         [cos(E1)*sin(E2),
-                          cos(E0)*cos(E2)+sin(E0)*sin(E1)*sin(E2),
-                          -sin(E0)*cos(E2)+cos(E0)*sin(E1)*sin(E2)],
-                         [-sin(E1),
-                          sin(E0)*cos(E1),
-                          cos(E0)*cos(E1)]])
-        Y,X = numpy.mgrid[:qmap.shape[0],:qmap.shape[1]]
-        Y = Y.flatten()
-        X = X.flatten()
-        s = qmap.shape
-        qmap = numpy.array([numpy.dot(M,qmap[iy,ix,:]) for ix,iy in zip(X,Y)])
-        qmap = qmap.reshape(s)
+    p_x = X*pixel_size
+    p_y = Y*pixel_size
+    p_z = numpy.ones_like(X)*detector_distance
+    l = numpy.sqrt(p_x**2+p_y**2+p_z**2)
+    r_x = p_x/l
+    r_y = p_y/l
+    r_z = p_z/l - 1.
+    qmap = numpy.zeros(shape=(X.shape[0],X.shape[1],3))
+    if order == "xyz":
+        qmap[:,:,0] = r_x * R_Ewald
+        qmap[:,:,1] = r_y * R_Ewald
+        qmap[:,:,2] = r_z * R_Ewald
+    elif order == "zyx":
+        qmap[:,:,0] = r_z * R_Ewald
+        qmap[:,:,1] = r_y * R_Ewald
+        qmap[:,:,2] = r_x * R_Ewald
+    else:
+        log_and_raise_error(logger, "Indexing with order=%s is invalid." % order)
+    if extrinsic_rotation is not None:
+        log_debug(logger, "Applying qmap rotation.")
+        intrinsic_rotation = copy.deepcopy(extrinsic_rotation)
+        intrinsic_rotation.invert()
+        qmap = intrinsic_rotation.rotate_vectors(qmap.ravel(), order=order).reshape(qmap.shape)
     return qmap
 
 def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
@@ -72,16 +63,16 @@ def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
     qmap = numpy.sqrt(qmap[:,:,0]**2+qmap[:,:,1]**2+qmap[:,:,2]**2)
     return qmap
 
-def generate_qmap_ori(X,Y,pixel_size,detector_distance,wavelength):
-    phi = numpy.arctan2(pixel_size*numpy.sqrt(X**2+Y**2),detector_distance)
-    R_Ewald = 2*numpy.pi/wavelength
-    qx = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*X,detector_distance)/2.)
-    qy = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*Y,detector_distance)/2.)
-    qz = R_Ewald*(1-numpy.cos(phi))
-    qmap = numpy.zeros(shape=(X.shape[0],Y.shape[1],3))
-    qmap[:,:,0] = qz[:,:]
-    qmap[:,:,1] = qy[:,:]
-    qmap[:,:,2] = qx[:,:]
-    return qmap
+#def generate_qmap_ori(X,Y,pixel_size,detector_distance,wavelength):
+#    phi = numpy.arctan2(pixel_size*numpy.sqrt(X**2+Y**2),detector_distance)
+#    R_Ewald = 2*numpy.pi/wavelength
+#    qx = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*X,detector_distance)/2.)
+#    qy = R_Ewald*2*numpy.sin(numpy.arctan2(pixel_size*Y,detector_distance)/2.)
+#    qz = R_Ewald*(1-numpy.cos(phi))
+#    qmap = numpy.zeros(shape=(X.shape[0],Y.shape[1],3))
+#    qmap[:,:,0] = qx[:,:]
+#    qmap[:,:,1] = qy[:,:]
+#    qmap[:,:,2] = qz[:,:]
+#    return qmap
 
 x_to_q = lambda x,pixel_size,detector_distance,wavelength: 4*numpy.pi/wavelength*numpy.sin(numpy.arctan(x*pixel_size/detector_distance)/2.)

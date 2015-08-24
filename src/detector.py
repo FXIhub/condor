@@ -27,28 +27,32 @@ import h5py
 sys.path.append("utils")
 import numpy
 
+import logging
+logger = logging.getLogger(__name__)
+
 import condor.utils.log
-from condor.utils.log import log 
-import condor.utils.config
+from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
+from condor.utils.config import load_config
 import utils.resample
 from condor.utils.variation import Variation
 from condor.utils.pixelmask import PixelMask
 from condor.utils.linalg import length
 
+
 def load_detector(conf=None):
     """
-    Create new Detector instance and load parameters from a Condor configuration file.
+    Create new Detector instance and load parameters from a Condor configuration file or dictionary.
     
     Kwargs:
-       :conf(str): Condor configuration file (default = None)
+       :conf(str): Condor configuration file or dictionary (default = None)
     """
-    C = condor.utils.config.load_config({"detector": condor.utils.config.load_config(conf)["detector"]}, {"detector": condor.utils.config.get_default_conf()["detector"]})
+    C = condor.utils.config.load_config({"detector": load_config(conf)["detector"]}, {"detector": load_config(condor.CONDOR_default_conf)["detector"]})
     detector = Detector(**C["detector"])
     return detector
 
 class Detector:
     """
-    Class for area detector
+    Class for photon area-detector
     """
     def __init__(self, distance, pixel_size,
                  x_gap_size_in_pixel=0, y_gap_size_in_pixel=0, hole_diameter_in_pixel=0, cx_hole="middle", cy_hole="middle",
@@ -176,7 +180,7 @@ class Detector:
             # Initialise empty mask
             self._mask = numpy.zeros(shape=(ny+y_gap_size_in_pixel, nx+x_gap_size_in_pixel),dtype=numpy.uint16)
         else:
-            log(condor.CONDOR_logger.error,"Either \"mask\" or \"nx\" and \"ny\" have to be specified.")
+            log_and_raise_error(logger, "Either \"mask\" or \"nx\" and \"ny\" have to be specified.")
             sys.exit(1)
         self._nx = self._mask.shape[1]
         self._ny = self._mask.shape[0]
@@ -193,8 +197,7 @@ class Detector:
                 cx_hole = (self._nx-1)/2.
             if cy_hole == "middle":
                 cy_hole = (self._ny-1)/2.
-            X,Y = numpy.meshgrid(numpy.arange(0,self._nx,1.0),
-                                 numpy.arange(0,self._ny,1.0))
+            Y,X = numpy.indices((self._ny,self._nx), dtype=numpy.float64)
             X = X-cx_hole
             Y = Y-cy_hole
             R = numpy.sqrt(X**2 + Y**2)
@@ -280,6 +283,7 @@ class Detector:
     def get_p_max(self, cx = None, cy = None, pos = "corner", center_variation = False):
         x_max = self.get_x_max(cx=cx, cy=cy, center_variation=center_variation)
         y_max = self.get_y_max(cx=cx, cy=cy, center_variation=center_variation)
+        log_debug(logger, "y_max = %.1f pix, x_max = %.1f pix" % (y_max/self.pixel_size,x_max/self.pixel_size))
         if pos == "corner":
             return numpy.array([self.distance, y_max, x_max])
         elif pos == "edge":
@@ -288,7 +292,7 @@ class Detector:
             else:
                 return numpy.array([self.distance, y_max, 0.])
         else:
-            log(condor.CONDOR_logger.error, "Invalid input: pos=%s. Input must be either \"corner\" or \"edge\"." % pos)
+            log_and_raise_error(logger, "Invalid input: pos=%s. Input must be either \"corner\" or \"edge\"." % pos)
 
     def get_q_max(self, wavelength, cx = None, cy = None, pos = "corner", center_variation = False):
         p = self.get_p_max(cx=cx, cy=cy, pos=pos, center_variation=center_variation)
@@ -339,5 +343,5 @@ def q_from_p(p, wavelength):
     R_Ewald = 2*numpy.pi / wavelength
     k0 = R_Ewald * numpy.array([1.,0.,0.])
     k1 = R_Ewald * p0
-    q = k1 - k0
+    q = k0 - k1
     return q

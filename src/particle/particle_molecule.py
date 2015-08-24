@@ -26,28 +26,31 @@ import os,sys
 import numpy
 import tempfile
 
+import logging
+logger = logging.getLogger(__name__)
+
 import condor
 import condor.utils.log
-from condor.utils.log import log 
+from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
 from particle_abstract import AbstractParticle
 
 class ParticleMolecule(AbstractParticle):
     def __init__(self,
                  pdb_filename = None, atomic_positions = None, atomic_numbers = None,
-                 alignment = None, euler_angle_0 = None, euler_angle_1 = None, euler_angle_2 = None,
+                 rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
                  concentration = 1.,
                  position = None,  position_variation = None, position_spread = None, position_variation_n = None):
         try:
             import spsim
         except:
-            log(condor.CONDOR_logger.error, "Cannot import spsim module. This module is necessary to simulate diffraction for particle model \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
+            log_and_raise_error(logger, "Cannot import spsim module. This module is necessary to simulate diffraction for particle model \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
             return
         # Initialise base class
         AbstractParticle.__init__(self,
-                                       alignment=alignment, euler_angle_0=euler_angle_0, euler_angle_1=euler_angle_1, euler_angle_2=euler_angle_2,
-                                       concentration=concentration,
-                                       position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n)
+                                  rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode,                                            
+                                  concentration=concentration,
+                                  position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n)
         self._atomic_positions  = None
         self._atomic_numbers    = None
         self._pdb_filename      = None
@@ -56,7 +59,7 @@ class ParticleMolecule(AbstractParticle):
             if os.path.isfile(pdb_filename):
                 self.set_atoms_from_pdb(pdb_filename)
             else:
-                log(condor.CONDOR_logger.error, "Cannot initialize particle model molecule. PDB file %s does not exist." % kwargs["pdb_filename"])
+                log_and_raise_error(logger, "Cannot initialize particle model molecule. PDB file %s does not exist." % pdb_filename)
                 sys.exit(0)
         else:
             self.set_atoms_from_arrays(atomic_numbers, atomic_positions)

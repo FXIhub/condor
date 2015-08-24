@@ -26,37 +26,38 @@ import numpy, sys, numpy, types, pickle, time, math
 import icosahedron, linalg
  
 import logging
-logger = logging.getLogger("Condor")
-from log import log
+logger = logging.getLogger(__name__)
+from log import log_and_raise_error,log_warning,log_info,log_debug
 
 
 def make_icosahedron_map(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
-    logger.debug("Building icosahedral geometry")
-    logger.debug("Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
+    log_debug(logger, "Building icosahedral geometry")
+    log_debug(logger, "Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
     t0 = time.time()
     icomap = icosahedron.icosahedron(N,nRmax,(euler1,euler2,euler3))
     t1 = time.time()
-    logger.debug("Built map within %f seconds." % (t1-t0))
+    log_debug(logger, "Built map within %f seconds." % (t1-t0))
     return icomap
 
 def make_icosahedron_map_python(N,nRmax,euler1=0.,euler2=0.,euler3=0.):
     na = nRmax/numpy.sqrt(10.0+2*numpy.sqrt(5))*4.
     nRmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*na # radius at faces
-    logger.debug("Building icosahedral geometry")
+    log_debug(logger, "Building icosahedral geometry")
     n_list = get_icosahedron_normal_vectors(euler1,euler2,euler3)
     # Rotate
+    rotation = rotation.Rotation(values=[euler1,euler2,euler3], formalism="euler_angles_zxz")
     if euler1 != 0. or euler2 != 0. or euler3 != 0.:
         for i in range(0,len(n_list)):
-            n_list[i] = linalg.rotation(n_list[i],euler1,euler2,euler3)
+            n_list[i] = rotation.rotate_vector(n_list[i])
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     X = X - (N-1)/2.
     Y = Y - (N-1)/2.
     Z = Z - (N-1)/2.
-    logger.debug("Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
+    log_debug(logger, "Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
     icomap = numpy.zeros((len(n_list),N,N,N))
     # calculate distance of all voxels to all faces (negative inside, positive outside icosahedron)
     for i in range(len(n_list)):
-        icomap[i,:,:,:] = (X*n_list[i][2]+Y*n_list[i][1]+Z*n_list[i][0])+nRmin
+        icomap[i,:,:,:] = (X*n_list[i][0]+Y*n_list[i][1]+Z*n_list[i][2])+nRmin
     s = 1.
     M = icomap.copy()
     temp = abs(M)<0.5*s
@@ -114,13 +115,15 @@ def get_icosahedron_normal_vectors():
                     n_list.append(n)
     return n_list
 
-def make_spheroid_map(N,nA,nB,euler0=0.,euler1=0.,euler2=0.):
+def make_spheroid_map(N,nA,nB,rotation=None):
     X,Y,Z = 1.0*numpy.mgrid[0:N,0:N,0:N]
     X = X-(N-1)/2.
     Y = Y-(N-1)/2.
     Z = Z-(N-1)/2.
     R_sq = X**2+Y**2+Z**2
-    e_c = linalg.rotation(numpy.array([0.0,1.0,0.0]),euler0,euler1,euler2)
+    e_c = numpy.array([0.0,1.0,0.0])
+    if rotation is not None:
+        e_c = rotation.rotate_vector(e_c)
     d_sq_c = ((Z*e_c[0])+(Y*e_c[1])+(X*e_c[2]))**2
     r_sq_c = abs( R_sq * (1 - (d_sq_c/(R_sq+numpy.finfo("float32").eps))))
     spheroidmap = r_sq_c/nA**2+d_sq_c/nB**2
@@ -145,7 +148,7 @@ def array_to_array(A1,A2,p0=None,origin="corner",mode="sum",fill_value=0.,factor
     N2 = numpy.array(A2.shape)
     d = len(N1)
     if d > 3:
-        logger.error("Cannot handle more than 3 dimensional data.")
+        log_and_raise_error(logger, "Cannot handle more than 3 dimensional data.")
         return
     if p0 == None:
         p1 = numpy.zeros(d)
@@ -159,7 +162,6 @@ def array_to_array(A1,A2,p0=None,origin="corner",mode="sum",fill_value=0.,factor
         p = p1+origin
     p_min = numpy.int16((p-N1/2).round())
     p_max = p_min + N1
-    #print p_min,p_max
     N2_new = N2.copy()
     origin_offset = numpy.zeros(d)
     for di in range(d):
@@ -178,7 +180,7 @@ def array_to_array(A1,A2,p0=None,origin="corner",mode="sum",fill_value=0.,factor
     elif mode == "max": f = lambda a,b: (a>=b)*a+(b>a)*b
     elif mode == "min": f = lambda a,b: (a<=b)*a+(b<a)*b
     elif mode == "factor": f = lambda a,b: a*(1-b)+b*factor
-    else: logger.error("%s is not a valid mode." % mode)
+    else: log_and_raise_error(logger, "%s is not a valid mode." % mode)
     if d == 1:
         A2_new[p_min[0]:p_max[0]] = f(A2_new[p_min[0]:p_max[0]],A1[:])
     elif d == 2:
