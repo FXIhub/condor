@@ -9,8 +9,8 @@
 
 # Installation of Condor
 import sys, os, fileinput
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/src")
-import data.pickle_tables as pt
+sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/src/data/")
+import pickle_tables as pt
 from distutils.core import setup, Extension
 import numpy.distutils.misc_util
 
