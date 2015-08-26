@@ -30,6 +30,15 @@ logger = logging.getLogger(__name__)
 from log import log_and_raise_error,log_warning,log_info,log_debug
 import rotation
 
+
+def q_from_p(p, wavelength):
+    p0 = p / length(p)
+    R_Ewald = 2*numpy.pi / wavelength
+    k0 = R_Ewald * numpy.array([0.,0.,1.])
+    k1 = R_Ewald * p0
+    q = k0 - k1
+    return q
+
 def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation=None, order="xyz"):
     log_debug(logger, "Allocating qmap (%i,%i,%i)" % (X.shape[0],X.shape[1],3))
     R_Ewald = 2*numpy.pi/wavelength
@@ -75,4 +84,3 @@ def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
 #    qmap[:,:,2] = qz[:,:]
 #    return qmap
 
-x_to_q = lambda x,pixel_size,detector_distance,wavelength: 4*numpy.pi/wavelength*numpy.sin(numpy.arctan(x*pixel_size/detector_distance)/2.)

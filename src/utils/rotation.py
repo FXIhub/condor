@@ -351,9 +351,9 @@ def R_euler(euler_angles, rotation_axes="zxz"):
     """
     Otain rotation matrix from three euler angles and the rotation axes
     Args:
-       :euler_angles: Length-3 array of euler angles
+      :euler_angles: Length-3 array of euler angles
     Kwargs:
-       :rotation_axes(str): Rotation axes of the three consecutive Euler rotations (default = \'zxz\') 
+      :rotation_axes(str): Rotation axes of the three consecutive Euler rotations (default = \'zxz\') 
     """
     R = numpy.identity(3)
     for ang,ax in zip(euler_angles, rotation_axes):

@@ -139,7 +139,6 @@ class Experiment:
         cy                  = D_detector["cy"]
         pixel_size          = D_detector["pixel_size"]
         detector_distance   = D_detector["distance"]
-        Omega_p             = D_detector["solid_angle_pixel"]
         wavelength          = D_source["wavelength"]
 
         F_singles    = []
@@ -152,8 +151,8 @@ class Experiment:
             D_particle["intensity"] = self.source.get_intensity(pos, "ph/m2", pulse_energy=D_source["pulse_energy"])
             I_0 = D_particle["intensity"]
             # Calculate primary wave amplitude
-            # F0 = sqrt(I_0 Omega_p) 2pi/wavelength^2
-            F0 = numpy.sqrt(I_0*Omega_p)*2*numpy.pi/wavelength**2
+            # F0 = sqrt(I_0) 2pi/wavelength^2
+            F0 = numpy.sqrt(I_0)*2*numpy.pi/wavelength**2
             D_particle["F0"] = F0
             # 3D Orientation
             extrinsic_rotation = Rotation(values=D_particle["extrinsic_quaternion"], formalism="quaternion")
@@ -169,8 +168,10 @@ class Experiment:
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
                 K = (F0*V*abs(dn))**2
+                # Geometrical factor
+                Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 # Pattern
-                F = condor.utils.sphere_diffraction.F_sphere_diffraction(K, q, R)
+                F = condor.utils.sphere_diffraction.F_sphere_diffraction(K, q, R) * numpy.sqrt(Omega_p)
 
             # UNIFORM SPHEROID
             elif isinstance(p, condor.particle.ParticleSpheroid):
@@ -184,15 +185,17 @@ class Experiment:
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
                 K = (F0*V*abs(dn))**2
+                # Geometrical factors
                 a = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_a(D_particle["diameter"], D_particle["flattening"])
                 c = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_c(D_particle["diameter"], D_particle["flattening"])
+                Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 # Pattern
                 # Spheroid axis before rotation
                 v0 = numpy.array([0.,1.,0.])
                 v1 = extrinsic_rotation.rotate_vector(v0)
                 theta = numpy.arcsin(v1[2])
                 phi   = numpy.arctan2(-v1[0],v1[1])
-                F = condor.utils.spheroid_diffraction.F_spheroid_diffraction(K, qx, qy, a, c, theta, phi)
+                F = condor.utils.spheroid_diffraction.F_spheroid_diffraction(K, qx, qy, a, c, theta, phi) * numpy.sqrt(Omega_p)
 
             # MAP
             elif isinstance(p, condor.particle.ParticleMap):
@@ -203,6 +206,8 @@ class Experiment:
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
+                # Geometrical factor
+                Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 # Generate map
                 # We multiply by 0.99 to prevent numerical issues
                 dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False) * 0.99
@@ -237,7 +242,7 @@ class Experiment:
                 # reshaping
                 fourier_pattern = numpy.reshape(fourier_pattern, (qmap_scaled.shape[0], qmap_scaled.shape[1]))
                 log_debug(logger, "Got pattern of %i x %i pixels." % (fourier_pattern.shape[1], fourier_pattern.shape[0]))
-                F = F0 * fourier_pattern * dx**3
+                F = F0 * fourier_pattern * dx**3 * numpy.sqrt(Omega_p)
 
             # MOLECULE
             elif isinstance(p, condor.particle.ParticleMolecule):
@@ -282,7 +287,8 @@ class Experiment:
         for D_particle,F in zip(D_sample["particles"], F_singles):
             v = D_particle["position"]
             F_tot = F_tot + F * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
-        I_tot, M_tot, IXxX_tot, MXxX_tot = self.detector.detect_photons(abs(F_tot)**2)
+        I_tot, M_tot = self.detector.detect_photons(abs(F_tot)**2)
+        IXxX_tot, MXxX_tot = self.detector.bin_photons(I_tot, M_tot)
         if self.detector.binning is not None:
             FXxX_tot, MXxX_tot = condor.utils.resample.downsample(F_tot, self.detector.binning, mode="integrate", 
                                                                   mask2d0=M_tot, bad_bits=PixelMask.PIXEL_IS_IN_MASK, min_N_pixels=1)
@@ -325,11 +331,9 @@ class Experiment:
             calculate = calculate or not extrinsic_rotation.similar(self._qmap_cache["extrinsic_rotation"])
         if calculate:
             log_debug(logger,  "Calculating qmap")
-            Y,X = numpy.meshgrid(numpy.arange(ny), numpy.arange(nx), indexing="ij")
-            X = numpy.float64(X)
-            Y = numpy.float64(Y)
-            X -= cx
-            Y -= cy
+            Y,X = numpy.meshgrid(numpy.float64(numpy.arange(ny))-cy,
+                                 numpy.float64(numpy.arange(nx))-cx,
+                                 indexing="ij")
             self._qmap_cache = {
                 "qmap"              : condor.utils.scattering_vector.generate_qmap(X, Y, pixel_size, detector_distance, wavelength, extrinsic_rotation=extrinsic_rotation, order=order),
                 "nx"                : nx,

@@ -37,14 +37,15 @@ import utils.resample
 from condor.utils.variation import Variation
 from condor.utils.pixelmask import PixelMask
 from condor.utils.linalg import length
-
+import condor.utils.testing
+import condor.utils.scattering_vector
 
 def load_detector(conf=None):
     """
     Create new Detector instance and load parameters from a Condor configuration file or dictionary.
     
     Kwargs:
-       :conf(str): Condor configuration file or dictionary (default = None)
+       :conf(str): Condor configuration file or dictionary (default ``None``)
     """
     C = condor.utils.config.load_config({"detector": load_config(conf)["detector"]}, {"detector": load_config(condor.CONDOR_default_conf)["detector"]})
     detector = Detector(**C["detector"])
@@ -53,52 +54,82 @@ def load_detector(conf=None):
 class Detector:
     """
     Class for photon area-detector
+        
+    **Arguments:**
+
+      :distance (float): Distance from interaction point to detector plane
+
+      :pixel_size (float): Edge length of pixel (square pixel shape)
+
+    **Keyword arguments:**
+    
+      :cx (float): Horizontal beam position in unit pixel. If ``cx=None`` beam will be positioned at the center (default ``None``)
+
+      :cy (float): Vertical beam position in unit pixel If ``cy=None`` beam will be positioned at the center (default ``None``)
+
+      :center_variation(str): Variation of the beam center position (default ``None``)
+        
+      :center_spread_x (float): Width of the distribution of center position in *x* (default ``None``)
+    
+      :center_spread_y (float): Width of the distribution of center position in *y* (default ``None``)
+
+      :center_variation_n (int): Number of samples within the specified range (default ``None``)
+
+      .. note:: The keyword arguments ``center_variation``, ``center_spread_x``, ``center_spread_y``, and ``center_variation_n`` are passed on to :meth:`condor.detector.Detector.set_center_variation` during initialisation. For more detailed information read the documentation of the method.
+
+      :noise (str): Noise added to the predicted intensities  (default ``None``)
+
+      :noise_spread (float): Width of the Gaussian or uniform noise distribution  (default ``None``) 
+
+      :noise_filename (str): Location of the HDF5 file that contains the noise data  (default ``None``)
+
+      :noise_dataset (str):  HDF5 dataset (in the file specified by the argument ``noise_filename``) that contains the noise data  (default ``None``)
+
+      .. note:: The keyword arguments ``noise``, ``noise_spread``, ``noise_filename``, and ``noise_dataset`` are passed on to :meth:`condor.detector.Detector.set_noise` during initialisation. For more detailed information read the documentation of the method.
+
+      :saturation_level (float): Value at which detector pixels satutrate (default ``None``)
+
+      :binning (int): Pixel binning factor, intensies are integrated over square patches that have an area of ``binning`` x ``binning`` pixels (default ``None``)
+
+      :mask_CXI_bitmask(bool): If ``True`` the provided mask (see below ``mask_dataset`` or ``mask``) is a CXI bitmask
+
+        - ``False``: pixels of value 0 are invalid, pixels of value 1 are valid 
+        - ``True``: (pixels & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0 are valid
+
+        See also :meth:`condor.utils.pixelmask.PixelMask`
+
+      **There are 3 alternative options to specify shape and mask of the detector**
+
+        *A) Parameters*
+
+          :nx (int): Number of pixels in *x* direction (not including a potential gap or hole) (default ``None``)
+
+          :ny (int): Number of pixels in *y* direction (not including a potential gap or hole) (default ``None``)
+
+          :x_gap_size_in_pixel(int): Size of central gap along *x* in unit pixel (default ``None``)
+    
+          :y_gap_size_in_pixel(int): Size of central gap along *y* in unit pixel (default ``None``)
+
+          :hole_diameter_in_pixel(int): Diameter of central hole in unit pixel (default ``None``)
+    
+        *B) HDF5 dataset for mask*
+
+          :mask_filename (str): Location of HDF5 file that contains dataset for mask (default ``None``)
+
+          :mask_dataset (str): HDF5 dataset (in the file specified by the argument ``mask_filename``) that contains the mask data (default ``None``)
+
+
+        *C) Numpy array for mask*
+
+          :mask: 2D numpy integer array that defines the mask (default ``None``)
+   
     """
     def __init__(self, distance, pixel_size,
-                 x_gap_size_in_pixel=0, y_gap_size_in_pixel=0, hole_diameter_in_pixel=0, cx_hole="middle", cy_hole="middle",
+                 x_gap_size_in_pixel=0, y_gap_size_in_pixel=0, hole_diameter_in_pixel=0, cx_hole=None, cy_hole=None,
                  noise=None, noise_spread=None, noise_variation_n=None, noise_filename=None, noise_dataset=None,
-                 cx="middle", cy="middle", center_variation=None, center_spread_x=None, center_spread_y=None, center_variation_n=None, center_spread_limit=None,
+                 cx=None, cy=None, center_variation=None, center_spread_x=None, center_spread_y=None, center_variation_n=None,
                  saturation_level=None, mask=None, mask_filename=None, mask_dataset=None, mask_is_cxi_bitmask=False,
                  nx=None, ny=None, binning=None):
-        """
-        Initialisation of a Detector instance
-        
-        Args:
-           :distance(float): Distance between detector and interaction point
-           :pixel_size(float): Edge length of square pixel
-
-        Kwargs:
-           :cx: Horizontal beam position in pixel (fast changing dimension). If argument is None or not given center is set to the middle (default = None)
-           :cy: Vertical beam position in pixel (slowly changing dimension). If argument is None or not given center is set to the middle (default = None)
-           :center_variation(str): Variation of the center position. Either None, \"normal\", \"uniform\" or \"range\" (default = None)
-           :center_spread_x(float): If \"normal\", \"uniform\" or \"range\" center variation is specified spread defines width of the distribution in x
-           :center_spread_y(float): If \"normal\", \"uniform\" or \"range\" center variation is specified spread defines width of the distribution in y
-           :center_variation_n(int): I \"range\" center variation is specified this argument specifies the number of samples within the specified range
-           :noise(str): Noise that is put on the intensities when read. Either None, \"poisson\", \"normal\", \"uniform\" or \"normal_poisson or \"file\" or \"file_poisson\" (default = None)
-           :noise_spread(float): If \"normal\", \"uniform\" or \"normal_poisson\" noise is specified spread defines width of gaussian/uniform distribution (default = None)
-           :noise_filename(str): If \"file\" or \"file_poisson\" noise is specified this HDF5 file contains the dataset that is added to an image (default = None)
-           :noise_dataset(str):  If \"file\" or \"file_poisson\" noise is specified this HDF5 file dataset contains the signal that is added to a diffraction image. If the dataset has 3 dimensions a random frame (i.e. dataset[i_random,:,:]) is picked for every read out (default = None)
-           :saturation_level(float): Value at which detector pixels satutrate (default = None)
-           :binning(int): Pixel binning factor, intensies are integrated over patches of \'binning\' x \'binning\' pixels (default = None)
-
-        The mask can be specified in three alternative ways:
-
-        By parametrisation
-           :nx(int): Number of pixels in horizontal direction not including a potential gap (default = None)
-           :ny(int): Number of pixels in vertical direction not including a potential gap (default = None)
-           :x_gap_size_in_pixel(int): Width of central horizontal gap in pixel (default = 0)
-           :y_gap_size_in_pixel(int): Width of central vertical gap in pixel (default = 0)
-           :hole_diameter_in_pixel(int): Diameter of central hole in pixel (default = 0)
-        
-        or by specifying the mask with an array
-           :mask_filename: path to HDF5 file where the mask is stored (default = None)
-           :mask_dataset: dataset path in file (default = None)
-           :mask_CXI_bitmask(bool): Bool wheter or not data is stored as a CXI bitmask. False: pixels with value 0 are invalid, pixels with value 1 are valid. True: (pixels & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0 are the valid pixels (default = False)
-
-        or by reading the mask from a dataset in an HDF5 file
-           :mask: 2d mask as numpy array (default = None)
-           :mask_CXI_bitmask(bool): Bool wheter or not data is stored as a CXI bitmask. False: pixels with value 0 are invalid, pixels with value 1 are valid. True: (pixels & PixelMask.PIXEL_IS_IN_MASK_DEFAULT) == 0 are the valid pixels (default = False)
-        """
 
         self.distance = distance
         self.pixel_size = pixel_size
@@ -109,8 +140,7 @@ class Detector:
         self.set_center_variation(center_variation=center_variation,
                                   center_spread_x=center_spread_x,
                                   center_spread_y=center_spread_y,
-                                  center_variation_n=center_variation_n,
-                                  center_spread_limit=center_spread_limit)
+                                  center_variation_n=center_variation_n)
         self.set_noise(noise=noise,
                        noise_spread=noise_spread,
                        noise_variation_n=noise_variation_n,
@@ -120,6 +150,14 @@ class Detector:
         self.binning = binning
 
     def get_conf(self):
+        """
+        Get configuration in form of a dictionary. Another identically configured Detector instance can be initialised by:
+
+        .. code-block:: python
+
+          conf = D0.get_conf()         # D0: already existing Detector instance
+          D1 = condor.Detector(**conf) # D1: new Detector instance with the same configuration as D0  
+        """
         conf = {}
         conf["detector"] = {}
         conf["detector"]["distance"]           = self.distance
@@ -128,8 +166,8 @@ class Detector:
         conf["detector"]["cy"]                 = self.cy_mean
         cvar = self._center_variation.get_conf()
         conf["detector"]["center_variation"]   = cvar["mode"]
-        conf["detector"]["center_spread_x"]    = cvar["spread"][1]
-        conf["detector"]["center_spread_y"]    = cvar["spread"][0]
+        conf["detector"]["center_spread_x"]    = cvar["spread"][0]
+        conf["detector"]["center_spread_y"]    = cvar["spread"][1]
         conf["detector"]["center_variation_n"] = cvar["n"]
         noise = self._noise.get_conf()
         conf["detector"]["noise"]              = noise["mode"]
@@ -143,13 +181,31 @@ class Detector:
         
     def set_noise(self, noise=None, noise_spread=None, noise_variation_n=None, noise_filename=None, noise_dataset=None):
         """
-        Set detector noise type and parameters
+        Set detector noise type and parameters (this method is called during initialisation)
 
         Kwargs:
-           :noise(str): Noise that is put on the intensities when read. Either None, \"poisson\", \"normal\", \"uniform\" or \"normal_poisson or \"file\" or \"file_poisson\" (default = None)
-           :noise_spread(float): If \"normal\", \"uniform\" or \"normal_poisson\" noise is specified spread defines width of gaussian/uniform distribution (default = None)
-           :noise_filename(str): Location of HDF5 file that contains noise data that is added to simulated data. Specify the dataset with the argument \'noise_dataset\' (see below). The arguments \'noise_filename\' and \'noise_dataset\' only matter if noise=\"file\" or noise=\"file_poisson\" (default = None)
-           :noise_dataset(str): Dataset that contains the noise data that is added to simulated data. If the dataset has 3 dimensions a random frame (i.e. dataset[i_random,:,:]) is picked for every simulated pattern. Specify the filename with the argument \'noise_filename\' (see above). The arguments \'noise_filename\' and \'noise_dataset\' only matter if noise=\"file\" or noise=\"file_poisson\"  (default = None)
+
+          :noise (str): Noise added to the predicted intensities  (default ``None``)
+
+            Legal inputs:
+    
+              - ``None``: No noise
+              - ``\"poisson\"``: Poisson noise (*shot noise*)
+              - ``\"normal\"``: Normal (*Gaussian*) noise 
+              - ``\"uniform\"``: Uniformly distributed values within spread limits
+              - ``\"normal_poisson\"``: Normal (*Gaussian*) noise on top of Poisson noise (*shot noise*)
+              - ``\"file\"``: Noise data from file
+              - ``\"file_poisson\"``: Noise data from file on top of Poisson noise (*shot noise*)
+
+          :noise_spread (float): Width of the Gaussian or uniform noise distribution  (default ``None``) 
+        
+            .. note:: The argument ``noise_spread`` takes only effect in combination with ``noise=\"normal\"``, ``\"uniform\"`` or ``\"normal_poisson\"``
+
+          :noise_filename (str): Location of the HDF5 file that contains the noise data  (default ``None``)
+
+          :noise_dataset (str):  HDF5 dataset (in the file specified by the argument ``noise_filename``) that contains the noise data  (default ``None``)
+
+            .. note:: The arguments ``noise_filename`` and ``noise_dataset`` takes effect only in combination with ``noise=\"file\"`` or ``\"file_poisson\"``
         """
         if noise in ["file","file_poisson"]:
             self._noise_filename = noise_filename
@@ -160,9 +216,34 @@ class Detector:
             self._noise_dataset = None
             self._noise = Variation(noise, noise_spread, noise_variation_n, number_of_dimensions=1, name="noise")
 
-    def set_center_variation(self, center_variation, center_spread_x, center_spread_y, center_variation_n, center_spread_limit):
-        self._center_variation = Variation(center_variation,[center_spread_y,center_spread_x],center_variation_n,number_of_dimensions=2,name="center position")
-        self._center_spread_limit = center_spread_limit
+    def set_center_variation(self, center_variation=None, center_spread_x=None, center_spread_y=None, center_variation_n=None):
+        """
+        Set the variation of the beam center position (this method is called during initialisation)
+        
+        Kwargs:
+
+          :center_variation(str): Variation of the beam center position (default ``None``) [see also :meth:`condor.detector.Detector.set_noise`]
+
+            Legal inputs:
+
+              - ``None``: No variation
+              - ``\"normal\"``: Normal random distribution
+              - ``\"uniform\"``: Uniform random distribution
+              - ``\"range\"``: Equispaced grid around mean center position
+
+          :center_spread_x (float): Width of the distribution of center position in *x* (default ``None``)
+    
+          :center_spread_y (float): Width of the distribution of center position in *y* (default ``None``)
+    
+            .. note:: The arguments ``center_spread_y`` and ``center_spread_x`` take effect only in combination with ``center_variation=\"normal\"``, ``\"uniform\"`` or ``\"range\"``
+
+          :center_variation_n (int): Number of samples within the specified range (default ``None``)
+
+            .. note:: The argument ``center_variation_n`` take effect only in combination with ``center_variation=\"range\"``
+        """
+
+        
+        self._center_variation = Variation(center_variation,[center_spread_x,center_spread_y],center_variation_n,number_of_dimensions=2,name="center position")
         
     def _init_mask(self, mask, mask_is_cxi_bitmask, mask_filename, mask_dataset, nx, ny, x_gap_size_in_pixel, y_gap_size_in_pixel, cx_hole, cy_hole, hole_diameter_in_pixel):
         if mask is not None or (mask_filename is not None and mask_dataset is not None):
@@ -193,9 +274,9 @@ class Detector:
             self._mask[:,cx-y_gap_size_in_pixel/2:cx-y_gap_size_in_pixel/2+y_gap_size_in_pixel] |= PixelMask.PIXEL_IS_MISSING
         # Mask out pixels in hole    
         if hole_diameter_in_pixel > 0:
-            if cx_hole == "middle":
+            if cx_hole is None:
                 cx_hole = (self._nx-1)/2.
-            if cy_hole == "middle":
+            if cy_hole is None:
                 cy_hole = (self._ny-1)/2.
             Y,X = numpy.indices((self._ny,self._nx), dtype=numpy.float64)
             X = X-cx_hole
@@ -205,50 +286,58 @@ class Detector:
             if tmp.sum() > 0:
                 self._mask[tmp] |= PixelMask.PIXEL_IS_MISSING
         
-    def get_mask(self,intensities,output_bitmask=True):
-        if output_bitmask:
-            return self.get_bitmask(intensities)
-        else:
-            return numpy.array(self.get_bitmask(intensities) == 0,dtype="bool")
+    def get_mask(self,intensities=None, boolmask=False):
+        """
+        Return mask. The mask has information about the status of each individual detector pixel. The output can be either a CXI bitmask (default) or a boolean mask.
     
-    def get_bitmask(self,intensities):
-        M = self._mask.copy()
-        if self.saturation_level is not None:
-            M[intensities >= self.saturation_level] |= PixelMask.PIXEL_IS_SATURATED
-        return M
+        See also :meth:`condor.utils.pixelmask.PixelMask`
+       
+        Kwargs:
 
-    def _get_c_mean_value(self):
-        c =  numpy.array([self.get_cy_mean_value(), self.get_cx_mean_value()])
-        return c
+          :intensities: Numpy array of photon intensities for masking saturated pixels (default ``None``)
+
+          :boolmask (bool): If ``True`` the output will be a boolean array. Mask values are converted to ``True`` if no bit is set and to ``False`` otherwise.
+        """
+        if intensities is not None:
+            if not condor.utils.testing.same_shape(intensities, self._mask):
+                log_and_raise_error(logger, "Intensities and mask do not have the same shape")
+        M = self._mask.copy()
+        if self.saturation_level is not None and intensities is not None:
+            M[intensities >= self.saturation_level] |= PixelMask.PIXEL_IS_SATURATED
+        if output_boolmask:
+            return numpy.array(M == 0,dtype="bool")
+        else:
+            return M
     
     def get_cx_mean_value(self):
-        if self.cx_mean == "middle":
+        """
+        Return *x*-coordinate of the mean beam center position.
+        """
+        if self.cx_mean is None:
             return (self._nx-1) / 2.
         else:
             return self.cx_mean
 
     def get_cy_mean_value(self):
-        if self.cy_mean == "middle":
+        """
+        Return *y*-coordinate of the mean beam center position.
+        """
+
+        if self.cy_mean is None:
             return (self._ny-1) / 2.
         else:
             return self.cy_mean
 
     def get_next(self):
+        """
+        Iterate the parameters of the detector and return them as a dictionary.
+        """
         O = {}
         cx_mean = self.get_cx_mean_value()
         cy_mean = self.get_cy_mean_value()
-        # Center variation
-        ready = False 
-        while not ready:
-            cy_now, cx_now = self._center_variation.get([cy_mean,cx_mean])
-            ready = True
-            if self._center_variation._mode is not None:
-                if self._center_spread_limit > 0:
-                    if (self._center_spread_limit < abs(cx_now - cx_mean)*2) and (self._center_spread_limit < abs(cy_now - cy_mean)*2):
-                        ready = False
+        cx, cy = self._center_variation.get([cx_mean,cy_mean])
         O["cx"] = cx_now
         O["cy"] = cy_now
-        O["solid_angle_pixel"] = self.get_pixel_solid_angle()
         O["nx"] = self._nx
         O["ny"] = self._ny
         O["pixel_size"] = self.pixel_size
@@ -258,66 +347,201 @@ class Detector:
             O["cy_xxx"] = utils.resample.downsample_pos(cy_now,self._ny,self.binning)
         return O
 
-    def get_pixel_solid_angle(self):
-        omega = self.pixel_size**2 / self.distance**2
+    def get_pixel_solid_angle(self, x_off=0., y_off=0.):
+        """
+        Get the solid angle for a pixel at position ``x_off``, ``y_off`` with respect to the beam center.
+        
+        Kwargs:
+
+          :x_off: *x*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
+
+          :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
+
+        """
+        r_max_off = numpy.sqrt(x_off**2+y_off**2) * self.pixel_size
+        it = isinstance(r_max, collections.Iterable)
+        if it:
+            r_max = r_max.max()
+        if r_max/self.distance < 0.0001:
+            # Small angle approximation (fast)
+            omega = self.pixel_size**2 / self.distance**2
+            if it:
+                omega *= numpy.ones_like(r_max)
+        else:
+            # More precise formula for large angles (slow)
+            x_alpha = numpy.arctan2((x_off+0.5)*self.pixel_size, self.distance) - numpy.arctan2((x_off-0.5)*self.pixel_size, self.distance)
+            y_alpha = numpy.arctan2((y_off+0.5)*self.pixel_size, self.distance) - numpy.arctan2((y_off-0.5)*self.pixel_size, self.distance)
+            omega = 4. * numpy.arcsin(numpy.sin(x_alpha/2.)*numpy.sin(y_alpha/2.))
         return omega
 
-    def get_x_max(self, cx = None, cy = None, center_variation = False):
-        if cx is None or center_variation:
-            cx = self.get_cx_mean_value()
-        lim = self._center_spread_limit if (center_variation and self._center_spread_limit is not None) else 0
-        cx_min = cx - lim/2.
-        cx_max = cx + lim/2.
-        dist_max = max([self._nx-1-cx_min, cx_max]) * self.pixel_size
+    def get_all_pixel_solid_angles(self, cx, cy):
+        """
+        Return the solid angles of all detector pixels assuming a beam center at position (``cx``, ``cy``).
+        
+        Args:
+
+          :cx (float): *x*-coordinate of the center position in unit pixel
+        
+          :cy (float): *y*-coordinate of the center position in unit pixel
+
+        """
+        Y,X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-cy,
+                             numpy.float64(numpy.arange(self._nx))-cx,
+                             indexing="ij")
+        return self.get_pixel_solid_angle(X, Y)
+
+    def _get_xy_max_dist(self, cx = None, cy = None, center_variation = False):
+        dist_max = []       
+        for c,dc,n in zip([[cx if cx is not None else self.get_cx_mean_value(),self._center_variation.get_spread()[0],self._nx],
+                           [cy if cy is not None else self.get_cy_mean_value(),self._center_variation.get_spread()[1],self._ny]]):
+            if center_variation:
+                lim = dc 
+                lim = lim*0.5 if lim is not None else 0.
+            if "normal" in self._center_variation.get_mode():
+                lim *= 3
+            c_min = c - lim/2.
+            c_max = c + lim/2.
+            res1 = n-1-c_min
+            res2 = -c_max
+            dist_max.append(res1 if abs(res1) > abs(res2) else res2)
         return dist_max
 
-    def get_y_max(self, cx = None, cy = None, center_variation = False):
-        if cy is None or center_variation:
-            cy = self.get_cy_mean_value()
-        lim = self._center_spread_limit if (center_variation and self._center_spread_limit is not None) else 0
-        cy_min = cy - lim/2.
-        cy_max = cy + lim/2.
-        dist_max = max([self._ny-1-cy_min, cy_max]) * self.pixel_size
-        return dist_max
+    def get_p_max_dist(self, cx = None, cy = None, pos = "corner", center_variation = False):
+        """
+        Return 3D position vector of the pixel furthest away from the beam center. If each of the given center position coordinates (``cx``, ``cy``) is ``None`` the beam center is assumed to be located at its mean position
+        
+        Kwargs:
+          
+          :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
 
-    def get_p_max(self, cx = None, cy = None, pos = "corner", center_variation = False):
-        x_max = self.get_x_max(cx=cx, cy=cy, center_variation=center_variation)
-        y_max = self.get_y_max(cx=cx, cy=cy, center_variation=center_variation)
-        log_debug(logger, "y_max = %.1f pix, x_max = %.1f pix" % (y_max/self.pixel_size,x_max/self.pixel_size))
+          :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
+          :pos (str): Position constraint can be either ``pos=\"corner\"`` or ``pos=\"edge\"``. (default ``\"corner\"``)
+
+          :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others  (default ``False``)
+        """
+        x, y = self._get_xy_max(cx=cx, cy=cy, center_variation=center_variation)
+        xm = x*self.pixel_size
+        ym = y*self.pixel_size        
+        log_debug(logger, "x = %.1f pix, y = %.1f pix" % (x, y))
+        p = numpy.array([0.,0.,self.distance])
         if pos == "corner":
-            return numpy.array([self.distance, y_max, x_max])
+            p[0] = xm
+            p[1] = ym
         elif pos == "edge":
-            if x_max > y_max:
-                return numpy.array([self.distance, 0., x_max])
+            if abs(x) > abs(y):
+                p[0] = xm
             else:
-                return numpy.array([self.distance, y_max, 0.])
+                p[1] = ym
         else:
             log_and_raise_error(logger, "Invalid input: pos=%s. Input must be either \"corner\" or \"edge\"." % pos)
+        return p
 
     def get_q_max(self, wavelength, cx = None, cy = None, pos = "corner", center_variation = False):
-        p = self.get_p_max(cx=cx, cy=cy, pos=pos, center_variation=center_variation)
-        q = q_from_p(p, wavelength)
+        """
+        Return q-vector of maximal lenght
+
+        Args:
+
+          :wavelength (float): Photon wavelength in meters
+
+        Kwargs:
+
+          :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
+          :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+        """
+        p = abs(self.get_p_max_dist(cx=cx, cy=cy, pos=pos, center_variation=center_variation))
+        q = condor.utils.scattering_vector.q_from_p(p, wavelength)
         return q
 
     def _get_resolution_element(self, wavelength, cx = None, cy = None, center_variation = False, pos="edge"):
         res = numpy.pi / self.get_q_max(wavelength, cx=cx, cy=cy, pos=pos, center_variation=center_variation)
         return res
 
-    def get_resolution_element_z(self, wavelength, cx = None, cy = None, center_variation = False):
-        return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[0]
+    def get_max_resolution(self, wavelength, cx = None, cy = None, center_variation = False):
+        """
+        Return maximum resolution as a 3D vector (i.e. maximum resolution / momentum transfer in *x*, *y* and *z*)
+        
+        Args:
+
+          :wavelength (float): Photon wavelength in meters
+
+        Kwargs:
+
+          :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
+          :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
+          :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others (default ``False``)
+        """
+        return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")
 
     def get_resolution_element_y(self, wavelength, cx = None, cy = None, center_variation = False):
+        """
+        Return resolution in *y* in 1/meters
+
+        Args:
+
+          :wavelength (float): Photon wavelength in meters
+
+        Kwargs:
+
+          :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
+          :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
+          :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others (default ``False``)
+        """
         return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[1]
 
     def get_resolution_element_x(self, wavelength, cx = None, cy = None, center_variation = False):
-        return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[2]
+        """
+        Return resolution in *x* in 1/meters
+
+        Args:
+
+          :wavelength (float): Photon wavelength in meters
+
+        Kwargs:
+
+          :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
+          :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
+          :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others (default ``False``)
+        """
+        return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[0]
 
     def get_resolution_element_r(self, wavelength, cx = None, cy = None, center_variation = False):
+        """
+        Return resolution at the furthes corner position in 1/meters
+
+        Args:
+
+          :wavelength (float): Photon wavelength in meters
+
+        Kwargs:
+
+          :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
+          :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
+          :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others (default ``False``)
+        """
+        
         qmax = self.get_q_max(wavelength, cx=cx, cy=cy, pos="corner", center_variation=center_variation)
         res = numpy.pi / length(qmax)
         return res
         
     def detect_photons(self,I):
+        """
+        Return measurement of intensities from an array of expectation values of intensities. This method also returns the mask of the pattern
+
+        Args:
+        
+          :I: Intensity pattern represented as 2D array
+        """
         I_det = self._noise.get(I)
         if self._noise_filename is not None:
             with h5py.File(self._noise_filename,"r") as f:
@@ -329,19 +553,26 @@ class Detector:
             I_det = I_det + bg
         if self.saturation_level is not None:
             I_det = numpy.clip(I_det, -numpy.inf, self.saturation_level)
-        M_det = self.get_bitmask(I_det)
+        M_det = self.get_mask(I_det)
+        return I_det, M_det
+
+    def bin_photons(self, I_det, M_det):
+        """
+        Return the tuple of binned diffraction pattern and mask. If binning has not been specified the tuple (``None``, ``None``) is returned
+
+        Args:
+        
+          :I_det: Intensity pattern (before binning) represented by a 2D array
+
+          :M_det: CXI bitmask (before binning) represented by a 2D array (see also :meth:`condor.utils.pixelmask.PixelMask`)
+        """
         if self.binning is not None:
             IXxX_det, MXxX_det = utils.resample.downsample(I_det,self.binning,mode="integrate",
                                                            mask2d0=M_det,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
         else:
             IXxX_det = None
             MXxX_det = None
-        return I_det, M_det, IXxX_det, MXxX_det
+        return IXxX_det, MXxX_det
 
-def q_from_p(p, wavelength):
-    p0 = p / length(p)
-    R_Ewald = 2*numpy.pi / wavelength
-    k0 = R_Ewald * numpy.array([1.,0.,0.])
-    k1 = R_Ewald * p0
-    q = k0 - k1
-    return q
+
+        
