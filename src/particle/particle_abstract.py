@@ -44,42 +44,6 @@ from condor.utils.variation import Variation
 from condor.utils.config import load_config
 import condor.utils.diffraction
 
-def load_particles(conf):
-    C = load_config(conf)
-    names = [k for k in C.keys() if k.startswith("particle")]
-    particles = {}
-    for n in names:
-        particles[n] = load_particle(conf, n)
-    return particles
-
-def load_particle(conf, name=None):
-    C = load_config(conf)
-    names = [k for k in C.keys() if k.startswith("particle")]
-    default = load_config(condor.CONDOR_default_conf)
-    if len(names) > 1 and name is None:
-        log_and_raise_error(logger, "There is more than one particle defined in configuration and no \'name\' is given to decide which one to load.")
-        return
-    if name is None:
-        k = C.keys()[0]
-    else:
-        k = name
-    if k.startswith("particle_sphere"):
-        CP = load_config({"particle": C[k]}, {"particle": default["particle_sphere"]})
-        particle = condor.ParticleSphere(**CP["particle"])
-    elif k.startswith("particle_spheroid"):
-        CP = load_config({"particle": C[k]}, {"particle": default["particle_spheroid"]})
-        particle = condor.ParticleSpheroid(**CP["particle"])
-    elif k.startswith("particle_map"):
-        CP = load_config({"particle": C[k]}, {"particle": default["particle_map"]})
-        particle = condor.ParticleMap(**CP["particle"])
-    elif k.startswith("particle_molecule"):
-        CP = load_config({"particle": C[k]}, {"particle": default["particle_molecule"]})
-        particle = condor.ParticleMolecule(**CP["particle"])
-    else:
-        log_and_raise_error(logger,"Particle model for %s is not implemented." % k)
-        sys.exit(1)
-    return particle
-
 class AbstractParticle:
     def __init__(self,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
@@ -93,9 +57,9 @@ class AbstractParticle:
         
     def get_next(self):
         O = {}
-        O["_class_instance"]     = self
-        O["extrinsic_quaternion"]= self._get_next_extrinsic_rotation().get_as_quaternion()
-        O["position"]            = self._get_next_position()
+        O["_class_instance"]      = self
+        O["extrinsic_quaternion"] = self._get_next_extrinsic_rotation().get_as_quaternion()
+        O["position"]             = self._get_next_position()
         return O
 
     def get_current_rotation(self):

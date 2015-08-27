@@ -44,7 +44,73 @@ from condor.utils.rotation import Rotation
 import condor.sample
 import condor.particle
 
+
+def experiment_from_configfile(configfile):
+    """
+    Initialise Experiment instance from configuration file
+
+    *See also:*
+
+      - :class:`condor.experiment.Experiment`
+
+      - `Composing a configuration file <configfile.html>`_
+    """
+    
+    # Read configuration file into dictionary
+    C = condor.utils.config.read_configfile(configfile)
+    return experiment_from_configdict(configdict)
+
+def experiment_from_configdict(configdict):
+    """
+    Initialise Experiment instance from a dictionary
+
+    *See also:*
+
+      - :class:`condor.experiment.Experiment`
+
+      - `Composing a configuration file <configdict.html>`_
+    """
+    # Source
+    source = condor.Source(**configdict["source"])
+    # Sample
+    sample = condor.Sample(**configdict["sample"])
+    # Particles
+    particle_keys = [k for k in configdict.keys() if k.startswith("particle")]
+    particles = {}
+    for k in particle_keys:
+        if k.startswith("particle_sphere"):
+            particles[k] = condor.ParticleSphere(**configdict[k])
+        elif k.startswith("particle_spheroid"):
+            particles[k] = condor.ParticleSpheroid(**configdict[k])
+        elif k.startswith("particle_map"):
+            particles[k] = condor.ParticleMap(**configdict[k])
+        elif k.startswith("particle_molecule"):
+            particles[k] = condor.ParticleMolecule(**configdict[k])
+        else:
+            log_and_raise_error(logger,"Particle model for %s is not implemented." % k)
+            sys.exit(1)
+    # Add particles to sample    
+    for k, par in particles.items():
+        sample.append_particle(par, k)
+    # Detector
+    detector = condor.Detector(**configdict["detector"])
+    experiment = Experiment(source, sample, detector)
+    return experiment
+
+
+
 class Experiment:
+    """
+    Class for X-ray diffraction experiment
+
+    Args:
+    
+      :source: Source instance
+
+      :sample: Sample instance
+
+      :detector: Detector instance
+    """
     def __init__(self, source, sample, detector):
         self.source   = source
         self.sample   = sample
@@ -52,6 +118,14 @@ class Experiment:
         self._qmap_cache = {}
 
     def get_conf(self):
+        """
+        Get configuration in form of a dictionary. Another identically configured Experiment instance can be initialised by:
+
+        .. code-block:: python
+
+          conf = E0.get_conf()                         # E0: already existing Experiment instance
+          E1 = condor.experiment_from_configdict(conf) # E1: new Experiment instance with the same configuration as E0  
+        """
         conf = {}
         conf.update(self.source.get_conf())
         conf.update(self.sample.get_conf())
@@ -60,72 +134,8 @@ class Experiment:
 
     @log_execution_time(logger)
     def propagate(self, save_map3d = False, save_qmap = False):
-        N = self.source.number_of_shots
-        O = {"source":{}, "sample":{}, "detector":{}}
-        O_particles = {}
-        N_particles_max = 0
 
-        for i in range(N):
-            log_debug(logger, "Calculation diffraction pattern (%i/%i). (PROGSTAT)" % (i+1, N))
-
-            Os = self._propagate_single(save_map3d=save_map3d, save_qmap=save_qmap)
-
-            N_particles = len(Os["sample"]["particles"])
-            log_info(logger, "%i/%i (%i particle%s)" % (i+1, N, N_particles, "s" if N_particles > 1 else ""))
-
-            for k in [k for k in Os.keys() if k not in ["source", "sample", "detector"]]:
-                if k not in O:
-                    O[k] = [None for _ in range(N)]
-                O[k][i] = Os[k]
-            # Source
-            for k,v in Os["source"].items():
-                if k not in O["source"]:
-                    O["source"][k] = [None for _ in range(N)]
-                O["source"][k][i] = Os["source"][k]
-            # Sample
-            for k in [k for k in Os["sample"].keys() if k != "particles"]:
-                if k not in O["sample"]:
-                    O["sample"][k] = [None for _ in range(N)]
-                O["sample"][k][i] = Os["sample"][k]
-            for j,p in zip(range(len(Os["sample"]["particles"])), Os["sample"]["particles"]):
-                for k,v in p.items():
-                    if k not in O_particles:
-                        O_particles[k] = [[] for _ in range(N)]
-                    O_particles[k][i].append(v)
-            N_particles_max = max([N_particles_max, N_particles])
-            # Detector
-            for k,v in Os["detector"].items():
-                if k not in O["detector"]:
-                    O["detector"][k] = [None] * N
-                O["detector"][k][i] = Os["detector"][k]
-        # Make arrays for particle parameters
-        for k,v in O_particles.items():
-            s = [N, N_particles_max]
-            v0 = numpy.array(v[0])
-            s_item = list(v0.shape)
-            s_item.pop(0)
-            s = s + s_item
-            A = numpy.zeros(shape=s, dtype=v0.dtype)
-            for i in range(len(v)):
-                vi = numpy.array(v[i])
-                d = len(vi.shape)
-                if d == 1:
-                    A[i,:vi.shape[0]] = vi[:]
-                elif d == 2:
-                    A[i,:vi.shape[0],:] = vi[:,:]
-                elif d == 3:
-                    A[i,:vi.shape[0],:,:] = vi[:,:,:]
-                elif d == 4:
-                    A[i,:vi.shape[0],:,:,:] = vi[:,:,:,:]
-            O["sample"][k] = A
-        for k in O["source"].keys(): O["source"][k] = numpy.array(O["source"][k])
-        for k in O["detector"].keys(): O["detector"][k] = numpy.array(O["detector"][k])
-        for k in [k for k in O.keys() if k not in ["source", "sample", "detector"]]:
-            O[k] = numpy.array(O[k])
-        return O
-
-    @log_execution_time(logger)
-    def _propagate_single(self, save_map3d = False, save_qmap = False):
+        log_debug(logger, "Start propagation")
         
         # Iterate objects
         D_source   = self.source.get_next()
@@ -141,10 +151,10 @@ class Experiment:
         detector_distance   = D_detector["distance"]
         wavelength          = D_source["wavelength"]
 
-        F_singles    = []
-        qmap_singles = []
+        F_singles    = {}
+        qmap_singles = {}
         # Calculate patterns of all single particles individually
-        for D_particle in D_sample["particles"]:
+        for particle_key, D_particle in D_sample["particles"].items():
             p  = D_particle["_class_instance"]
             # Intensity at interaction point
             pos  = D_particle["position"]
@@ -163,7 +173,7 @@ class Experiment:
                 dn = p.material.get_dn(wavelength)
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, extrinsic_rotation=None)
-                q = numpy.sqrt(qmap[:,:,1]**2+qmap[:,:,2]**2)
+                q = numpy.sqrt(qmap[:,:,0]**2+qmap[:,:,1]**2)
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
@@ -278,15 +288,15 @@ class Experiment:
                 sys.exit(0)
 
             if save_qmap:
-                qmap_singles.append(qmap)
+                qmap_singles[particle_key] = qmap
 
-            F_singles.append(F)
+            F_singles[particle_key] = F
 
         F_tot = numpy.zeros_like(F)
         # Superimpose patterns
-        for D_particle,F in zip(D_sample["particles"], F_singles):
-            v = D_particle["position"]
-            F_tot = F_tot + F * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
+        for particle_key in D_sample["particles"].keys():
+            v = D_sample["particles"][particle_key]["position"]
+            F_tot = F_tot + F_singles[particle_key] * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
         I_tot, M_tot = self.detector.detect_photons(abs(F_tot)**2)
         IXxX_tot, MXxX_tot = self.detector.bin_photons(I_tot, M_tot)
         if self.detector.binning is not None:
@@ -300,18 +310,26 @@ class Experiment:
         O["sample"]            = D_sample
         O["detector"]          = D_detector
 
-        O["fourier_pattern"]   = F_tot
-        O["intensity_pattern"] = I_tot
-        O["mask_binary"]       = M_tot_binary
-        O["mask"]              = M_tot
+        O["entry_1"] = {}
 
-        #O["qmap"] = qmap_singles
+        data_1 = {}
+        
+        data_1["data_fourier"] = F_tot
+        data_1["data"]         = I_tot
+        data_1["mask"]         = M_tot
+
+        O["entry_1"]["data_1"] = data_1
         
         if self.detector.binning is not None:
-            O["fourier_pattern_xxx"]   = FXxX_tot
-            O["intensity_pattern_xxx"] = IXxX_tot
-            O["mask_xxx"]              = MXxX_tot
-            O["mask_xxx_binary"]       = MXxX_tot_binary
+            data_2 = {}
+            
+            data_2["data_fourier"] = FXxX_tot
+            data_2["data"]         = IXxX_tot
+            data_2["mask"]         = MXxX_tot
+
+            O["entry_1"]["data_2"] = data_2
+
+        O = remove_from_dict(O, "_")
             
         return O
 
@@ -439,3 +457,12 @@ class Experiment:
     #        condor.CONDOR_logger.debug("Using a newly interpolated map for propagtion.")
     #    return map3d
     # ------------------------------------------------------------------------------------------------
+
+
+def remove_from_dict(D, startswith="_"):
+    for k,v in D.items():
+        if k.startswith(startswith):
+            del D[k]
+        if isinstance(v, dict):
+           remove_from_dict(D[k], startswith) 
+    return D

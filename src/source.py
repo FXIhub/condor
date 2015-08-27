@@ -32,48 +32,53 @@ logger = logging.getLogger(__name__)
 
 import condor.utils.log
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
-from condor.utils.config import load_config
 from condor.utils.variation import Variation
-
-def load_source(conf):
-    """
-    Create new Source instance and load parameters from a Condor configuration file.
-    
-    Args:
-       :conf(str): Condor configuration file
-    """
-    C = condor.utils.config.load_config({"source": load_config(conf)["source"]}, {"source": load_config(condor.CONDOR_default_conf)["source"]})
-    source = Source(**C["source"])
-    return source
-  
+from condor.utils.photon import Photon
+from condor.utils.profile import Profile
+ 
 class Source:
     """
-    Class for the X-ray source
+    Class for an X-ray source
+
+    **Arguments:**
+
+      :wavelength (float): X-ray wavelength in unit meter
+
+      :focus_diameter (float): Focus diameter (characteristic transverse dimension) in unit meter
+
+      :pulse_energy (float): (Statistical mean of) pulse energy in unit Joule
+
+    **Keyword arguments:**
+
+      :profile_model (str): Model for the spatial illumination profile (default `None`)
+    
+      .. note:: The (keyword) arguments ``focus_diameter`` and ``profile_model`` are passed on to the constructor of :class:`condor.utils.profile.Profile`. For more detailed information read the documentation of the initialisation function.
+    
+      :pulse_energy_variation (str): Statistical variation of the pulse energy (default ``None``)
+      
+      :pulse_energy_spread (float): Statistical spread of the pulse energy in unit Joule (default ``None``)
+      
+      :pulse_energy_variation_n (int): Number of samples within the specified range (default ``None``)
+
+      .. note:: The keyword arguments ``pulse_energy_variation``, ``pulse_energy_spread``, and ``pulse_energy_variation_n`` are passed on to :meth:`condor.source.Source.set_pulse_energy_variation` during initialisation. For more detailed information read the documentation of the method.
+
     """
-    def __init__(self, wavelength, focus_diameter, pulse_energy, profile_model=None, pulse_energy_variation=None, pulse_energy_spread=None, pulse_energy_variation_n=None, number_of_shots=1):
-        """
-        Initialisation of a Source instance
-
-        Args:
-            :wavelength(float): X-ray wavelength [m]
-            :focus_diameter(float): Focus diameter (characteristic transverse dimension) [m]
-            :pulse_energy(float): Pulse energy (or its statistical mean) [J]
-
-        Kwargs:
-            :number_of_shots(int): Number of independent shots to be simulated (default = 1)
-            :pulse_energy_variation(str): Statistical variation of the pulse energy - either \"normal\", \"uniform\", \"range\" or None (no variation of the pulse energy) (default = None)
-            :pulse_energy_spread(float): Statistical spread of the pulse energy [J] (default = None)
-            :pulse_energy_variation_n(int): This parameter is only effective if pulse_energy_variation=\"range\". In that case this parameter determines the number of samples within the interval pulse_energy +/- pulse_energy_spread/2 (default = None)
-            :profile_model(str): Model for the spatial illumination profile - either \"top_hat\", \"pseudo_lorentzian\", \"gaussian\" or None (infinite extent of the illuminatrion, intensity same as in case of \"top_hat\") (default = None)
-        """
+    def __init__(self, wavelength, focus_diameter, pulse_energy, profile_model=None, pulse_energy_variation=None, pulse_energy_spread=None, pulse_energy_variation_n=None):
         self.photon = Photon(wavelength=wavelength)
         self.pulse_energy_mean = pulse_energy
-        self.set_pulse_energy_variation(variation=pulse_energy_variation, spread=pulse_energy_spread, n=pulse_energy_variation_n)
+        self.set_pulse_energy_variation(pulse_energy_variation, pulse_energy_spread, pulse_energy_variation_n)
         self.profile = Profile(model=profile_model, focus_diameter=focus_diameter)
-        self.number_of_shots = number_of_shots
         log_debug(logger, "Source configured")
 
     def get_conf(self):
+        """
+        Get configuration in form of a dictionary. Another identically configured Source instance can be initialised by:
+
+        .. code-block:: python
+
+          conf = S0.get_conf()         # S0: already existing Source instance
+          S1 = condor.Source(**conf)   # S1: new Source instance with the same configuration as S0
+        """
         conf = {}
         conf["source"] = {}
         conf["source"]["wavelength"]               = self.photon.get_wavelength()
@@ -84,30 +89,59 @@ class Source:
         conf["source"]["pulse_energy_variation"]   = pevar["mode"]
         conf["source"]["pulse_energy_spread"]      = pevar["spread"]
         conf["source"]["pulse_energy_variation_n"] = pevar["n"]
-        conf["source"]["number_of_shots"]          = self.number_of_shots
         return conf
         
-    def set_pulse_energy_variation(self, variation = None, spread = None, n = None):
+    def set_pulse_energy_variation(self, pulse_energy_variation = None, pulse_energy_spread = None, pulse_energy_variation_n = None):
         """
-        Specify how the pulse energy varies. If no inputs are given the pulse energy is constant
+        Set variation of the pulse energy
 
         Kwargs:
-            :pulse_energy_variation(str): Statistical variation of the pulse energy - either \"normal\", \"uniform\", \"range\" or None (no variation of the pulse energy) (default = None)
-            :pulse_energy_spread(float): Statistical spread of the pulse energy [J] (default = None)
-            :pulse_energy_variation_n(int): This parameter is only effective if pulse_energy_variation=\"range\". In that case this parameter determines the number of samples within the interval pulse_energy +/- pulse_energy_spread/2 (default = None)
+
+          :pulse_energy_variation (str): Statistical variation of the pulse energy (default ``None``)
+
+            *Choose one of the following options:*
+
+              - ``\'normal\'`` - random normal (Gaussian) distribution
+
+              - ``\'uniform\'`` - random uniform distribution
+
+              - ``\'range\'`` - equispaced pulse energies around ``pulse_energy``
+
+              - ``None`` - no variation of the pulse energy
+      
+          :pulse_energy_spread (float): Statistical spread of the pulse energy in unit Joule (default ``None``)
+      
+          :pulse_energy_variation_n (int): Number of samples within the specified range
+
+            .. note:: The argument ``pulse_energy_variation_n`` takes effect only in combination with ``pulse_energy_variation=\'range\'``
         """
-        self._pulse_energy_variation = Variation(variation,spread,n,number_of_dimensions=1,name="pulse energy")
+        self._pulse_energy_variation = Variation(pulse_energy_variation, pulse_energy_spread, pulse_energy_variation_n, number_of_dimensions=1, name="pulse energy")
 
     def get_intensity(self, position, unit = "ph/m2", pulse_energy = None):
         """
-        Retrieve the intensity at a given position in the beam
+        Calculate the intensity at a given position in the focus
 
         Args:
-           :position(list): Coordinates of the position where the intensity shall be calculated
+
+          :position: Coordinates [*x*, *y*, *z*] of the position where the intensity shall be calculated
            
         Kwargs:
-           :unit(str): Intensity unit - either \"ph/m2\", \"J/m2\", \"J/um2\" or \"mJ/um2\" (default = \"ph/m2\")
-           :pulse_energy(float): Pulse energy - if None the statistical mean of the pulse energy will be used [J] (default = None)
+
+          :unit (str): Intensity unit (default ``\'ph/m2\'``)
+
+            *Choose one of the following options:*
+        
+              - ``\'ph/m2\'``
+
+              - ``\'J/m2\'``
+
+              - ``\'J/um2\'``
+
+              - ``\'mJ/um2\'``
+
+              - ``\'ph/m2\'``
+
+           :pulse_energy (float): Pulse energy of that particular pulse in unit Joule. If ``None`` the mean of the pulse energy will be used (default ``None``)
         """
         # Assuming
         # 1) Radially symmetric profile that is invariant along the beam axis within the sample volume
@@ -129,7 +163,7 @@ class Source:
 
     def get_next(self):
         """
-        Iterate and return parameters in a dictionary
+        Iterate the parameters of the Source instance and return them as a dictionary
         """
         return {"pulse_energy":self._get_next_pulse_energy(),
                 "wavelength":self.photon.get_wavelength(),
@@ -151,118 +185,4 @@ class Source:
                 self._get_next_pulse_energy()
             else:
                 return p
-
-
-    
-class Photon:
-    """
-    Class for X-ray photon
-    """
-    def __init__(self, wavelength=None, energy=None, energy_eV=None):
-        """
-        Initialisation of a Photon instance
-
-        The photon can be initialised either by passing the wavelength, the photon energy in unit Joule or the photon energy in unit eV
-
-        Kwargs:
-           :wavelength(float): Photon wavelength [m]
-           :energy(float): Photon energy [J]
-           :energy_eV(float): Photon energy in electron volts [eV]
-        """
-        if (wavelength is not None and energy is not None) or (wavelength is not None and energy_eV is not None) or (energy is not None and energy_eV is not None):
-            log_and_raise_error(logger, "Invalid arguments during initialisation of Photon instance. More than one of the arguments is not None.")
-            return
-        if wavelength is not None:
-            self.set_wavelength(wavelength)
-        elif energy is not None:
-            self.set_energy(energy,"J")
-        elif energy_eV is not None:
-            self.set_energy(energy_eV,"eV")
-        else:
-            log_and_raise_error(logger, "Photon could not be initialized. It needs to be initialized with either the wavelength, the photon energy in unit Joule or the photon energy in unit eV.")
-            
-    def get_energy(self,unit="J"):
-        if unit == "J":
-            return self._energy
-        elif unit == "eV":
-            return self._energy/constants.e
-        else:
-            log_and_raise_error(logger, "%s is not a valid energy unit." % unit)
-
-    def set_energy(self,energy,unit="J"):
-        if unit == "J":
-            self._energy = energy
-        elif unit == "eV":
-            self._energy = energy*constants.e
-        else:
-            log_and_raise_error(logger, "%s is not a valid energy unit." % unit)
-
-    def get_wavelength(self):
-        return constants.c*constants.h/self._energy
-
-    def set_wavelength(self,wavelength):
-        self._energy = constants.c*constants.h/wavelength
-
-        
-class Profile:
-    """
-    Class for spatial illumination profile
-    """
-    def __init__(self, model, focus_diameter):
-        """
-        Initialisation of a Profile instance
-
-        Args:
-           :model(str): Model for the spatial illumination profile - either \"top_hat\", \"pseudo_lorentzian\", \"gaussian\" or None (infinite extent of the illuminatrion, intensity same as in case of \"top_hat\")
-           :focus_diameter(float): Focus diameter (or characteristic dimension) [m]
-        """
-        self.set_model(model)
-        self.focus_diameter = focus_diameter
-        
-    def set_model(self,model):
-        if model is None or model in ["top_hat","pseudo_lorentzian","gaussian"]:
-            self._model = model
-        else:
-            log_and_raise_error(logger, "Pulse profile model %s is not implemented. Change your configuration and try again.")
-            sys.exit(0)
-
-    def get_model(self):
-        return self._model
-
-    def get_radial(self):
-        if self._model is None:
-            # we always hit with full power
-            p = lambda r: 1. / (numpy.pi * (self.focus_diameter / 2.)**2)
-        elif self._model == "top_hat":
-            # focus diameter is diameter of top hat profile
-            def p(r):
-                if numpy.isscalar(r):
-                    return (1.  / (numpy.pi * (self.focus_diameter / 2.)**2)) if r < (self.focus_diameter / 2.) else 0.
-                else:
-                    return (1.  / (numpy.pi * (self.focus_diameter / 2.)**2)) * (r < (self.focus_diameter / 2.))
-        elif self._model == "pseudo_lorentzian":
-            # focus diameter is FWHM of lorentzian
-            sigma = self.focus_diameter / 2.
-            p = lambda r: _pseudo_lorentzian_2dnorm(r, sigma)
-        elif self._model == "gaussian":
-            # focus diameter is FWHM of gaussian
-            sigma = self.focus_diameter / (2.*numpy.sqrt(2.*numpy.log(2.)))
-            p = lambda r: _gaussian_2dnorm(r, sigma)
-        return p
-            
-_gaussian = lambda x, sigma: numpy.exp(-x**2/(2*sigma**2))
-
-_gaussian_2dnorm = lambda x, sigma: _gaussian(x, sigma) / ( 2 * numpy.pi * sigma**2 )
-
-_lorentzian = lambda x, sigma: sigma**2 / (x**2 + sigma**2)
-
-_pseudo_lorenzian_A1 = 0.74447313315648778 
-_pseudo_lorenzian_A2 = 0.22788162774723308
-_pseudo_lorenzian_s1 = 0.73985516665883544
-_pseudo_lorenzian_s2 = 2.5588165723260907
-_pseudo_lorentzian = lambda x, sigma: _pseudo_lorenzian_A1 * _gaussian(x, _pseudo_lorenzian_s1*sigma) + \
-                                      _pseudo_lorenzian_A2 * _gaussian(x, _pseudo_lorenzian_s2*sigma)
-
-_pseudo_lorentzian_2dnorm = lambda x, sigma: _pseudo_lorentzian(x, sigma) / ( 2. * numpy.pi * ( _pseudo_lorenzian_A1 * (_pseudo_lorenzian_s1*sigma)**2 + \
-                                                                                                _pseudo_lorenzian_A2 * (_pseudo_lorenzian_s2*sigma)**2 ) )
 

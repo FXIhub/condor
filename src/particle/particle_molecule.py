@@ -99,6 +99,7 @@ class ParticleMolecule(AbstractParticle):
             
     def get_next(self):
         O = AbstractParticle.get_next(self)
+        O["particle_model"] = "molecule"
         O["atomic_numbers"], O["atomic_positions"] = self.get_atoms()
         return O
 

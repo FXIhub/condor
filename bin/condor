@@ -12,6 +12,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Condor - simulation of single particle X-ray diffraction patterns')
     parser.add_argument('-v', '--verbose', dest='verbose',  action='store_true', help='verbose mode', default=False)
     parser.add_argument('-d', '--debug', dest='debug',  action='store_true', help='debugging mode (even more output than in verbose mode)', default=False)
+    parser.add_argument('-n', '--number-of-patterns', metavar='number_of_patterns', type=int,
+                        help="number of patterns to be simulated", default=1)
     args = parser.parse_args()
     if not os.path.exists("./condor.conf"):
         parser.error("Cannot find configuration file \"condor.conf\" in current directory.")
@@ -20,8 +22,8 @@ if __name__ == "__main__":
     if args.debug:
         logger.setLevel("DEBUG")
 
-    I = condor.utils.tools.Input("./condor.conf")
-
+    E = condor.experiment.experiment_from_configfile("./condor.conf")
+        
     # FOR BENCHMARKING
     #from pycallgraph import PyCallGraph
     #from pycallgraph.output import GraphvizOutput
@@ -34,8 +36,10 @@ if __name__ == "__main__":
     #])
     #with PyCallGraph(output=GraphvizOutput(),config=config):
 
-    O = condor.utils.tools.Output(I)
-    log_info(logger, "Writing output to condor.cxi")
-    O.write("./condor.cxi", output="all")
+    W = condor.utils.log.CXIWriter("./condor.cxi")
+    for i in range(args.number_of_patterns):
+        res = E.propagate()
+        W.write(res)
+    W.close()
 
     

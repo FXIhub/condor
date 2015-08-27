@@ -192,7 +192,7 @@ def conf_to_opts(D_source,D_particle,D_detector):
     s += "detector_binning = 1;\n"
     s += "experiment_wavelength = %.6e;\n" % D_source["wavelength"]
     s += "experiment_beam_intensity = %.6e;\n" % D_particle["intensity"]
-    intrinsic_rotation = copy.deepcopy(D_particle["extrinsic_rotation"])
+    intrinsic_rotation = condor.utils.rotation.Rotation(values=D_particle["extrinsic_quaternion"],formalism="quaternion")
     intrinsic_rotation.invert()
     e0, e1, e2 = intrinsic_rotation.get_as_euler_angles("zxz")
     s += "phi = %.6e;\n" % e0

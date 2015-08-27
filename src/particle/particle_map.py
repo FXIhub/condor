@@ -113,6 +113,7 @@ class ParticleMap(AbstractContinuousParticle):
 
     def get_next(self):
         O = AbstractContinuousParticle.get_next(self)
+        O["particle_model"] = "map"
         O["geometry"]   = self.geometry
         O["flattening"] = self._get_next_flattening()
         return O

@@ -8,7 +8,6 @@ logger.setLevel("WARNING")
 
 import condor
 
-
 def test_compare_spheroid_with_map(tolerance = 0.15):
     """
     Compare the output of two diffraction patterns, one simulated with the direct formula and the other one from a 3D refractive index map on a regular grid
@@ -32,21 +31,24 @@ def test_compare_spheroid_with_map(tolerance = 0.15):
     par = condor.ParticleSpheroid(diameter=spheroid_diameter, material_type="water", flattening=spheroid_flattening, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
     s = "spheroid"
     sam.append_particle(par, s)
-    P = condor.Experiment(src, sam, det)
-    res = P.propagate()
+    E = condor.Experiment(src, sam, det)
+    res = E.propagate()
     sam.remove_all_particles()
-    F_ideal = res["fourier_pattern"][0]
+    F_ideal = res["entry_1"]["data_1"]["data_fourier"]
     # Map (spheroid)
     par = condor.ParticleMap(diameter=spheroid_diameter, material_type="water", flattening=spheroid_flattening, geometry="spheroid", rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
     s = "map_spheroid"
     sam.append_particle(par, s)
-    P = condor.Experiment(src, sam, det)
-    res = P.propagate()
+    E = condor.Experiment(src, sam, det)
+    res = E.propagate()
     sam.remove_all_particles()
-    F_map = res["fourier_pattern"][0]
+    F_map = res["entry_1"]["data_1"]["data_fourier"]
     # Compare
     I_ideal = abs(F_ideal)**2
     I_map = abs(F_map)**2
+    #import matplotlib.pyplot as pypl
+    #pypl.imsave("./Ispheroid_sph.png", abs(I_ideal))
+    #pypl.imsave("./Ispheroid_map.png", abs(I_map))
     diff = I_ideal-I_map
     err = abs(diff).sum() / ((I_ideal.sum()+I_map.sum())/2.)
     if err < tolerance:
@@ -66,7 +68,7 @@ def test_compare_molecule_with_map(tolerance = 0.1):
     angle_d = 72.
     angle = angle_d/360.*2*numpy.pi
     rotation_axis = numpy.array([0.43,0.643,0.])
-SW    rotation_axis = rotation_axis / condor.utils.linalg.length(rotation_axis)
+    rotation_axis = rotation_axis / condor.utils.linalg.length(rotation_axis)
     quaternion = condor.utils.rotation.quat(angle,rotation_axis[0],rotation_axis[1], rotation_axis[2])
     rotation_values = numpy.array([quaternion])
     rotation_formalism = "quaternion"
@@ -84,9 +86,9 @@ SW    rotation_axis = rotation_axis / condor.utils.linalg.length(rotation_axis)
     par = condor.ParticleMap(diameter=long_diameter, material_type="custom", massdensity=massdensity, atomic_composition={"H":1.}, geometry="custom", map3d=map3d, dx=dx, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
     s = "map_custom"
     sam.append_particle(par, s)
-    P = condor.Experiment(src, sam, det)
-    res = P.propagate()
-    F_map = res["fourier_pattern"][0]
+    E = condor.Experiment(src, sam, det)
+    res = E.propagate()
+    F_map = res["entry_1"]["data_1"]["data_fourier"]
     sam.remove_all_particles()
     # Molecule
     Z1,Y1,X1 = numpy.meshgrid(numpy.linspace(0, short_diameter, N_short),
@@ -105,9 +107,9 @@ SW    rotation_axis = rotation_axis / condor.utils.linalg.length(rotation_axis)
     par = condor.ParticleMolecule(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
     s = "molecule"
     sam.append_particle(par, s)
-    P = condor.Experiment(src, sam, det)
-    res = P.propagate()
-    F_molecule = res["fourier_pattern"][0]
+    E = condor.Experiment(src, sam, det)
+    res = E.propagate()
+    F_molecule = res["entry_1"]["data_1"]["data_fourier"]
     sam.remove_all_particles()
     # Compare
     I_molecule = abs(F_molecule)**2
@@ -115,8 +117,8 @@ SW    rotation_axis = rotation_axis / condor.utils.linalg.length(rotation_axis)
     diff = I_molecule-I_map
     err = abs(diff).sum() / ( ( I_molecule.sum() + I_map.sum() ) / 2. )
     #import matplotlib.pyplot as pypl
-    #pypl.imsave("./Imol.png", abs(I_molecule))
-    #pypl.imsave("./Imap.png", abs(I_map))
+    #pypl.imsave("./Imolecule_mol.png", abs(I_molecule))
+    #pypl.imsave("./Imolecule_map.png", abs(I_map))
     if err < tolerance:
         print "\t=> Test successful (err = %e)" % err
         return False

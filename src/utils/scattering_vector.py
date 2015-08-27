@@ -29,10 +29,11 @@ logger = logging.getLogger(__name__)
 
 from log import log_and_raise_error,log_warning,log_info,log_debug
 import rotation
+import linalg
 
 
 def q_from_p(p, wavelength):
-    p0 = p / length(p)
+    p0 = p / linalg.length(p)
     R_Ewald = 2*numpy.pi / wavelength
     k0 = R_Ewald * numpy.array([0.,0.,1.])
     k1 = R_Ewald * p0

@@ -39,3 +39,7 @@ class ParticleSphere(AbstractContinuousParticle):
                                             position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n,
                                             material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
         
+    def get_next(self):
+        O = AbstractContinuousParticle.get_next(self)
+        O["particle_model"] = "sphere"
+        return O

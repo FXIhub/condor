@@ -68,6 +68,7 @@ class ParticleSpheroid(AbstractContinuousParticle):
         
     def get_next(self):
         O = AbstractContinuousParticle.get_next(self)
+        O["particle_model"] = "spheroid"
         O["flattening"] = self._get_next_flattening()
         return O
         

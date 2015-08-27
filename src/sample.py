@@ -35,32 +35,32 @@ import condor.utils.tools
 from condor.utils.config import load_config
 from condor.utils.variation import Variation
 
-def load_sample(conf):
-    """
-    Create new Sample instance and load parameters from a Condor configuration file or dictionary.
-    
-    Kwargs:
-       :conf(str): Condor configuration file or dictionary (default = None)
-    """
-    C = condor.utils.config.load_config({"sample": load_config(conf)["sample"]}, {"sample": load_config(condor.CONDOR_default_conf)["sample"]})
-    sample = Sample(**C["sample"])
-    return sample
         
 class Sample:
     """
-    Class for sample
+    Class for a sample
+
+    Keyword arguments:
+
+      :number_of_particles (float): Expectation value for the number of particles in the interaction volume (default = 1.)
+    
+      :number_of_particles_variation (str): Variation of the number of particles (default ``None``)
+
+      :number_of_particles_spread (float): Statistical spread of the number of particles (default ``None``)
+
+      :number_of_particles_variation_n (int): Number of samples within the specified range
+
+      .. note:: The keyword arguments ``number_of_particles_variation``, ``number_of_particles_spread``, and ``number_of_particles_variation_n`` are passed on to :meth:`condor.sample.Sample.set_number_of_particles_variation` during initialisation. For more detailed information read the documentation of the method.    
+
+      :particle_pick (str): The way how condor decides which defined particle model to choose (in case that more than one particle model is defined) (default ``\'random\'``)
+
+        *Choose one of the following options:*
+
+          - ``\'sequential\'`` - sequential pick
+
+          - ``\'random\'`` - random pick
     """
     def __init__(self, number_of_particles=1, number_of_particles_variation=None, number_of_particles_spread=None, number_of_particles_variation_n=None, particle_pick="random"):
-        """
-        Initialisation of a Sample instance. Call load_sample(conf) for initialisation from file 
-
-        Kwargs:
-           :number_of_particles(int): Number of particles present at the same time in the interaction volume (default = 1)
-           :number_of_particles_variation(str): Variation of the number of particles, either \"poisson\", \"uniform\", \"range\" or None (default = None)
-           :number_of_particles_spread(int): Statistical spread of the number of particles (default = None)
-           :numbrt_of_particles_variation_n(int): This parameter is only effective if number_of_particles_variation_n=\"range\". In that case this parameter determines the number of samples within the interval number_of_particles +/- number_of_particles_spread/2 (default = None)
-           :particle_pick(str): This parameter only takes effect if more than one particle is defined. If the number of particles in the interaction volume exceeds one particles are drawn according to the rule defined by this argument, either \"sequential\" or \"random\" (default = \"random\")
-        """
         self.number_of_particles_mean = number_of_particles
         self.particle_pick = particle_pick
         self.set_number_of_particles_variation(number_of_particles_variation, number_of_particles_spread, number_of_particles_variation_n)
@@ -69,7 +69,12 @@ class Sample:
 
     def get_conf(self):
         """
-        Rerieve configuration of this sample instance in form of a dictionary
+        Get configuration in form of a dictionary. Another identically configured Sample instance (but without the particle models!) can be initialised by:
+
+        .. code-block:: python
+
+          conf = S0.get_conf()         # S0: already existing Sample instance
+          S1 = condor.Sample(**conf)   # S1: new Sample instance with the same configuration as S0
         """
         conf = {}
         conf["number_of_particles"]             = self.number_of_particles_mean
@@ -81,24 +86,25 @@ class Sample:
         
     def get_next(self):
         """
-        Draw next
+        Iterate the parameters of the Sample instance and return them as a dictionary
         """
         self._next_particles()
         O = {}
-        #O["particle_types"] = []
-        O["particles"] = []
-        for p in self._particles:
-            O["particles"].append(p.get_next())
+        O["particles"] = {}
+        for i,p in enumerate(self._particles):
+            O["particles"]["particle_%02i" % i] = p.get_next()
         O["number_of_particles"] = len(self._particles)
         return O
 
     def append_particle(self, particle_model, name):
         """
-        Add a particle model to the sample
+        Add a particle model to the sample (at the end of the particles list)
         
         Args:
+
            :particle_model: Particle model instance
-           :name(str): Name of the new particle
+
+           :name (str): Name of the new particle (must be unique)
         """
         if not isinstance(particle_model, condor.particle.ParticleSphere) and \
            not isinstance(particle_model, condor.particle.ParticleSpheroid) and \
@@ -141,16 +147,29 @@ class Sample:
             pm[n] = p
         return pm
             
-    def set_number_of_particles_variation(self, mode, spread, variation_n):
+    def set_number_of_particles_variation(self, number_of_particles_variation, number_of_particles_spread, number_of_particles_variation_n):
         """
         Set statistical variation model for the number of particles
 
         Args:
-           :mode(str): Either None, \"poisson\", \"normal\", \"uniform\" or \"range\"
-           :spread(float): Width of the distribution of number of particles. Only matters if mode is \"normal\", \"uniform\" or \"range\". For \'mode\'=\"normal\" \'spread\' means standard deviation, for \'mode\'=\"uniform\" and '\mode'\=\"range\" \'spread\' determines the full width of the distribution
-           :variation_n(int): If mode is \"range\" this argument specifies the number of samples within the specified range
+
+          :number_of_particles_variation (str): Variation of the number of particles
+
+            *Choose one of the following options:*
+
+              - ``\'poisson\'`` - random Poisson distribution
+     
+              - ``\'uniform\'``- random uniform distribution
+    
+              - ``\'range\'``- equispaced values around expectation value
+
+              - ``None`` - no variation
+
+          :number_of_particles_spread (float): Statistical spread of the number of particles
+
+          :number_of_particles_variation_n (int): Number of samples within the specified range
         """
-        self._number_of_particles_variation = Variation(mode, spread, variation_n)
+        self._number_of_particles_variation = Variation(number_of_particles_variation, number_of_particles_spread, number_of_particles_variation_n)
 
     def _get_next_number_of_particles(self):
         N = self._number_of_particles_variation.get(self.number_of_particles_mean)
@@ -171,6 +190,10 @@ class Sample:
         
     def _next_particles(self):
         N = self._get_next_number_of_particles()
+        if N == 0:
+            log_and_raise_error(logger, "Number of particles is zero")
+        if len(self._particle_models) == 0:
+            log_and_raise_error(logger, "Sample contains no particles")
         if self.particle_pick == "sequential":
             self._particles = [self._particle_models[i%len(self._particle_models)] for i in range(N)]
         elif self.particle_pick == "random":

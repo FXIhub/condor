@@ -85,61 +85,82 @@ def log_execution_time(logger):
         return st_func
     return st_time
 
-        
 class CXIWriter:
-    def __init__(self,filename,N):
-        self.filename = os.path.expandvars(filename)
-        self.f = h5py.File(filename,"w")
-        self.N = N
-    def write(self,d,prefix="",i=-1):
-        for k in d.keys():
-            name = prefix+"/"+k
-            log_debug(logger, "Writing dataest %s" % name)
-            if isinstance(d[k],dict):
-                if name not in self.f:
-                    self.f.create_group(name)
-                self.write(d[k],name,i)
-            elif k != "i":
-                self.write_to_dataset(name,d[k],d.get("i",i))
-    def write_to_dataset(self,name,data,i):
-        log_debug(logger, "Write dataset %s of event %i." % (name,i))
-        if name not in self.f:
-            #print name
-            t0 = time.time()
-            if numpy.isscalar(data):
-                if i == -1:
-                    s = [1]
-                else:
-                    s= [self.N]
-                t=numpy.dtype(type(data))
-                if t == "S":
-                    t = h5py.new_vlen(str)
-                axes = "experiment_identifier:value"
-            else:
-                data = numpy.array(data)
-                s = list(data.shape)
-                ndims = len(s)
-                axes = "experiment_identifier"
-                if ndims == 2: axes = axes + ":x"
-                elif ndims == 3: axes = axes + ":y:x"
-                elif ndims == 4: axes = axes + ":z:y:x"
-                if i != -1:
-                    s.insert(0,self.N)
-                t=data.dtype
-            self.f.create_dataset(name,s,t)
-            self.f[name].attrs.modify("axes",[axes])
-            t1 = time.time()
-            log_debug(logger, "Create dataset %s within %.6f sec." % (name,t1-t0))
-        if i == -1:
-            if numpy.isscalar(data):
-                self.f[name][0] = data
-            else:
-                self.f[name][:] = data[:]
-        else:
-            if numpy.isscalar(data):
-                self.f[name][i] = data
-            else:
-                self.f[name][i,:] = data[:]
-    def close(self):
-        self.f.close()
+    def __init__(self, filename, chunksize=2):
+        self._filename = os.path.expandvars(filename)
+        if os.path.exists(filename):
+            log_warning(logger, "File %s exists and is being overwritten" % filename)
+        self._f = h5py.File(filename, "w")
+        self._i = 0
+        self._chunksize = chunksize
 
+    def write(self, D):
+        self._write_without_iterate(D)
+        self._i += 1
+        
+    def _write_without_iterate(self, D, group_prefix="/"):
+        for k in D.keys():
+            if isinstance(D[k],dict):
+                group_prefix_new = group_prefix + k + "/"
+                log_debug(logger, "Writing group %s" % group_prefix_new)
+                if k not in self._f[group_prefix]:
+                    self._f.create_group(group_prefix_new)
+                self._write_without_iterate(D[k], group_prefix_new)
+            else:
+                name = group_prefix + k
+                log_debug(logger, "Writing dataset %s" % name)
+                data = D[k]
+                if k not in self._f[group_prefix]:
+                    if numpy.isscalar(data):
+                        maxshape = (None,)
+                        shape = (self._chunksize,)
+                        dtype = numpy.dtype(type(data))
+                        if dtype == "S":
+                            dtype = h5py.new_vlen(str)
+                        axes = "experiment_identifier:value"
+                    else:
+                        data = numpy.asarray(data)
+                        try:
+                            h5py.h5t.py_create(data.dtype, logical=1)
+                        except TypeError:
+                            log_warning(logger, "Could not save dataset %s. Conversion to numpy array failed" % name)
+                            continue
+                        maxshape = tuple([None]+list(data.shape))
+                        shape = tuple([self._chunksize]+list(data.shape))
+                        dtype = data.dtype
+                        ndim = data.ndim
+                        axes = "experiment_identifier"
+                        if ndim == 1: axes = axes + ":x"
+                        elif ndim == 2: axes = axes + ":y:x"
+                        elif ndim == 3: axes = axes + ":z:y:x"
+                    log_debug(logger, "Create dataset %s [shape=%s, dtype=%s]" % (name,str(shape),str(dtype)))
+                    self._f.create_dataset(name, shape, maxshape=maxshape, dtype=dtype)
+                    self._f[name].attrs.modify("axes",[axes])
+                if self._f[name].shape[0] <= self._i:
+                    new_shape = tuple([self._chunksize*(self._i/self._chunksize+1)]+list(data.shape))
+                    log_debug(logger, "Resize dataset [old shape: %s, new shape: %s]" % (name,str(shape),str(new_shape)))
+                    self._f[name].resize(new_shape)
+                log_debug(logger, "Write to dataset %s at stack position %i" % (name, self._i))
+                if numpy.isscalar(data):
+                    self._f[name][self._i] = data
+                else:
+                    self._f[name][self._i,:] = data[:]
+
+    def _shrink_stacks(self, group_prefix="/"):
+        for k in self._f[group_prefix].keys():
+            name = group_prefix + k
+            if isinstance(self._f[name], h5py.Dataset):
+                log_debug(logger, "Shrinking dataset %s to stack length %i" % (name, self._i))
+                s = list(self._f[name].shape)
+                s.pop(0)
+                s.insert(0, self._i)
+                s = tuple(s)
+                self._f[name].resize(s)
+            else:
+                self._shrink_stacks(name + "/")
+                    
+    def close(self):
+        self._shrink_stacks()
+        log_debug(logger, "Closing file %s" % self._filename)
+        self._f.close()
+    

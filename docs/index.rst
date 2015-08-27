@@ -11,6 +11,13 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+.. toctree::
+   :hidden:
+
+   Welcome <self>
+   Installation <installation>
+   Configuration <config>
+   Modules <#py-modindex>
 
 
 Indices and tables

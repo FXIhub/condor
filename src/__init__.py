@@ -23,10 +23,10 @@
 # -----------------------------------------------------------------------------------------------------
 
 from .experiment import Experiment
-from .source import Source, load_source
-from .sample import Sample, load_sample
-from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleMolecule, load_particle, load_particles
-from .detector import Detector, load_detector
+from .source import Source
+from .sample import Sample
+from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleMolecule
+from .detector import Detector
 
 # Set global variables
 def _init():
