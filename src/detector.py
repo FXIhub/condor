@@ -58,25 +58,21 @@ class Detector:
 
       :cy (float): Vertical beam position in unit pixel If ``cy=None`` beam will be positioned at the center (default ``None``)
 
-      :center_variation(str): Variation of the beam center position (default ``None``)
+      :center_variation (str): See :meth:`condor.detector.Detector.set_center_variation` (default ``None``)
         
-      :center_spread_x (float): Width of the distribution of center position in *x* (default ``None``)
+      :center_spread_x (float): See :meth:`condor.detector.Detector.set_center_variation` (default ``None``)
     
-      :center_spread_y (float): Width of the distribution of center position in *y* (default ``None``)
+      :center_spread_y (float): See :meth:`condor.detector.Detector.set_center_variation` (default ``None``)
 
-      :center_variation_n (int): Number of samples within the specified range (default ``None``)
+      :center_variation_n (int): See :meth:`condor.detector.Detector.set_center_variation` (default ``None``)
 
-      .. note:: The keyword arguments ``center_variation``, ``center_spread_x``, ``center_spread_y``, and ``center_variation_n`` are passed on to :meth:`condor.detector.Detector.set_center_variation` during initialisation. For more detailed information read the documentation of the method.
+      :noise (str): See :meth:`condor.detector.Detector.set_noise` (default ``None``)
 
-      :noise (str): Noise added to the predicted intensities  (default ``None``)
+      :noise_spread (float): See :meth:`condor.detector.Detector.set_noise` (default ``None``)
 
-      :noise_spread (float): Width of the Gaussian or uniform noise distribution  (default ``None``) 
+      :noise_filename (str): See :meth:`condor.detector.Detector.set_noise` (default ``None``)
 
-      :noise_filename (str): Location of the HDF5 file that contains the noise data  (default ``None``)
-
-      :noise_dataset (str):  HDF5 dataset (in the file specified by the argument ``noise_filename``) that contains the noise data  (default ``None``)
-
-      .. note:: The keyword arguments ``noise``, ``noise_spread``, ``noise_filename``, and ``noise_dataset`` are passed on to :meth:`condor.detector.Detector.set_noise` during initialisation. For more detailed information read the documentation of the method.
+      :noise_dataset (str):  See :meth:`condor.detector.Detector.set_noise` (default ``None``)
 
       :saturation_level (float): Value at which detector pixels satutrate (default ``None``)
 
@@ -102,11 +98,11 @@ class Detector:
 
           :ny (int): Number of pixels in *y* direction (not including a potential gap or hole) (default ``None``)
 
-          :x_gap_size_in_pixel(int): Size of central gap along *x* in unit pixel (default ``None``)
+          :x_gap_size_in_pixel (int): Size of central gap along *x* in unit pixel (default ``None``)
     
-          :y_gap_size_in_pixel(int): Size of central gap along *y* in unit pixel (default ``None``)
+          :y_gap_size_in_pixel (int): Size of central gap along *y* in unit pixel (default ``None``)
 
-          :hole_diameter_in_pixel(int): Diameter of central hole in unit pixel (default ``None``)
+          :hole_diameter_in_pixel (int): Diameter of central hole in unit pixel (default ``None``)
     
         *B) HDF5 dataset for mask*
 
@@ -183,7 +179,7 @@ class Detector:
 
           :noise (str): Noise added to the predicted intensities  (default ``None``)
 
-            Legal inputs:
+            *Choose one of the following options:*
     
               - ``None`` - No noise
 
@@ -199,7 +195,7 @@ class Detector:
 
               - ``\'file_poisson\'`` - Noise data from file on top of Poisson noise (*shot noise*)
 
-          :noise_spread (float): Width of the Gaussian or uniform noise distribution  (default ``None``) 
+          :noise_spread (float): Width (full width at half maximum) of the Gaussian or uniform noise distribution  (default ``None``) 
         
             .. note:: The argument ``noise_spread`` takes only effect in combination with ``noise=\'normal\'``, ``\'uniform\'`` or ``\'normal_poisson\'``
 
@@ -295,7 +291,7 @@ class Detector:
         """
         Return mask. The mask has information about the status of each individual detector pixel. The output can be either a CXI bitmask (default) or a boolean mask
     
-        See also :class:`condor.utils.pixelmask.PixelMask`
+        For further information and the full bitcode go to :class:`condor.utils.pixelmask.PixelMask`
        
         Kwargs:
 

@@ -16,8 +16,8 @@ Contents:
 
    Welcome <self>
    Installation <installation>
-   Configuration <config>
-   Modules <#py-modindex>
+   Running Condor simulations <config>
+   
 
 
 Indices and tables

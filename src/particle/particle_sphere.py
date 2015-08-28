@@ -25,6 +25,44 @@
 from particle_abstract import AbstractContinuousParticle
 
 class ParticleSphere(AbstractContinuousParticle):
+    """
+    Class for uniformly filled spherical particle (no discrete individual atoms, continuum approximation)
+
+    **Arguments:**
+
+      :diameter (float): Sphere diameter
+
+    **Keyword arguments:**
+    
+      :diameter_variation (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :diameter_spread (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :diameter_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :rotation_values (array): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :rotation_formalism (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :concentration (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+
+      :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+
+      :position_variation (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :position_spread (float): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :position_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :material_type (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``\'water\'``)
+
+      :massdensity (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
+
+      :atomic_composition (dict): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
+    """
+
     def __init__(self,
                  diameter, diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
                  concentration = 1.,
@@ -40,6 +78,20 @@ class ParticleSphere(AbstractContinuousParticle):
                                             material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
         
     def get_next(self):
+        """
+        Iterate the parameters and return them as a dictionary
+        """
         O = AbstractContinuousParticle.get_next(self)
         O["particle_model"] = "sphere"
         return O
+
+    def get_conf(sef):
+        """
+        Get configuration in form of a dictionary. Another identically configured ParticleMap instance can be initialised by:
+
+        .. code-block:: python
+
+          conf = P0.get_conf()                 # P0: already existing ParticleSphere instance
+          P1 = condor.ParticleSpheroid(**conf) # P1: new ParticleSphere instance with the same configuration as P0  
+        """
+        return AbstractContinuousParticle.get_conf(self)

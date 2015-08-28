@@ -42,17 +42,78 @@ import condor.utils.bodies
 from particle_abstract import AbstractContinuousParticle
 
 class ParticleMap(AbstractContinuousParticle):
+    """
+    Class for particle with a refractive index map sampled on a cubic grid (no discrete individual atoms, continuum approximation)
+
+    **Arguments:**
+
+      :geometry (str): Geometry type
+
+        *Choose one of the following options:*
+
+          - ``\'custom\'`` - provide map either with an HDF5 file (``map3d_filename``, ``map3d_dataset``) or with a numpy array (``map3d``)
+
+          - ``\'icosahedron\'`` - create map of a uniformly filled icosahedron
+
+          - ``\'cube\'`` - create map of a uniformly filled cube
+
+          - ``\'sphere\'`` - create map of a uniformly filled sphere
+
+          - ``\'spheroid\'`` - create map of a uniformly filled spheroid
+
+      :diameter (float): Particle diameter (not map diameter)
+
+    **Keyword arguments:**
+    
+      :diameter_variation (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :diameter_spread (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :diameter_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :dx: Distance between grid points of the map. This needs to be specified only if ``geometry=`\custom'\'. Depending on whether the geometry is specified by file (``map3d_filename``, ``map3d_dataset``) or by numpy array (``map3d``) for more documentation see :meth:`set_custom_geometry_by_h5file` or :meth:`set_custom_geometry_by_array` respectively (default ``None``)
+
+      :map3d: See :meth:`set_custom_geometry_by_array` (default ``None``)
+
+      :map3d_filename: See :meth:`set_custom_geometry_by_h5file` (default ``None``)
+
+      :map3d_dataset: See :meth:`set_custom_geometry_by_h5file` (default ``None``)
+
+      :rotation_values (array): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :rotation_formalism (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :flattening (float): (Mean) value of :math:`a/c`, takes only effect if ``geometry=\'spheroid\'`` (default ``0.75``)
+    
+      :concentration (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+
+      :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+
+      :position_variation (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :position_spread (float): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :position_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :material_type (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``\'water\'``)
+
+      :massdensity (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
+
+      :atomic_composition (dict): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)          
+    """
     def __init__(self,
                  geometry, diameter,
                  diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
-                 map3d = None, dx = None, filename = None,
-                 flattening = 1., flattening_variation = None, flattening_spread = None, flattening_variation_n = None,
+                 dx = None,
+                 map3d = None, 
+                 map3d_filename = None, map3d_dataset = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
+                 flattening = 0.75,
                  concentration = 1.,
                  position = None, position_variation = None, position_spread = None, position_variation_n = None,
                  material_type = None, massdensity = None, atomic_composition = None):
-        """
-        """
         # Initialise base class
         AbstractContinuousParticle.__init__(self,
                                             diameter=diameter, diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n,
@@ -67,12 +128,8 @@ class ParticleMap(AbstractContinuousParticle):
             sys.exit(1)
         self.geometry = geometry
         
-        if geometry != "spheroid":
-            if flattening != 1. or flattening_variation is not None or flattening_spread is not None or flattening_variation_n is not None:
-                log_warning(logger, "At least one flattening keyword argument is not None - although geometry != \"spheroid\". The flattening keywords will have no effect.")
         # Has effect only for spheroids
-        self.flattening_mean = flattening
-        self.set_flattening_variation(flattening_variation=flattening_variation, flattening_spread=flattening_spread, flattening_variation_n=flattening_variation_n)
+        self.flattening = flattening
 
         # Init chache
         self._geometry               = None
@@ -81,44 +138,62 @@ class ParticleMap(AbstractContinuousParticle):
         self._map3d                  = None
         self._map3d_orig             = None
         self._diameter               = None
+        self._flattening             = None
 
         if geometry == "custom":
-            if filename is not None and map3d is not None:
-                log_and_raise_error(logger, "Cannot initialize geometry because the keyword arguments for both \'filename\' and \'map3d\' are not None.")
+            if (map3d_filename is not None or map3d_dataset is not None) and map3d is not None:
+                log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword arguments \'map3d_filename\' or \'map3d_dataset\' and \'map3d\' are not None.")
                 sys.exit(1)
             elif filename is None and map3d is None:
-                log_and_raise_error(logger, "Cannot initialize geometry because the keyword arguments for both \'filename\' and \'map3d\' are None.")
+                log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword arguments for \'map3d_filename\', \'map3d_dataset\', and \'map3d\' are None.")
                 sys.exit(1)
             elif dx is None:
-                log_and_raise_error(logger, "Cannot initialize geometry because the keyword argument \'dx\' is None.")
+                log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword argument \'dx\' is None.")
                 sys.exit(1)                
             elif map3d is not None:
                 self.set_custom_geometry_by_array(map3d, dx)
             elif filename is not None:
-                self.set_custom_geometry_by_h5file(filename, dx)
-            
+                self.set_custom_geometry_by_h5file(map3d_filename, map3d_dataset, dx)
             
     def get_conf(self):
+        """
+        Get configuration in form of a dictionary. Another identically configured ParticleMap instance can be initialised by:
+
+        .. code-block:: python
+
+          conf = P0.get_conf()            # P0: already existing ParticleMap instance
+          P1 = condor.ParticleMap(**conf) # P1: new ParticleMap instance with the same configuration as P0  
+        """
         conf = {}
         conf.update(AbstractContinuousParticle.get_conf(self))
-        m,dx = self.get_map3d()
-        conf["map3d"] = m
-        conf["dx"] = dx
-        conf["flattening"] = self.flattening_mean
-        fvar = self._flattening_variation.get_conf()
-        conf["flattening_variation"] = fvar["mode"]
-        conf["flattening_spread"] = fvar["spread"]
-        conf["flattening_variation_n"] = fvar["n"]
+        conf["geometry"] = self.geometry
+        if self.geometry == "custom":
+            m,dx = self.get_original_map()
+            conf["map3d"] = m
+            conf["dx"]    = dx
+        conf["flattening"] = self.flattening
         return conf
 
     def get_next(self):
+        """
+        Iterate the parameters and return them as a dictionary
+        """
         O = AbstractContinuousParticle.get_next(self)
         O["particle_model"] = "map"
-        O["geometry"]   = self.geometry
-        O["flattening"] = self._get_next_flattening()
+        O["geometry"]       = self.geometry
+        O["flattening"]     = self.flattening if self.geometry == "spheroid" else None
         return O
 
     def set_custom_geometry_by_array(self, map3d, dx):
+        """
+        Set map from numpy array
+
+        Args:
+
+          :map3d: Numpy array with three equal dimensions of float values. If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
+
+          :dx: Grid spacing in unit meter
+        """
         s = numpy.array(map3d.shape)
         if not numpy.all(s==s[0]):
             log_and_raise_error(logger, "Condor only accepts maps with equal dimensions.")
@@ -128,43 +203,54 @@ class ParticleMap(AbstractContinuousParticle):
         self._map3d = map3d
         self._dx = dx
         
-    def set_custom_geometry_by_h5file(self, filename, dx):
+    def set_custom_geometry_by_h5file(self, map3d_filename, map3d_dataset, dx):
+        """
+        Load map from dataset in HDF5 file
+
+        Args:
+
+          :map3d_filename: Location of the HDF5 file that contains the map data
+
+          :map3d_dataset: Dataset location in the file. The dataset must have three equal dimensions of float values. If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
+          :dx: Grid spacing in unit meter
+        """
         import h5py
-        with h5py.File(filename,"r") as f:
-            if len(f.items()) == 1:
-                map3d = numpy.array(f.items()[0][1][:,:,:], dtype="float")
-            else:
-                map3d = numpy.array(f["data"][:,:,:], dtype="float")
+        with h5py.File(map3d_filename,"r") as f:
+            map3d = numpy.array(f[map3d_dataset][:,:,:], dtype="float")
         self.set_custom_geometry_by_array(map3d, dx)                
+
+    def get_current_map(self):
+        """
+        Return the current map
+        """
+        return self._map3d, self._dx
+
+    def get_original_map(self):
+        """
+        Return the original map
+
+        """
+        return self._map3d_orig, self._dx_orig
     
-    def set_flattening_variation(self, flattening_variation=None, flattening_spread=None, flattening_variation_n=None):
-        self._flattening_variation = Variation(flattening_variation,flattening_spread,flattening_variation_n,name="spheroid flattening")       
-
-    def _get_next_flattening(self):
-        f = self._flattening_variation.get(self.flattening_mean)
-        # Non-random 
-        if self._flattening_variation._mode in [None, "range"]:
-            if f <= 0:
-                log_and_raise_error(logger, "Spheroid flattening smaller-equals zero. Change your configuration.")
-            else:
-                return f
-        # Random 
-        else:
-            if f <= 0.:
-                log_warning(logger, "Spheroid flattening smaller-equals zero. Try again.")
-                return self._get_next_flattening()
-            else:
-                return f
-
-    def get_map3d(self, O = None, dx_required = None, dx_suggested = None):
-        if O is not None:
+    def _get_map3d(self, O = None, dx_required = None, dx_suggested = None): 
+       if O is not None:
             m,dx = self.get_new_map(O, dx_required, dx_suggested)
         else:
-            dx = self._dx
-            m = self._map3d
+            m,dx = self.get_current_map()
         return m, dx
             
     def get_new_map(self, O, dx_required, dx_suggested):
+        """
+        Return new map with given parameters
+
+        Args:
+
+          :O (dict): Parameter dictionary as returned from :meth:`condor.particle.particle_map.get_next`
+
+          :dx_required (float): Required resolution (grid spacing) of the map. An error is raised if the resolution of the map has too low resolution
+
+          :dx_suggested (float): Suggested resolution (grid spacing) of the map. If the map has a very high resolution it will be interpolated to a the suggested resolution value
+        """
         if O["geometry"] != "custom":
             # Decide whether we need to build a new map
             build_map = False
@@ -175,6 +261,9 @@ class ParticleMap(AbstractContinuousParticle):
             else:
                 if abs(self._diameter - O["diameter"]) > 1E-10:
                     build_map = True
+                if O["flattening"] is not None and self._flattening is not None:
+                    if abs(self._flattening - O["flattening"]) > 1E-10:
+                        build_map = True
             if self._dx > dx_required:
                 build_map = True
                 self._map3d = None
@@ -230,8 +319,9 @@ class ParticleMap(AbstractContinuousParticle):
             dx = O["diameter"] / self.diameter_mean * self._dx
             m = self._map3d
 
-        self._geometry = O["geometry"]
-        self._diameter = O["diameter"]
+        self._geometry   = O["geometry"]
+        self._diameter   = O["diameter"]
+        self._flattening = O["flattening"]
         return m,dx
             
     def _put_custom_map(self, map_add):
@@ -291,61 +381,3 @@ class ParticleMap(AbstractContinuousParticle):
         cubemap[temp] = 0.5-d
         self._put_custom_map(cubemap)        
 
-    def plot_map3d(self,mode='surface'):
-        try:
-            from enthought.mayavi import mlab
-        except:
-            from mayavi import mlab
-        if mode=='planes':
-            s = mlab.pipeline.scalar_field(abs(self._map3d))
-            plane_1 = mlab.pipeline.image_plane_widget(s,plane_orientation='x_axes',
-                                                       slice_index=self._map3d.shape[2]/2)
-            plane_2 = mlab.pipeline.image_plane_widget(s,plane_orientation='y_axes',
-                                                       slice_index=self._map3d.shape[1]/2)
-            mlab.show()
-        elif mode=='surface':
-            mlab.contour3d(abs(self._map3d))
-        else:
-            log_and_raise_error(logger, "No valid mode given.")
-            
-    def plot_fmap3d(self):
-        from enthought.mayavi import mlab
-        import spimage
-        M = spimage.sp_image_alloc(self._map3d.shape[0],self._map3d.shape[1],self._map3d.shape[2])
-        M.image[:,:,:] = self._map3d[:,:,:]
-        M.mask[:,:,:] = 1
-        fM = spimage.sp_image_fftw3(M)
-        fM.mask[:,:,:] = 1
-        fsM = spimage.sp_image_shift(fM)
-        self.fmap3d = abs(fsM.image).copy()
-        self.fmap3d[self.fmap3d!=0] = numpy.log10(self.fmap3d[self.fmap3d!=0])
-        
-        s = mlab.pipeline.scalar_field(self.fmap3d)
-        plane_1 = mlab.pipeline.image_plane_widget(s,plane_orientation='x_axes',
-                                                   slice_index=self.fmap3d.shape[2]/2)
-        plane_2 = mlab.pipeline.image_plane_widget(s,plane_orientation='y_axes',
-                                                   slice_index=self.fmap3d.shape[1]/2)
-        mlab.show()
-
-
-    def save_map3d(self,filename):
-        """
-        Function saves the current refractive index map to an hdf5 file:
-        ================================================================
-        
-        Arguments:
-        
-        - filename: Filename.
-
-        """
-        if filename[-3:] == '.h5':
-            import h5py
-            f = h5py.File(filename,'w')
-            map3d = f.create_dataset('data', self._map3d.shape, self._map3d.dtype)
-            map3d[:,:,:] = self._map3d[:,:,:]
-            f['voxel_dimensions_in_m'] = self._dx
-            f.close()
-        else:
-            log_and_raise_error(logger, "Invalid filename extension, has to be \'.h5\'.")
-
- 

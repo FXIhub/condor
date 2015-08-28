@@ -37,14 +37,64 @@ from condor.utils.variation import Variation
 
 
 class ParticleSpheroid(AbstractContinuousParticle):
+    """
+    Class for uniformly filled spheroid particle (no discrete individual atoms, continuum approximation)
+
+    :math:`a`: radius (*semi-diameter*) perpendicular to the rotation axis of the ellipsoid
+    :math:`c`: radius (*semi-diameter*) along the rotation axis of the ellipsoid
+    
+    Before applying rotations the rotation axis is parallel to the the *y*-axis
+
+    **Arguments:**
+
+      :diameter (float): Sphere diameter
+
+    **Keyword arguments:**
+    
+      :diameter_variation (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :diameter_spread (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :diameter_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
+
+      :flattening (float): (Mean) value of :math:`a/c` (default ``0.75``)
+
+      :flattening_variation (str): See :meth:`condor.particle.particle_spheroid.set_flattening_variation` (default ``None``)
+
+      :flattening_spread (float): See :meth:`condor.particle.particle_spheroid.set_flattening_variation` (default ``None``)
+    
+      :flattening_variation_n (int): See :meth:`condor.particle.particle_spheroid.set_flattening_variation` (default ``None``)
+
+      :rotation_values (array): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :rotation_formalism (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
+
+      :concentration (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+
+      :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+
+      :position_variation (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :position_spread (float): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :position_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
+
+      :material_type (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``\'water\'``)
+
+      :massdensity (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
+
+      :atomic_composition (dict): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
+    """
     def __init__(self,
                  diameter,
                  diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
-                 flattening = 1., flattening_variation = None, flattening_spread = None, flattening_variation_n = None,
+                 flattening = 0.75, flattening_variation = None, flattening_spread = None, flattening_variation_n = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
                  concentration = 1.,
                  position = None, position_variation = None, position_spread = None, position_variation_n = None,
-                 material_type = None, massdensity = None, atomic_composition = None):
+                 material_type = 'water', massdensity = None, atomic_composition = None):
 
         # Initialise base class
         AbstractContinuousParticle.__init__(self,
@@ -57,6 +107,14 @@ class ParticleSpheroid(AbstractContinuousParticle):
         self.set_flattening_variation(flattening_variation=flattening_variation, flattening_spread=flattening_spread, flattening_variation_n=flattening_variation_n)
 
     def get_conf(self):
+        """
+        Get configuration in form of a dictionary. Another identically configured ParticleMap instance can be initialised by:
+
+        .. code-block:: python
+
+          conf = P0.get_conf()                 # P0: already existing ParticleSpheroid instance
+          P1 = condor.ParticleSpheroid(**conf) # P1: new ParticleSpheroid instance with the same configuration as P0  
+        """
         conf = {}
         conf.update(AbstractContinuousParticle.get_conf(self))
         conf["flattening"] = self.flattening_mean
@@ -67,12 +125,38 @@ class ParticleSpheroid(AbstractContinuousParticle):
         return conf
         
     def get_next(self):
+        """
+        Iterate the parameters and return them as a dictionary
+        """
         O = AbstractContinuousParticle.get_next(self)
         O["particle_model"] = "spheroid"
         O["flattening"] = self._get_next_flattening()
         return O
         
-    def set_flattening_variation(self, flattening_variation=None, flattening_spread=None, flattening_variation_n=None):
+    def set_flattening_variation(self, flattening_variation, flattening_spread, flattening_variation_n):
+        """
+        Set the variation scheme of the flattening parameter
+        
+        Args:
+        
+          :flattening_variation (str): Variation of the particle flattening
+
+            *Choose one of the following options:*
+              
+              - ``None`` - No variation
+
+              - ``\'normal\'`` - Normal (*Gaussian*) variation
+
+              - ``\'uniform\'`` - Uniformly distributed flattenings
+
+              - ``\'range\'`` - Equidistant sequence of particle-flattening samples within the spread limits. ``flattening_variation_n`` defines the number of samples within the range
+
+          :flattening_spread (float): Statistical spread of the parameter
+
+          :flattening_variation_n (int): Number of particle-flattening samples within the specified range
+
+            .. note:: The argument ``flattening_variation_n`` takes effect only if ``flattening_variation=\'range\'``
+        """
         self._flattening_variation = Variation(flattening_variation, flattening_spread, flattening_variation_n, name="spheroid flattening")       
 
     def _get_next_flattening(self):

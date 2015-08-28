@@ -24,7 +24,7 @@
 
 class PixelMask:
     """
-    CXI bitmasks follow the formalism described in Maia (2012) [#Maia2012]_ (most recent version under [#cxidb]_) and encode the status of detector pixels. In *Condor* these bitmasks are represented by arrays of unsigned 16 bit integer values. 
+    CXI bitmasks follow the formalism described in Maia (2012) [#Maia2012]_ (see also `www.cxidb.org <http://www.cxidb.org>`_) and encode the status of detector pixels. In *Condor* these bitmasks are represented by arrays of unsigned 16 bit integer values. 
 
     The status of a pixel is a combination of pixel properties represented by the bits of the bitmask value. A pixel with no bit set (all bits are 0) represents an \"perfect\" pixel. No property is set.
     
@@ -56,7 +56,6 @@ class PixelMask:
     ========================================  ============  =============================
 
     .. [#Maia2012] Filipe R. N. C. Maia, The Coherent X-ray Imaging Data Bank, Nature Methods 9, 854-855 (2012) `doi:10.1038/nmeth.2110 <http://dx.doi.org/doi:10.1038/nmeth.2110>`_.
-    .. [#cxidb] CXI-DB webpage publishes newer versions of the file format conventions: `www.cxidb.org <http://www.cxidb.org>`_.
 
 
     """

@@ -1,4 +1,4 @@
-Running condor simulations
+Running Condor simulations
 ==========================
 
 There are generally two ways of configuring and running simulations with Condor:
