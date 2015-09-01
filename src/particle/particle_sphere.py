@@ -26,7 +26,9 @@ from particle_abstract import AbstractContinuousParticle
 
 class ParticleSphere(AbstractContinuousParticle):
     """
-    Class for uniformly filled spherical particle (no discrete individual atoms, continuum approximation)
+    Class for a particle model
+
+    *Model:* Uniformly filled spherical particle (continuum approximation)
 
     **Arguments:**
 

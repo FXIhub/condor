@@ -38,7 +38,9 @@ from condor.utils.variation import Variation
 
 class ParticleSpheroid(AbstractContinuousParticle):
     """
-    Class for uniformly filled spheroid particle (no discrete individual atoms, continuum approximation)
+    Class for a particle model
+
+    *Model:* Uniformly filled spheroid particle (continuum approximation)
 
     :math:`a`: radius (*semi-diameter*) perpendicular to the rotation axis of the ellipsoid
     :math:`c`: radius (*semi-diameter*) along the rotation axis of the ellipsoid

@@ -25,13 +25,55 @@
 import numpy, math
  
 def crystallographic_resolution(wavelength, pixel_center_distance, detector_distance):
-    """
-    Returns crystallographic resolution (full-period resolution at the closest edge)
+    r"""
+    Returns crystallographic resolution :math:`R_f` (full-period resolution) in unit meter
+
+    .. math::
+
+      R_f = \frac{ \lambda }{ \sin\left( \arctan\left( \frac{X}{D} \right) \right) }
+
+    Args:
+
+      :wavelength: Photon wavelength :math:`\lambda` in unit meter
+
+      :pixel_center_distance: Distance :math:`X` between beam center and pixel measured orthogonally with respect to the beam axis. The unit is meter
+    
+      :detector_distance: Distance :math:`D` between interaction point and detector plane in unit meter
     """
     return wavelength / numpy.sin( numpy.arctan( pixel_center_distance / detector_distance ) )
+
+def resolution_element(wavelength, pixel_center_distance, detector_distance):
+    r"""
+    Returns length :math:`R_h` of one resolution element (half-period resolution) in unit meter
+
+    .. math::
+
+      R_h = \frac{ \lambda }{ 2 \, \sin\left( \arctan \left( \frac{X}{D} \right) \right) }
+
+    Args:
+
+      :wavelength: Photon wavelength :math:`\lambda` in unit meter
+
+      :pixel_center_distance: Distance :math:`X` between beam center and pixel measured orthogonally with respect to the beam axis. The unit is meter
     
-def nyquist_pixel_size(wavelength, detector_distance, particle_size):
+      :detector_distance: Distance :math:`D` between interaction point and detector plane in unit meter
     """
-    Returns size of one Nyquist pixel on the detector in meter.
+    return (0.5*crystallographic_resolution(wavelength, pixel_center_distance, detector_distance))
+
+def nyquist_pixel_size(wavelength, detector_distance, particle_size):
+    r"""
+    Returns size :math:`p_N` of one Nyquist pixel on the detector in unit meter
+
+    .. math::
+    
+      p_N = \frac{ D \lambda }{ d }
+
+    Args:
+
+      :wavelength: Photon wavelength :math:`\lambda` in unit meter
+    
+      :detector_distance: Distance :math:`D` between interaction point and detector plane in unit meter
+
+      :particle_size: Size or characteristic dimension :math:`d` of the particle in unit meter
     """
     return detector_distance * wavelength / particle_size

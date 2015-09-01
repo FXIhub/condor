@@ -1,3 +1,7 @@
+"""
+This module is an implementation of a variety of rotation tools in 3D space
+"""
+
 import sys, numpy, types, pickle, time, math
  
 import logging
@@ -6,45 +10,39 @@ logger = logging.getLogger(__name__)
 from log import log_and_raise_error,log_warning,log_info,log_debug
 import linalg
 
-#    COORDINATE SYSTEM:
-#     - Right handed cartesian system
-#     - Array representation of vectors:
-#        vector = [x, y, z]
-    
-#    QUATERNIONS:
-#     - Quaternions for rotations are represented by vectors of length 4:
-#       quaternion = [w, x, y, z] = [cos(theta/2), u_x sin(theta/2), u_y sin(theta/2), u_z sin(theta/2)]
-#       with theta being the rotation angle with respect to the rotation axis defined by the unit vector [u_x, u_y, u_z].
-#     - The direction of rotation follows the right hand rule.
-
-
 class Rotation:
-    """
-    Class for a rotation in 3D space.
+    r"""
+    Class for a rotation in 3D space
+
+    **Arguments:**
+
+      :values (array): Array of values that define the rotation. For random rotations set values=None. (default ``None``)
+
+      :formalism: Rotation representation of the given values. (default ``None``)
+
+        *Rotation formalism can be one of the following:*
+    
+        ======================== =========================================================================================================================== ===============================================================================
+        ``formalism``            Variables                                                                                                                   ``values``
+        ======================== =========================================================================================================================== ===============================================================================
+        ``'quaternion'``         :math:`q = w + ix + jy + kz`                                                                                                :math:`[w,x,y,z]`
+        ``'rotation_matrix'``    :math:`R = \begin{pmatrix} R_{11} & R_{12} & R_{13} \\ R_{21} & R_{22} & R_{23} \\ R_{31} & R_{32} & R_{33}  \end{pmatrix}` :math:`[[R_{11},R_{12},R_{13}],[R_{21},R_{22},R_{23}],[R_{31},R_{32},R_{33}]]`
+        ``'euler_angles_zxz'``   :math:`e_1^{(z)}`, :math:`e_2^{(x)}`, :math:`e_3^{(z)}`                                                                     :math:`[e_1^{(y)},e_2^{(z)},e_3^{(y)}]`
+        ``'euler_angles_xyx'``   :math:`e_1^{(x)}`, :math:`e_2^{(y)}`, :math:`e_3^{(x)}`                                                                     :math:`[e_1^{(x)},e_2^{(y)},e_3^{(x)}]`
+        ``'euler_angles_xyz'``   :math:`e_1^{(x)}`, :math:`e_2^{(y)}`, :math:`e_3^{(z)}`                                                                     :math:`[e_1^{(x)},e_2^{(y)},e_3^{(z)}]`
+        ``'euler_angles_yzx'``   :math:`e_1^{(y)}`, :math:`e_2^{(z)}`, :math:`e_3^{(x)}`                                                                     :math:`[e_1^{(y)},e_2^{(z)},e_3^{(x)}]`
+        ``'euler_angles_zxy'``   :math:`e_1^{(z)}`, :math:`e_2^{(x)}`, :math:`e_3^{(y)}`                                                                     :math:`[e_1^{(z)},e_2^{(x)},e_3^{(y)}]`
+        ``'euler_angles_zyx'``   :math:`e_1^{(z)}`, :math:`e_2^{(y)}`, :math:`e_3^{(x)}`                                                                     :math:`[e_1^{(z)},e_2^{(y)},e_3^{(x)}]`
+        ``'euler_angles_yxz'``   :math:`e_1^{(y)}`, :math:`e_2^{(x)}`, :math:`e_3^{(z)}`                                                                     :math:`[e_1^{(y)},e_2^{(x)},e_3^{(z)}]`
+        ``'euler_angles_xzy'``   :math:`e_1^{(x)}`, :math:`e_2^{(z)}`, :math:`e_3^{(y)}`                                                                     :math:`[e_1^{(x)},e_2^{(z)},e_3^{(y)}]`
+        ``'random'``             *fully random rotation*                                                                                                     ``None``
+        ``'random_x'``           *random rotation around* :math:`x` *axis*                                                                                   ``None``
+        ``'random_y'``           *random rotation around* :math:`y` *axis*                                                                                   ``None``
+        ``'random_z'``           *random rotation around* :math:`z` *axis*                                                                                   ``None``
+        ======================== =========================================================================================================================== ===============================================================================
     """
     
     def __init__(self, values=None, formalism=None):
-        """
-        Args:
-           :values: Array of values that define the rotation. For random rotations set values=None. (default = None)
-           :formalism: Rotation representation of the given values. (default = None)
-             Rotation formalism can be one of the following
-             - \'quaternion\'      (values shape=(4,))
-             - \'rotation_matrix\' (values shape=(3,3))
-             - \'euler_angles_zxz\' (values shape=(3,))
-             - \'euler_angles_yzy\' (values shape=(3,))
-             - \'euler_angles_xyx\' (values shape=(3,))
-             - \'euler_angles_xyz\' (values shape=(3,))
-             - \'euler_angles_yzx\' (values shape=(3,))
-             - \'euler_angles_zxy\' (values shape=(3,))
-             - \'euler_angles_zyx\' (values shape=(3,))
-             - \'euler_angles_yxz\' (values shape=(3,))
-             - \'euler_angles_xzy\' (values shape=(3,))
-             - \'random\'
-             - \'random_x\' (rotation with respect to x-axis)
-             - \'random_y\' (rotation with respect to y-axis)
-             - \'random_z\' (rotation with respect to z-axis)
-        """
         self.rotation_matrix = None
         if values is None and formalism is None:
             # No rotation (rotation matrix = identity matrix)
@@ -65,11 +63,15 @@ class Rotation:
             return
 
     def set_with_euler_angles(self, euler_angles, rotation_axes="zxz"):
-        """
+        r"""
         Set rotation with an array of three euler angles
+
         Args:
+
            :euler_angles: Array of the three euler angles representing consecutive rotations
+
         Kwargs:
+
            :rotation_axes(str): Rotation axes of the three consecutive rotations (default = \'zxz\') 
         """
         # Check input
@@ -80,9 +82,11 @@ class Rotation:
         self.rotation_matrix = R_euler(euler_angles, rotation_axes)
         
     def set_with_rotation_matrix(self, rotation_matrix):
-        """
+        r"""
         Set rotation with a rotation matrix
+
         Args:
+
            :rotation_matrix: 3x3 array representing the rotation matrix
         """
         # Check input
@@ -98,12 +102,17 @@ class Rotation:
         self.rotation_matrix = rotation_matrix.copy()
 
     def set_with_quaternion(self, quaternion):
-        """
+        r"""
         Set rotation with a quaternion
+
         Args:
-           :quaternion: Length-4 array representing the quaternion w+ix+jy+kz: 
-                        [w, x, y, z] = [cos(theta/2), u_x sin(theta/2), u_y sin(theta/2), u_z sin(theta/2)] 
-                        with theta being the rotation angle with respect to the rotation axis defined by the unit vector [u_x, u_y, u_z]. 
+
+           :quaternion: Length-4 array representing the quaternion :math:`w+ix+jy+kz`: 
+
+                        [:math:`w`, :math:`x`, :math:`y`, :math:`z`] = [:math:`\cos(\theta/2)`, :math:`u_x \sin(\theta/2)`, :math:`u_y \sin(\theta/2)`, :math:`u_z \sin(\theta/2)`] 
+
+                        with :math:`\theta` being the rotation angle with respect to the rotation axis defined by the unit vector [:math:`u_x`, :math:`u_y`, :math:`u_z`]. 
+
                         The direction of rotation follows the right hand rule
         """
         # Check input
@@ -113,59 +122,63 @@ class Rotation:
         # Set rotation matrix
         self.rotation_matrix = rotmx_from_quat(quaternion)
         
-    def _next_random(self, formalism):
+    def _set_as_random(self, formalism):
         if formalism == "random":
-            self.next_random()
+            self.set_as_random()
         elif formalism == "random_x":
-            self.next_random_x()
+            self.set_as_random_x()
         elif formalism == "random_y":
-            self.next_random_y()
+            self.set_as_random_y()
         elif formalism == "random_z":
-            self.next_random_z()
+            self.set_as_random_z()
         
-    def next_random(self):
+    def set_as_random(self):
         """
         Set new random rotation (fully random).
         """
         q = rand_quat()
         self.rotation_matrix = rotmx_from_quat(q)
 
-    def next_random_x(self):
+    def set_as_random_x(self):
         """
-        Set new random rotation around the x-axis.
+        Set new random rotation around the :math:`x`-axis.
         """
         ang = numpy.random.rand()*2*numpy.pi
         self.rotation_matrix = R_x(ang)
 
-    def next_random_y(self):
+    def set_as_random_y(self):
         """
-        Set new random rotation around the y-axis.
+        Set new random rotation around the :math:`y`-axis.
         """
         ang = numpy.random.rand()*2*numpy.pi
         self.rotation_matrix = R_y(ang)
 
-    def next_random_z(self):
+    def set_as_random_z(self):
         """
-        Set new random rotation around the z-axis.
+        Set new random rotation around the :math:`z`-axis.
         """
         ang = numpy.random.rand()*2*numpy.pi
         self.rotation_matrix = R_z(ang)
 
     def invert(self):
         """
-        Invert rotation.
+        Invert rotation
         """
         q = self.get_as_quaternion()
         q[1:] = -q[1:]
         self.set_with_quaternion(q)
         
     def is_similar(self, rotation, tol=0.00001):
-        """
-        Compare rotation with another instance of the Rotation class. If quaternion distance is smaller than tol return True
+        r"""
+        Compare rotation with another instance of the Rotation class. If quaternion distance is smaller than tol return ``True``
+
         Args:
-           :rotation: Instance of the Rotation class
+
+           :rotation (:class:`condor.utils.rotation.Rotation`): Instance of the Rotation class
+
         Kwargs:
-           :tol(float): Tolerance for similarity. This is the maximum distance of the two quaternions in 4D space that will be interpreted for similar rotations. (default = 0.00001)
+
+           :tol (float): Tolerance for similarity. This is the maximum distance of the two quaternions in 4D space that will be interpreted for similar rotations. (default 0.00001)
         """
         q0 = self.get_as_quaternion(uniquify=True)
         q1 = rotation.get_as_quaternion(uniquify=True)
@@ -173,12 +186,16 @@ class Rotation:
         return (err < tol)
             
     def rotate_vector(self, vector, order="xyz"):
-        """
+        r"""
         Return the rotated copy of a given vector
+
         Args:
-           :vector: 3D vector
+
+           :vector (array): 3D vector
+
         Kwargs:
-           :order(str): Order of geometrical axes in array representation of the given vector (default = \'xyz\')
+
+           :order (str): Order of geometrical axes in array representation of the given vector (default ``'xyz'``)
         """
         # Check input
         if vector.size != 3 or vector.ndim != 1:
@@ -193,12 +210,16 @@ class Rotation:
             log_and_raise_error(logger, "Corrdinates in order=%s is invalid." % order)
 
     def rotate_vectors(self, vectors, order="xyz"):
-        """
+        r"""
         Return the rotated copy of a given array of vectors
+
         Args:
-           :vectors: Array of 3D vectors with shape=(N,3)
+
+           :vectors (array): Array of 3D vectors with shape (:math:`N`, 3) with :math:`N` denoting the number of 3D vectors
+
         Kwargs:
-           :order(str): Order of geometrical axes in array representation of the given vector (default = \'xyz\')
+
+           :order (str): Order of geometrical axes in array representation of the given vector (default ``'xyz'``)
         """        
         # Check input
         if vectors.ndim != 2 and vectors.ndim != 1:
@@ -222,23 +243,24 @@ class Rotation:
             log_and_raise_error(logger, "Corrdinates in order=%s is invalid." % order)
 
     def get_as_euler_angles(self, rotation_axes="zxz"):
-        """
+        r"""
         Get rotation in Euler angle represantation (length-3 array).
+
         Kwargs:
-           :rotation_axes(str): Rotation axes of the three rotations (default = \'zxz\') 
+
+           :rotation_axes (str): Rotation axes of the three rotations (default ``'zxz'``) 
         """
         q = self.get_as_quaternion()
         return euler_from_quat(q, rotation_axes=rotation_axes)
     
     def get_as_rotation_matrix(self):
-        """
-        Get rotation in rotation matrix representation (3x3 array). 
-        (Matrix in array representation: The rotation of a vector [x,y,z] can be obtained by a numpy dot-product of the matrix with the vector.)
+        r"""
+        Get rotation in rotation matrix representation (3x3 array)
         """
         return self.rotation_matrix.copy()
 
     def get_as_quaternion(self, uniquify=False):
-        """
+        r"""
         Get rotation in quaternion representation (length-4 array).
         Kwargs:
            :uniquify(bool): Make quaternion unique. For more details check the documentation of the function \'uniquify_quat(q)\' (default = False)
@@ -247,35 +269,20 @@ class Rotation:
         if uniquify:
             q = uniquify_quat(q)
         return q
-    
 
 class Rotations:
-    """
-    Class for rotations in 3D space.
-    """
+    r"""
+    Class for a list of rotations in 3D space
+
+    Args:
     
+      :values (array): Arrays of values that define the rotation. For random rotations set ``values = None`` (default ``None``)
+
+      :formalism (str): See :class:`condor.utils.rotation.Rotation`. For no rotation set ``formalism = None`` (default ``None``)
+    """    
     def __init__(self, values=None, formalism=None):
         """
-        Args:
-           :values: Array of values that define the rotation. For random rotations set values=None. (default = None)
-           :formalism: Rotation representation of the given values. (default = None)
-             Rotation formalism can be one of the following
-             - \'quaternion\'      (values shape=(N,4,))
-             - \'rotation_matrix\' (values shape=(N,3,3))
-             - \'euler_angles_zxz\' (values shape=(N,3,))
-             - \'euler_angles_yzy\' (values shape=(N,3,))
-             - \'euler_angles_xyx\' (values shape=(N,3,))
-             - \'euler_angles_xyz\' (values shape=(N,3,))
-             - \'euler_angles_yzx\' (values shape=(N,3,))
-             - \'euler_angles_zxy\' (values shape=(N,3,))
-             - \'euler_angles_zyx\' (values shape=(N,3,))
-             - \'euler_angles_yxz\' (values shape=(N,3,))
-             - \'euler_angles_xzy\' (values shape=(N,3,))
-             - \'random\'   (fully random rotations)
-             - \'random_x\' (random rotations with respect to x-axis)
-             - \'random_y\' (random rotations with respect to y-axis)
-             - \'random_z\' (random rotations with respect to z-axis)
-        """
+       """
         if values is None and formalism is None:
             single = True
         elif formalism.startswith("euler_angles_") and len(formalism) == len("euler_angles_xyz"):
@@ -313,7 +320,7 @@ class Rotations:
                 
     def get_next(self):
         """
-        Iterate to and return next rotation, which is an instance of the Rotation class
+        Iterate and return next rotation
         """
         if self._formalism in ["random","random_x","random_y","random_z"]:
             self._rotations[0]._next_random(self._formalism)
@@ -321,15 +328,15 @@ class Rotations:
         self._i += 1
         return rotation
     
-    def get_current(self):
+    def get_current_rotation(self):
         """
-        Return current rotation, which is an instance of the Rotation class
+        Return current rotation
         """
         return self._rotations[self._i % len(self._rotations)]
 
     def get_all_values(self):
         """
-        Return all values that define the rotations.
+        Return all values that define the rotations
         """
         return self._values
 
@@ -348,12 +355,16 @@ R_z = lambda t: numpy.array([[numpy.cos(t), -numpy.sin(t), 0.],
                              [0., 0., 1.]])
 
 def R_euler(euler_angles, rotation_axes="zxz"):
-    """
-    Otain rotation matrix from three euler angles and the rotation axes
+    r"""
+    Obtain rotation matrix from three euler angles and the rotation axes
+
     Args:
-      :euler_angles: Length-3 array of euler angles
+
+      :euler_angles (array): Length-3 array of euler angles
+
     Kwargs:
-      :rotation_axes(str): Rotation axes of the three consecutive Euler rotations (default = \'zxz\') 
+
+      :rotation_axes (str): Rotation axes of the three consecutive Euler rotations (default ``'zxz'``) 
     """
     R = numpy.identity(3)
     for ang,ax in zip(euler_angles, rotation_axes):
@@ -370,9 +381,10 @@ def R_euler(euler_angles, rotation_axes="zxz"):
 
 # RANDOM ROTATION
 def rand_quat():
-    """
-    Obtain a uniform random rotation in quaternion representation
-    Reference: K. Shoemake. Uniform random rotations. In D. Kirk, editor, Graphics Gems III, pages 124-132. Academic, New York, 1992. (pages 129f)
+    r"""
+    Obtain a uniform random rotation in quaternion representation [Shoemake1992p129f]_
+    
+    .. [Shoemake1992p129f] K. Shoemake. Uniform random rotations. In D. Kirk, editor, Graphics Gems III, pages 124-132. Academic, New York, 1992. (pages 129f)
     """
     x0,x1,x2 = numpy.random.random(3)
     theta1 = 2.*numpy.pi*x1
@@ -388,15 +400,16 @@ def rand_quat():
 
 # CONVERSIONS FROM DIFFERENT REPRESENTATIONS OF ROTATION
 def rotmx_from_quat(q):
-    """
-    Create a rotation matrix from given quaternion
+    r"""
+    Create a rotation matrix from given quaternion [Shoemake1992p128]_
+
     Args:
-       :quaternion: Length-4 array representing the quaternion w+ix+jy+kz: 
-                    [w, x, y, z] = [cos(theta/2), u_x sin(theta/2), u_y sin(theta/2), u_z sin(theta/2)] 
-                    with theta being the rotation angle with respect to the rotation axis defined by the unit vector [u_x, u_y, u_z]. 
-                    The direction of rotation follows the right hand rule
-    Reference: K. Shoemake. Uniform random rotations. In D. Kirk, editor, Graphics Gems III, pages 124-132. Academic, New York, 1992. (page 128)
-    
+
+       :quaternion (array): :math:`q = w + ix + jy + kz` (``values``: :math:`[w,x,y,z]`)
+
+    The direction of rotation follows the right hand rule
+
+    .. [Shoemake1992p128] K. Shoemake. Uniform random rotations. In D. Kirk, editor, Graphics Gems III, pages 124-132. Academic, New York, 1992. (pages 128)
     """
     w,x,y,z = q
     R = numpy.array([[1.-2.*(y**2+z**2),
@@ -416,16 +429,18 @@ quat = lambda theta,ux,uy,uz: numpy.array([numpy.cos(theta/2.),
                                            numpy.sin(theta/2.)*uy,
                                            numpy.sin(theta/2.)*uz])
 # Quaternions for roations with respect to the x-, y- or z-axis
-quatx = lambda theta: quat(theta,1.,0.,0.)
-quaty = lambda theta: quat(theta,0.,1.,0.)
-quatz = lambda theta: quat(theta,0.,0.,1.)
+quat_x = lambda theta: quat(theta,1.,0.,0.)
+quat_y = lambda theta: quat(theta,0.,1.,0.)
+quat_z = lambda theta: quat(theta,0.,0.,1.)
 
 # Normalisation of quaternion
 def norm_quat(q, tolerance=0.00001):
-    """
+    r"""
     Return a copy of the normalised quaternion (adjust length to 1 if deviation larger than given tolerance).
+
     Args:
-       :tolerance(float): Maximum deviation of length before rescaling (default = 0.00001)
+
+       :tolerance(float): Maximum deviation of length before rescaling (default ``0.00001``)
     """
     # Adjust length
     l = linalg.length(q)
@@ -436,11 +451,14 @@ def norm_quat(q, tolerance=0.00001):
     return q_norm
 
 def uniquify_quat(q):
-    """
-    Return the quaternion in a unique representation of rotations by avoiding the ambiguity that q and -q determine the same rotation.
+    r"""
+    Return the quaternion in a unique representation of rotations by avoiding the ambiguity that :math:`q` and :math:`-q` determine the same rotation.
+
     The convention is that the first non-zero coordinate value of the quaternion array has to be positive.
+
     Args:
-       :q: Length-4 array [w, x, y, z] representing the qauternion w+jx+jy+kz
+      
+      :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] representing the qauternion :math:`q = w + ix + jy + kz`
     """
     if q[0] < 0:
         return -q
@@ -461,17 +479,17 @@ def _test_rotmx_from_quat(N=1000):
         theta = numpy.random.rand()*2*numpy.pi
         #print "R_x"
         R_x0 = R_x(theta)
-        R_x1 = rotmx_from_quat(quatx(theta))
+        R_x1 = rotmx_from_quat(quat_x(theta))
         errx = ((R_x0-R_x1)**2).sum()
         #print "Error = %e" % errx
         #print "R_y"
         R_y0 = R_y(theta)
-        R_y1 = rotmx_from_quat(quaty(theta))
+        R_y1 = rotmx_from_quat(quat_y(theta))
         erry = ((R_y0-R_y1)**2).sum()
         #print "Error = %e" % erry
         #print "R_z"
         R_z0 = R_z(theta)
-        R_z1 = rotmx_from_quat(quatz(theta))
+        R_z1 = rotmx_from_quat(quat_z(theta))
         errz = ((R_z0-R_z1)**2).sum()
         err[i] = errx+erry+errz
     if err.max() < 0.00001:
@@ -482,11 +500,14 @@ def _test_rotmx_from_quat(N=1000):
         return True
 
 def quat_mult(q1, q2):
-    """
+    r"""
     Return the product of two quaternions
+
     Args:
-       :q1: Length-4 array [w1,x1,y1,z1] that represents quaternion 1
-       :q2: Length-4 array [w2,x2,y2,z2] that represents quaternion 2
+
+       :q1 (array): Length-4 array [:math:`w_1`, :math:`x_1`, :math:`y_1`, :math:`z_1`] that represents the first quaternion
+
+       :q2 (array): Length-4 array [:math:`w_2`, :math:`x_2`, :math:`y_2`, :math:`z_2`] that represents the second quaternion
     """
     w1, x1, y1, z1 = q1
     w2, x2, y2, z2 = q2
@@ -496,32 +517,46 @@ def quat_mult(q1, q2):
     z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
     return numpy.array([w, x, y, z])
 
-def quat_vec_mult(q1, v1):
-    """
+def quat_vec_mult(q, v):
+    r"""
     Return the product of a quaternion and a vector
+
     Args:
-       :q1: Length-4 array [w1,x1,y1,z1] that represents the quaternion
-       :v1: Length-3 array [vx1,vy1,vz1] that represents the vector
+
+       :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] that represents the quaternion
+
+       :v (array): Length-3 array [:math:`v_x`, :math:`v_y`, :math:`v_z`] that represents the vector
     """    
-    q2 = numpy.array([0.,v1[0],v1[1],v1[2]])
-    return quat_mult(quat_mult(q1, q2), quat_conj(q1))[1:]
+    q2 = numpy.array([0.,v[0],v[1],v[2]])
+    return quat_mult(quat_mult(q, q2), quat_conj(q))[1:]
 
-def quat_conj(quat):
-    """ 
+def quat_conj(q):
+    r""" 
     Return the conjugate quaternion as a length-4 array [w,-ix,-jy,-kz]
-    Args:
-       :quat: Length-4 array [w,x,y,z] that represents the quaternion
-    """
-    iquat = quat.copy()
-    iquat[1:] = -iquat[1:]
-    return iquat
 
-def rotate_quat(v,q):
+    Args:
+
+       :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] that represents the quaternion
+    """
+    iq = q.copy()
+    iq[1:] = -iq[1:]
+    return iq
+
+def rotate_quat(v, q):
+    r"""
+    Return rotated version of a given vector by a given quaternion
+
+    Args:
+
+       :v (array): Length-3 array [:math:`v_x`, :math:`v_y`, :math:`v_z`] that represents the vector      
+
+       :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] that represents the quaternion
+    """
     return quat_vec_mult(q, v)
 
 # Quaternion from rotation matrix
 def quat_from_rotmx(R):
-    """
+    r"""
     Obtain the quaternion from a given rotation matrix
     Args:
        :R: 3x3 array that represent the rotation matrix
@@ -554,7 +589,7 @@ def _test_quat_from_rotmx(N=1000):
 
 # Euler angles from rotation matrix
 def euler_from_quat(q, rotation_axes="zxz"):
-    """
+    r"""
     Return euler angles from quaternion
     Args:
        :q: Length-4 array [w,x,y,z] that represents the quaternion
@@ -614,7 +649,7 @@ def euler_from_quat(q, rotation_axes="zxz"):
     return numpy.array([e0,e1,e2])
 
 def norm_euler_repax(euler):
-    """
+    r"""
     Normalising Euler angles for roations with a repeated axis (zxz, zyz, yzy, yxy, xzx, xyx) such that a set uniquely defines a rotation.
     There are the following ambiguities:
     1) (euler[0],euler[1],euler[2]) <=> (euler[0]+n*2*pi,euler[1]+n*2*pi,euler[2]+n*2*pi) , n: any integer
@@ -781,3 +816,4 @@ def _all_tests():
         print "\t=> ERROR: At least one rotation test failed!"
     else:
         print "\t=> All rotation tests passed successfully"
+

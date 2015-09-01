@@ -3,7 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 
-PyDoc_STRVAR(icosahedron__doc__, "icosahedron(array_side, radius, rotation)\n\nGenerate an icosahedron. Radius is given in pixels and is defined as the distance to the corners. Rotation should be tuple of three euler angles");
+PyDoc_STRVAR(icosahedron__doc__, "icosahedron(array_side, radius, rotation)\n\nGenerate an icosahedron. Radius is given in pixels and is defined as the distance to the corners. Rotation should be tuple of quaternions (w,x,y,z)");
 static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   int image_side = 0.;
@@ -37,63 +37,36 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
     
     long length = PySequence_Size(rotation_sequence);
     if (length != 3 && length != 4) {
-      PyErr_SetString(PyExc_ValueError, "Rotation must be of length 3 (euler angles) or 4 (quaternion)");
+      PyErr_SetString(PyExc_ValueError, "Rotation must be of length 4 (quaternion)");
       return NULL;
     }
 
-    if (length == 3) {
-      PyObject *seq_1 = PySequence_Fast_GET_ITEM(rotation_sequence, 0);
-      PyObject *seq_2 = PySequence_Fast_GET_ITEM(rotation_sequence, 1);
-      PyObject *seq_3 = PySequence_Fast_GET_ITEM(rotation_sequence, 2);
-      const double euler_1 = PyFloat_AsDouble(seq_1);
-      const double euler_2 = PyFloat_AsDouble(seq_2);
-      const double euler_3 = PyFloat_AsDouble(seq_3);
-      if (PyErr_Occurred()) {
-	PyErr_SetString(PyExc_ValueError, "Rotation must be sequence of 3 floats (euler angles) or 4 floats (quaternions).");
-	return NULL;
-      }
+    PyObject *seq_1 = PySequence_Fast_GET_ITEM(rotation_sequence, 0);
+    PyObject *seq_2 = PySequence_Fast_GET_ITEM(rotation_sequence, 1);
+    PyObject *seq_3 = PySequence_Fast_GET_ITEM(rotation_sequence, 2);
+    PyObject *seq_4 = PySequence_Fast_GET_ITEM(rotation_sequence, 3);
+    double quat_1 = PyFloat_AsDouble(seq_1);
+    double quat_2 = PyFloat_AsDouble(seq_2);
+    double quat_3 = PyFloat_AsDouble(seq_3);
+    double quat_4 = PyFloat_AsDouble(seq_4);
+      
+    double quaternion_norm = sqrt(pow(quat_1, 2) + pow(quat_2, 2) + pow(quat_3, 2) + pow(quat_4, 2));
+    quat_1 /= quaternion_norm;
+    quat_2 /= quaternion_norm;
+    quat_3 /= quaternion_norm;
+    quat_4 /= quaternion_norm;
     
-      rotm_11 = cos(euler_2)*cos(euler_3);
-      rotm_12 = -cos(euler_1)*sin(euler_3)+sin(euler_1)*sin(euler_2)*cos(euler_3);
-      rotm_13 = sin(euler_1)*sin(euler_3)+cos(euler_1)*sin(euler_2)*cos(euler_3);
-      rotm_21 = cos(euler_2)*sin(euler_3);
-      rotm_22 = cos(euler_1)*cos(euler_3)+sin(euler_1)*sin(euler_2)*sin(euler_3);
-      rotm_23 = -sin(euler_1)*cos(euler_3)+cos(euler_1)*sin(euler_2)*sin(euler_3);
-      rotm_31 = -sin(euler_2);
-      rotm_32 = sin(euler_1)*cos(euler_2);
-      rotm_33 = cos(euler_1)*cos(euler_2);
-    } else {
-      PyObject *seq_1 = PySequence_Fast_GET_ITEM(rotation_sequence, 0);
-      PyObject *seq_2 = PySequence_Fast_GET_ITEM(rotation_sequence, 1);
-      PyObject *seq_3 = PySequence_Fast_GET_ITEM(rotation_sequence, 2);
-      PyObject *seq_4 = PySequence_Fast_GET_ITEM(rotation_sequence, 2);
-      double quat_1 = PyFloat_AsDouble(seq_1);
-      double quat_2 = PyFloat_AsDouble(seq_2);
-      double quat_3 = PyFloat_AsDouble(seq_3);
-      double quat_4 = PyFloat_AsDouble(seq_4);
-      if (PyErr_Occurred()) {
-	PyErr_SetString(PyExc_ValueError, "Rotation must be sequence of 3 floats (euler angles) or 4 floats (quaternions).");
-	return NULL;
-      }
+    rotm_11 = quat_1*quat_1 + quat_2*quat_2 - quat_3*quat_3 - quat_4*quat_4;
+    rotm_12 = 2.*quat_2*quat_3 - 2.*quat_1*quat_4;
+    rotm_13 = 2.*quat_2*quat_4 + 2.*quat_1*quat_3;
       
-      double quaternion_norm = sqrt(pow(quat_1, 2) + pow(quat_2, 2) + pow(quat_3, 2) + pow(quat_4, 2));
-      quat_1 /= quaternion_norm;
-      quat_2 /= quaternion_norm;
-      quat_3 /= quaternion_norm;
-      quat_4 /= quaternion_norm;
-      
-      rotm_11 = quat_1*quat_1 + quat_2*quat_2 - quat_3*quat_3 - quat_4*quat_4;
-      rotm_12 = 2.*quat_2*quat_3 - 2.*quat_1*quat_4;
-      rotm_13 = 2.*quat_2*quat_4 + 2.*quat_1*quat_3;
-      
-      rotm_21 = 2.*quat_2*quat_3 + 2.*quat_1*quat_4;
-      rotm_22 = quat_1*quat_1 - quat_2*quat_2 + quat_3*quat_3 - quat_4*quat_4;
-      rotm_23 = 2.*quat_3*quat_4 - 2.*quat_1*quat_2;
+    rotm_21 = 2.*quat_2*quat_3 + 2.*quat_1*quat_4;
+    rotm_22 = quat_1*quat_1 - quat_2*quat_2 + quat_3*quat_3 - quat_4*quat_4;
+    rotm_23 = 2.*quat_3*quat_4 - 2.*quat_1*quat_2;
 
-      rotm_31 = 2.*quat_2*quat_4 - 2.*quat_1*quat_3;
-      rotm_32 = 2.*quat_3*quat_4 + 2.*quat_1*quat_2;
-      rotm_33 = quat_1*quat_1 - quat_2*quat_2 - quat_3*quat_3 + quat_4*quat_4;
-    }
+    rotm_31 = 2.*quat_2*quat_4 - 2.*quat_1*quat_3;
+    rotm_32 = 2.*quat_3*quat_4 + 2.*quat_1*quat_2;
+    rotm_33 = quat_1*quat_1 - quat_2*quat_2 - quat_3*quat_3 + quat_4*quat_4;
   }
 
   int out_dim[] = {image_side, image_side, image_side};
@@ -156,16 +129,16 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
   double projected_x, projected_y, projected_z;
   double scalar_product, distance;
   double image_side_float = (double) image_side;
-  int x_pixel, y_pixel, z_pixel;
-  for (x_pixel = 0; x_pixel < image_side; x_pixel++) {
+  int x_pixel, y_pixel, z_pixel, i;
+  for (z_pixel = 0; z_pixel < image_side; z_pixel++) {
     //x = fabs(((double)x_pixel - image_side_float/2. + 0.5));
-    no_rot_x = ((double)x_pixel - image_side_float/2. + 0.5);
+    no_rot_z = ((double)z_pixel - image_side_float/2. + 0.5);
     for (y_pixel = 0; y_pixel < image_side; y_pixel++) {
       //y = fabs(((double)y_pixel - image_side_float/2. + 0.5));
       no_rot_y = ((double)y_pixel - image_side_float/2. + 0.5);
-      for (z_pixel = 0; z_pixel < image_side; z_pixel++) {
+      for (x_pixel = 0; x_pixel < image_side; x_pixel++) {
 	//z = fabs(((double)z_pixel - image_side_float/2. + 0.5));
-	no_rot_z = ((double)z_pixel - image_side_float/2. + 0.5);
+	no_rot_x = ((double)x_pixel - image_side_float/2. + 0.5);
 	
 	if (rotate == 1) {
 	  //Transpose rotation matrix in comparison to Max' code since I don't rotate the icosahedron but the coordinate system.
@@ -183,47 +156,49 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
 	projected_y = y * face_distance/scalar_product;
 	projected_z = z * face_distance/scalar_product;
 
+	i = z_pixel*image_side*image_side + y_pixel*image_side + x_pixel;
 	if ((projected_x-center_x)*normal1_x + (projected_y-center_y)*normal1_y +
 	    (projected_z-center_z)*normal1_z > edge_distance) {
 	  distance = x*face_normal_1[2] + y*face_normal_1[1] + z*face_normal_1[0];
+
 	  if (distance > face_distance + half_edge_thickness) {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 0.;
+	    out[i] = 0.;
 	  } else if (distance < face_distance - half_edge_thickness) {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 1.;
+	    out[i] = 1.;
 	  } else {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 0.5 + (face_distance - distance) / edge_thickness;
+	    out[i] = 0.5 + (face_distance - distance) / edge_thickness;
 	  }
 	    
 	} else if ((projected_x-center_x)*normal2_x + (projected_y-center_y)*normal2_y +
 		   (projected_z-center_z)*normal2_z > edge_distance) {
 	  distance = x*face_normal_2[2] + y*face_normal_2[1] + z*face_normal_2[0];
 	  if (distance > face_distance + half_edge_thickness) {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 0.;
+	    out[i] = 0.;
 	  } else if (distance < face_distance - half_edge_thickness) {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 1.;
+	    out[i] = 1.;
 	  } else {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 0.5 + (face_distance - distance) / edge_thickness;
+	    out[i] = 0.5 + (face_distance - distance) / edge_thickness;
 	  }
 
 	} else if ((projected_x-center_x)*normal3_x + (projected_y-center_y)*normal3_y +
 		   (projected_z-center_z)*normal3_z > edge_distance) {
 	  distance = x*face_normal_3[2] + y*face_normal_3[1] + z*face_normal_3[0];
 	  if (distance > face_distance + half_edge_thickness) {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 0.;
+	    out[i] = 0.;
 	  } else if (distance < face_distance - half_edge_thickness) {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 1.;
+	    out[i] = 1.;
 	  } else {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 0.5 + (face_distance - distance) / edge_thickness;
+	    out[i] = 0.5 + (face_distance - distance) / edge_thickness;
 	  }
 
 	} else {
 	  distance = x*face_normal_center[2] + y*face_normal_center[1] + z*face_normal_center[0];
 	  if (distance > face_distance + half_edge_thickness) {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 0.;
+	    out[i] = 0.;
 	  } else if (distance < face_distance - half_edge_thickness) {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 1.;
+	    out[i] = 1.;
 	  } else {
-	    out[x_pixel*image_side*image_side + y_pixel*image_side + z_pixel] = 0.5 + (face_distance - distance) / edge_thickness;
+	    out[i] = 0.5 + (face_distance - distance) / edge_thickness;
 	  }
 	}
       }

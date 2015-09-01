@@ -32,30 +32,36 @@ from log import log_and_raise_error,log_warning,log_info,log_debug
 class Profile:
     """
     Class for spatial illumination profile
+
+    **Arguments:**
+      
+      :model (str): See :meth:`condor.utils.profile.Profile.set_model`
+    
+      :focus_diameter (float): Focus diameter / full-width half maximum in unit meter
+
     """
     def __init__(self, model, focus_diameter):
-        """
-        Initialisation of a Profile instance
-
-          *Choose one of the following options:*
-
-            - ``\'top_hat\'`` - Circular top hat profile
-
-            - ``\'pseudo_lorentzian\'`` - 2D radially symmetrical profile composed of two Gaussian profiles (possible to be normalised) that imitate a Lorentzian profile (``focus_diameter`` represents the full-width half maximum of the Pseudo-Lorentzian profile)
-
-            - ``\'gaussian\'`` - 2D radially symmetrical Gaussian profile (``focus_diameter`` represents the full-width half maximum of the Gaussian profile)
-
-            - ``None`` - infinite extent of the illuminatrion and the intensity at every point corresponds to the intensity within a top hat profile (see above)
-
-
-        Args:
-           :model(str): Model for the spatial illumination profile - either \"top_hat\", \"pseudo_lorentzian\", \"gaussian\" or None (infinite extent of the illuminatrion, intensity same as in case of \"top_hat\")
-           :focus_diameter(float): Focus diameter (or characteristic dimension) [m]
-        """
         self.set_model(model)
         self.focus_diameter = focus_diameter
         
     def set_model(self,model):
+        """
+        Set the model
+
+        Args:
+    
+          :model (str): Model for the spatial illumination profile
+        
+            *Choose one of the following options:*
+
+              - ``None`` - flat illuminatrion profile of infinite extent and the intensity at every point corresponds to the intensity of a top hat profile (see below)
+
+              - ``\'top_hat\'`` - Circular top hat profile
+    
+              - ``\'pseudo_lorentzian\'`` - 2D radially symmetrical profile composed of two Gaussian profiles obtained by a fit to a Lorentzian profile (used instead of a real Lorentzian because this function can be normalised)
+
+              - ``\'gaussian\'`` - 2D radially symmetrical Gaussian profile
+        """
         if model is None or model in ["top_hat","pseudo_lorentzian","gaussian"]:
             self._model = model
         else:
@@ -63,9 +69,15 @@ class Profile:
             sys.exit(0)
 
     def get_model(self):
+        """
+        Return profile model
+        """
         return self._model
 
     def get_radial(self):
+        """
+        Return radial function of intensity profile
+        """
         if self._model is None:
             # we always hit with full power
             p = lambda r: 1. / (numpy.pi * (self.focus_diameter / 2.)**2)

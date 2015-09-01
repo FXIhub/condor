@@ -33,6 +33,15 @@ import linalg
 
 
 def q_from_p(p, wavelength):
+    """
+    Return scattering vector from pixel position vector and photon wavelength
+
+    Args:
+
+      :p (array): Pixel position vector :math:`\vec{p}=(p_x,p_y,p_z)` with respect to the interaction point in unit meter
+
+      :wavelength (float): Photon wavelength in unit meter
+    """
     p0 = p / linalg.length(p)
     R_Ewald = 2*numpy.pi / wavelength
     k0 = R_Ewald * numpy.array([0.,0.,1.])
@@ -41,6 +50,27 @@ def q_from_p(p, wavelength):
     return q
 
 def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation=None, order="xyz"):
+    """
+    Generate scattering vector map from experimental parameters
+
+    Args:
+    
+      :X (array): :math:`x`-coordinates of pixels in unit meter
+
+      :Y (array): :math:`y`-coordinates of pixels in unit meter
+
+      :pixel_size (float): Pixel size (i.e. edge length) in unit meter
+
+      :detector_distance (float): Distance from interaction point to detector plane
+
+      :wavelength (float): Photon wavelength in unit meter
+
+    Kwargs:
+
+      :extrinsic_rotation (:class:`condor.utils.rotation.Rotation`): Extrinsic rotation of the sample. If ``None`` no rotation is applied (default ``None``)
+
+      :order (str): Order of scattering vector coordinates in the output array. Choose either ``\'xyz\'`` or ``\'zyx\'`` (default ``\'xyz\'``)    
+    """
     log_debug(logger, "Allocating qmap (%i,%i,%i)" % (X.shape[0],X.shape[1],3))
     R_Ewald = 2*numpy.pi/wavelength
     p_x = X*pixel_size
@@ -68,7 +98,23 @@ def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation
         qmap = intrinsic_rotation.rotate_vectors(qmap.ravel(), order=order).reshape(qmap.shape)
     return qmap
 
+# Convenience function
 def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
+    """
+    Generate absolute scattering vector map from experimental parameters
+
+    Args:
+    
+      :X (array): See :func:`condor.utils.scattering_vector.generate_qmap`
+
+      :Y (array): See :func:`condor.utils.scattering_vector.generate_qmap`
+
+      :pixel_size (float): See :func:`condor.utils.scattering_vector.generate_qmap`
+
+      :detector_distance (float): See :func:`condor.utils.scattering_vector.generate_qmap`
+
+      :wavelength (float): See :func:`condor.utils.scattering_vector.generate_qmap`
+    """
     qmap = generate_qmap(X,Y,pixel_size,detector_distance,wavelength)
     qmap = numpy.sqrt(qmap[:,:,0]**2+qmap[:,:,1]**2+qmap[:,:,2]**2)
     return qmap

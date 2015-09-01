@@ -21,6 +21,9 @@
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
+"""
+Reading, writing and converting configuration in different representations
+"""
 
 import os, numpy, ConfigParser, tempfile, copy
 
@@ -30,54 +33,60 @@ logger = logging.getLogger(__name__)
 from log import log_and_raise_error,log_warning,log_info,log_debug
 import condor
 
-def load_config(config = None, default = None):
-    if config is None:
-        config = {}
-    if default is None:
-        default = {}
-    if isinstance(config,str):
-        confDict = read_configfile(config)
-    else:
-        confDict = config
-        
-    if isinstance(default,str):
-        defDict = read_configfile(default)
-    else:
-        defDict = default
-            
-    # set unspecified to default
-    for sectionName in defDict.keys():
-        if sectionName not in confDict.keys():
-            self.confDict[sectionName] = {}
-            log_info(logger, "Add section %s with as section does not exist." % (sectionName))
-        for variableName in [n for n in defDict[sectionName].keys() if n not in confDict[sectionName].keys()]:
-            confDict[sectionName][variableName] = defDict[sectionName][variableName]
-            log_info(logger, "Add variable %s with default value %s to configuration section %s as variable does not exist." % (variableName,str(defDict[sectionName][variableName]),sectionName))
-
-    # set condor variables
-    for sectionName,section in confDict.items():
-        for variableName,variable in section.items():
-            if isinstance(variable, basestring):
-                if variable.startswith("CONDOR_"):
-                    exec("confDict[sectionName][variableName] = condor.%s" % variable)
-
+def read_configfile(configfile):
+    """
+    Read configuration file to dictionary
+    """
+    config = ConfigParser.ConfigParser()
+    with open(configfile,"r") as f:
+        config.readfp(f)
+        confDict = {}
+        for section in config.sections(): 
+            confDict[section] = {}
+            c = config.items(section)
+            for (key,value) in c:
+                v = _estimate_type(value)
+                if isinstance(v,str):
+                    v = v.replace(" ","")
+                    if v.startswith("[") and v.endswith("]"):
+                        v = _str_to_list(v)
+                        for i in range(len(v)):
+                            v[i] = os.path.expandvars(v[i]) if isinstance(v[i], str) else v[i] 
+                    elif v.startswith("{") and v.endswith("}"):
+                        v = v[1:-1].split(",")
+                        v = [w for w in v if len(w) > 0]
+                        d = {}
+                        for w in v:
+                            key,value = w.split(":")
+                            value = _estimate_type(value)
+                            if value.startswith("$"):
+                                value = os.path.expandvars(value)
+                            d[key] = value
+                        v = d
+                    else:
+                        if v.startswith("$"):
+                            v = os.path.expandvars(v)
+                confDict[section][key] = v
     return confDict
 
-def write_config(confDict, filename):
+def write_configfile(configdict, filename):
+    """
+    Write configuration file from a dictionary
+    """
     ls = ["# Configuration file\n# Automatically written by Configuration instance\n\n"]
-    for section_name,section in confDict.items():
+    for section_name,section in configdict.items():
         if isinstance(section,dict):
             ls.append("[%s]\n" % section_name)
             for variable_name,variable in section.items():
                 if (hasattr(variable, '__len__') and (not isinstance(variable, str))) or isinstance(variable, list):
-                    ls.append("%s=%s\n" % (variable_name,list_to_str(variable)))
+                    ls.append("%s=%s\n" % (variable_name,_list_to_str(variable)))
                 else:
                     ls.append("%s=%s\n" % (variable_name,str(variable)))
             ls.append("\n")
     with open(filename, "w") as f:
         f.writelines(ls)
  
-def estimate_type(var):
+def _estimate_type(var):
     #first test bools
     if var.lower() == 'true':
         return True
@@ -102,63 +111,29 @@ def estimate_type(var):
         except ValueError:
             raise NameError('Something messed up autocasting var %s (%s)' % (var, type(var)))
 
-def read_configfile(configfile):
-    config = ConfigParser.ConfigParser()
-    with open(configfile,"r") as f:
-        config.readfp(f)
-        confDict = {}
-        for section in config.sections(): 
-            confDict[section] = {}
-            c = config.items(section)
-            for (key,value) in c:
-                v = estimate_type(value)
-                if isinstance(v,str):
-                    v = v.replace(" ","")
-                    if v.startswith("[") and v.endswith("]"):
-                        v = str_to_list(v)
-                        for i in range(len(v)):
-                            v[i] = os.path.expandvars(v[i]) if isinstance(v[i], str) else v[i] 
-                    elif v.startswith("{") and v.endswith("}"):
-                        v = v[1:-1].split(",")
-                        v = [w for w in v if len(w) > 0]
-                        d = {}
-                        for w in v:
-                            key,value = w.split(":")
-                            value = estimate_type(value)
-                            if value.startswith("$"):
-                                value = os.path.expandvars(value)
-                            d[key] = value
-                        v = d
-                    else:
-                        if v.startswith("$"):
-                            v = os.path.expandvars(v)
-                confDict[section][key] = v
-    return confDict
-
-def str_to_list(s):
+def _str_to_list(s):
     if s.startswith("[") and s.endswith("]"):
         if s[1:-1].startswith("[") and s[1:-1].endswith("]"):
-            return str_to_list(s[1:-1])
+            return _str_to_list(s[1:-1])
         else:
             l = s[1:-1].split(",")
-            l = [estimate_type(w) for w in l if len(w) > 0]
+            l = [_estimate_type(w) for w in l if len(w) > 0]
             return l
     else:
         return s
        
-def list_to_str(L):
+def _list_to_str(L):
     if (hasattr(L, '__len__') and (not isinstance(L, str))) or isinstance(L, list):
         s = ""
         for l in L:
-            s += list_to_str(l)
+            s += _list_to_str(l)
             s += ","
         s = "[" + s[:-1] + "]"
         return s
     else:
         return str(L)
             
-# SPSIM
-def conf_to_opts(D_source,D_particle,D_detector):
+def conf_to_spsim_opts(D_source,D_particle,D_detector):
     import spsim
     # Create temporary file for pdb file
     tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)

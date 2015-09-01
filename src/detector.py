@@ -33,7 +33,6 @@ logger = logging.getLogger(__name__)
 
 import condor.utils.log
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
-from condor.utils.config import load_config
 import utils.resample
 from condor.utils.variation import Variation
 from condor.utils.pixelmask import PixelMask

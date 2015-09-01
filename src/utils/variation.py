@@ -21,6 +21,10 @@
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
+"""
+Tools for applying noise / statistical variation to values
+"""
+
 import numpy
 import collections
 
@@ -30,8 +34,23 @@ logger = logging.getLogger(__name__)
 from log import log_and_raise_error,log_warning,log_info,log_debug
 
 class Variation:
-    def __init__(self,mode=None,spread=None,n=None,number_of_dimensions=1,name=""):
-        self.name = name
+    """
+    Class for statistical variation of a variable
+
+    **Arguments:**
+
+      :mode (str): See :meth:`condor.utils.variation.Variation.set_mode`
+
+      :spread (float/array): See :meth:`condor.utils.variation.Variation.set_spread`
+
+    **Keyword arguments:**x
+
+      :n (int): Number of samples within the specified range (default ``None``)
+
+      :number_of_dimensions (int): Number of dimensions of the variable (default ``1``)    
+    """
+    
+    def __init__(self,mode,spread,n=None,number_of_dimensions=1):
         self._number_of_dimensions = number_of_dimensions
         self.set_mode(mode)
         self.set_spread(spread)
@@ -39,21 +58,55 @@ class Variation:
         self.reset_counter()
 
     def get_conf(self):
+        """
+        Get configuration in form of a dictionary. Another identically configured Variation instance can be initialised by:
+
+        .. code-block:: python
+
+          conf = V0.get_conf()                          # V0: already existing Variation instance
+          V1 = condor.utils.variation.Variation(**conf) # V1: new Variation instance with the same configuration as V0
+        """
         conf = {}
         conf["mode"] = self.get_mode()
         conf["spread"] = self.get_spread()
         conf["n"] = self.n
         conf["number_of_dimensions"] = self._number_of_dimensions
-        conf["name"] = self.name
         return conf
         
     def reset_counter(self):
+        """
+        Set counter back to zero
+
+        This counter is relevant only if ``mode=\'range\'``
+        """
         self._i = 0
 
     def get_number_of_dimensions(self):
+        """
+        Return the number of dimensions of the variation variable
+        """
         return self._number_of_dimensions
 
     def set_mode(self,mode):
+        """
+        Set the mode of variation
+
+        Args:
+
+          :mode (str): Mode of variation. Choose one of the following options:
+
+            - ``None`` - No variation
+
+            - ``\'uniform\'`` - Uniform random distribution
+
+            - ``\'normal\'`` - Normal random distribution
+
+            - ``\'poisson\'`` - Poissonian random distribution
+            
+            - ``\'normal_poisson\'`` - Normal (*Gaussian*) noise on top of Poisson variation (*shot noise*)
+        
+            - ``\'range\'`` - Equispaced grid around mean center position
+        """
         if mode not in [None,"normal","poisson","normal_poisson","uniform","range"]:
             log_and_raise_error(logger, "Variation object cannot be configured with illegal mode %s" % mode)
             return
@@ -81,21 +134,41 @@ class Variation:
         self._mode = mode
 
     def get_mode(self):
+        """
+        Return the mode of variation
+        """
         return self._mode
 
     def set_spread(self, spread):
+        """
+        Set spread of variation
+
+        Args:
+        
+          :spread (float): Width of the variation
+        """
         if isinstance(spread, collections.Iterable):
             self._spread = list(spread)
         else:
             self._spread = [spread]
             
     def get_spread(self):
+        """
+        Get spread of variation
+        """
         if len(self._spread) > 1:
             return self._spread
         else:
             return self._spread[0]
     
-    def get(self,v0):
+    def get(self, v0):
+        """
+        Get next value(s)
+
+        Args:
+
+          :v0 (float/int/array): Value(s) without variational deviation
+        """
         if self._number_of_dimensions == 1:
             v1 = self._get_values_for_one_dim(v0,0)
         else:

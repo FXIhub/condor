@@ -151,7 +151,7 @@ class Source:
         if unit == "J/m2":
             pass
         elif unit == "ph/m2":
-            I /= self.photon.get_energy("J") 
+            I /= self.photon.get_energy() 
         elif unit == "J/um2":
             I *= 1.E-12
         elif unit == "mJ/um2":
@@ -167,8 +167,8 @@ class Source:
         """
         return {"pulse_energy":self._get_next_pulse_energy(),
                 "wavelength":self.photon.get_wavelength(),
-                "photon_energy":self.photon.get_energy("J"),
-                "photon_energy_eV":self.photon.get_energy("eV")}
+                "photon_energy":self.photon.get_energy(),
+                "photon_energy_eV":self.photon.get_energy_eV()}
 
     def _get_next_pulse_energy(self):
         p = self._pulse_energy_variation.get(self.pulse_energy_mean)

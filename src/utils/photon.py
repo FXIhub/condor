@@ -34,18 +34,18 @@ from log import log_and_raise_error,log_warning,log_info,log_debug
 class Photon:
     """
     Class for X-ray photon
+
+    A Photon instance is initialised with one keyword argument - either with ``wavelength``, ``energy`` or ``energy_eV``.
+    
+    Kwargs:
+
+      :wavelength(float): Photon wavelength in unit meter
+
+      :energy(float): Photon energy in unit Joule
+
+      :energy_eV(float): Photon energy in unit electron volt
     """
     def __init__(self, wavelength=None, energy=None, energy_eV=None):
-        """
-        Initialisation of a Photon instance
-
-        The photon can be initialised either by passing the wavelength, the photon energy in unit Joule or the photon energy in unit eV
-
-        Kwargs:
-           :wavelength(float): Photon wavelength [m]
-           :energy(float): Photon energy [J]
-           :energy_eV(float): Photon energy in electron volts [eV]
-        """
         if (wavelength is not None and energy is not None) or (wavelength is not None and energy_eV is not None) or (energy is not None and energy_eV is not None):
             log_and_raise_error(logger, "Invalid arguments during initialisation of Photon instance. More than one of the arguments is not None.")
             return
@@ -58,26 +58,52 @@ class Photon:
         else:
             log_and_raise_error(logger, "Photon could not be initialized. It needs to be initialized with either the wavelength, the photon energy in unit Joule or the photon energy in unit eV.")
             
-    def get_energy(self,unit="J"):
-        if unit == "J":
-            return self._energy
-        elif unit == "eV":
-            return self._energy/constants.e
-        else:
-            log_and_raise_error(logger, "%s is not a valid energy unit." % unit)
+    def get_energy(self):
+        """
+        Return photon energy in unit Joule
+        """
+        return self._energy
 
-    def set_energy(self,energy,unit="J"):
-        if unit == "J":
-            self._energy = energy
-        elif unit == "eV":
-            self._energy = energy*constants.e
-        else:
-            log_and_raise_error(logger, "%s is not a valid energy unit." % unit)
+    def get_energy_eV(self):
+        """
+        Return photon energy in unit electron volt
+        """
+        return self._energy/constants.e
+
+    def set_energy(self, energy):
+        """
+        Set photon energy in unit Joule
+
+        Args:
+
+          :energy (float): Photon energy in unit Joule
+        """
+        self._energy = energy
+
+    def set_energy_eV(self, energy_eV):
+        """
+        Set photon energy in unit electron volt
+
+        Args:
+
+          :energy (float): Photon energy in unit electron volt
+        """
+        self._energy = energy_eV*constants.e
 
     def get_wavelength(self):
+        """
+        Return wavelength in unit meter
+        """
         return constants.c*constants.h/self._energy
 
-    def set_wavelength(self,wavelength):
+    def set_wavelength(self, wavelength):
+        """
+        Set photon wavelength
+
+        Args:
+        
+          :wavelength (float): Photon wavelength in unit meter
+        """
         self._energy = constants.c*constants.h/wavelength
 
         

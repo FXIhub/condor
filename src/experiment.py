@@ -259,7 +259,7 @@ class Experiment:
                 # Import only here (otherwise errors if spsim library not installed)
                 import spsim
                 # Create options struct
-                opts = condor.utils.config.conf_to_opts(D_source, D_particle, D_detector)
+                opts = condor.utils.config.conf_to_spsim_opts(D_source, D_particle, D_detector)
                 spsim.write_options_file("./spsim.confout",opts)
                 # Create molecule struct
                 mol = spsim.get_molecule_from_atoms(D_particle["atomic_numbers"], D_particle["atomic_positions"])

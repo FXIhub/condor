@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 import condor.utils.log
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 import condor.utils.tools
-from condor.utils.config import load_config
 from condor.utils.variation import Variation
 
         

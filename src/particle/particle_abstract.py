@@ -41,7 +41,6 @@ import condor
 from material import Material
 from condor.utils.variation import Variation
 
-from condor.utils.config import load_config
 import condor.utils.diffraction
 
 class AbstractParticle:
@@ -91,7 +90,7 @@ class AbstractParticle:
         """
         Return current orientation of the particle in form of an instance of :class:`condor.utils.rotation.Rotation`
         """
-        return self._rotations.get_current()
+        return self._rotations.get_current_rotation()
 
     def set_alignment(self, rotation_values, rotation_formalism, rotation_mode):
         """
@@ -167,7 +166,7 @@ class AbstractParticle:
 
     
     def _get_next_extrinsic_rotation(self):
-        rotation = self._rotations.get_next()
+        rotation = self._rotations.next()
         if self._rotation_mode == "intrinsic":
             rotation = copy.deepcopy(rotation)
             rotation.invert()
@@ -189,7 +188,7 @@ class AbstractParticle:
     def _get_conf_alignment(self):
         R = self.get_current_rotation()
         A = {
-            "rotation_values"    : self._rotations.get_values(),
+            "rotation_values"    : self._rotations.get_all_values(),
             "rotation_formalism" : self._rotations.get_formalism(),
             "rotation_mode"      : self._rotation_mode
         }

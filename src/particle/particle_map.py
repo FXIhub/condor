@@ -43,7 +43,9 @@ from particle_abstract import AbstractContinuousParticle
 
 class ParticleMap(AbstractContinuousParticle):
     """
-    Class for particle with a refractive index map sampled on a cubic grid (no discrete individual atoms, continuum approximation)
+    Class for a particle model
+
+    *Model:* Refractive index map sampled on a cubic grid (continuum approximation)
 
     **Arguments:**
 
@@ -62,7 +64,6 @@ class ParticleMap(AbstractContinuousParticle):
           - ``\'spheroid\'`` - create map of a uniformly filled spheroid
 
       :diameter (float): Particle diameter (not map diameter)
-
     **Keyword arguments:**
     
       :diameter_variation (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
@@ -87,7 +88,7 @@ class ParticleMap(AbstractContinuousParticle):
 
       :flattening (float): (Mean) value of :math:`a/c`, takes only effect if ``geometry=\'spheroid\'`` (default ``0.75``)
     
-      :concentration (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+      :concentration (float): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
 
       :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
 
@@ -233,7 +234,7 @@ class ParticleMap(AbstractContinuousParticle):
         return self._map3d_orig, self._dx_orig
     
     def _get_map3d(self, O = None, dx_required = None, dx_suggested = None): 
-       if O is not None:
+        if O is not None:
             m,dx = self.get_new_map(O, dx_required, dx_suggested)
         else:
             m,dx = self.get_current_map()
