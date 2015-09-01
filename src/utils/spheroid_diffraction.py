@@ -62,13 +62,13 @@ Before applying rotations by :math:`theta` and :math:`phi` (see below) the rotat
 
 .. math::
 
-  F = \sqrt{K} f(a,c,\theta,\phi,q_x,q_y)
+  F = \sqrt{K} \cdot f(a,c,\theta,\phi,q_x,q_y)
 
   f = 3 \frac{ \sin(qH) - qH \cos(qH) }{ (qH)^3 }
 
   H = \sqrt{a^2 \sin^2(g)+c^2 \cos^2(g)}
 
-  g = \arccos\left( \frac{ -q_x \cos(\theta) sin(\phi) + q_y \cos(\theta) cos(\phi) }{ sqrt{q_x^2+q_y^2} } \right)
+  g = \arccos\left( \frac{ -q_x \cos(\theta) sin(\phi) + q_y \cos(\theta) cos(\phi) }{ \sqrt{q_x^2+q_y^2} } \right)
 
 :math:`I_0`: Primary intensity on the sample in unit number of photons per square meter
 
