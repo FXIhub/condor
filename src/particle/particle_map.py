@@ -47,8 +47,7 @@ class ParticleMap(AbstractContinuousParticle):
 
     *Model:* Refractive index map sampled on a cubic grid (continuum approximation)
 
-    **Arguments:**
-
+    Args:
       :geometry (str): Geometry type
 
         *Choose one of the following options:*
@@ -64,8 +63,8 @@ class ParticleMap(AbstractContinuousParticle):
           - ``\'spheroid\'`` - create map of a uniformly filled spheroid
 
       :diameter (float): Particle diameter (not map diameter)
-    **Keyword arguments:**
-    
+
+    Kwargs:
       :diameter_variation (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
 
       :diameter_spread (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
@@ -145,15 +144,15 @@ class ParticleMap(AbstractContinuousParticle):
             if (map3d_filename is not None or map3d_dataset is not None) and map3d is not None:
                 log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword arguments \'map3d_filename\' or \'map3d_dataset\' and \'map3d\' are not None.")
                 sys.exit(1)
-            elif filename is None and map3d is None:
-                log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword arguments for \'map3d_filename\', \'map3d_dataset\', and \'map3d\' are None.")
+            elif (map3d_filename is None or map3d_dataset is None) and map3d is None:
+                log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword arguments for either (\'map3d_filename\' or \'map3d_dataset\') or \'map3d\' are None.")
                 sys.exit(1)
             elif dx is None:
                 log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword argument \'dx\' is None.")
                 sys.exit(1)                
             elif map3d is not None:
                 self.set_custom_geometry_by_array(map3d, dx)
-            elif filename is not None:
+            elif (map3d_filename is not None and map3d_dataset is not None):
                 self.set_custom_geometry_by_h5file(map3d_filename, map3d_dataset, dx)
             
     def get_conf(self):
@@ -172,7 +171,8 @@ class ParticleMap(AbstractContinuousParticle):
             m,dx = self.get_original_map()
             conf["map3d"] = m
             conf["dx"]    = dx
-        conf["flattening"] = self.flattening
+        if self.geometry == "spheroid":
+            conf["flattening"] = self.flattening
         return conf
 
     def get_next(self):
@@ -182,7 +182,8 @@ class ParticleMap(AbstractContinuousParticle):
         O = AbstractContinuousParticle.get_next(self)
         O["particle_model"] = "map"
         O["geometry"]       = self.geometry
-        O["flattening"]     = self.flattening if self.geometry == "spheroid" else None
+        if self.geometry == "spheroid":
+            O["flattening"]     = self.flattening
         return O
 
     def set_custom_geometry_by_array(self, map3d, dx):
@@ -312,9 +313,9 @@ class ParticleMap(AbstractContinuousParticle):
                 Z,Y,X = numpy.meshgrid(x1,x1,x1,indexing="ij")
                 coords = numpy.array([[z,y,x] for z,y,x in zip(Z.ravel(),Y.ravel(),X.ravel())])
                 m2 = abs(numpy.fft.fftshift(condor.utils.nfft.nfft(fm1,coords).reshape((N2,N2,N2))))
-                from pylab import *
-                imsave("m1.png", m1.sum(0))
-                imsave("m2.png", m2.sum(0))
+                #from pylab import *
+                #imsave("m1.png", m1.sum(0))
+                #imsave("m2.png", m2.sum(0))
                 self._dx    = self._dx_orig * float(N1)/float(N2)
                 self._map3d = m2/m2.sum()*m1.sum()
             dx = O["diameter"] / self.diameter_mean * self._dx
@@ -322,7 +323,7 @@ class ParticleMap(AbstractContinuousParticle):
 
         self._geometry   = O["geometry"]
         self._diameter   = O["diameter"]
-        self._flattening = O["flattening"]
+        self._flattening = O.get("flattening",None)
         return m,dx
             
     def _put_custom_map(self, map_add):
@@ -347,7 +348,7 @@ class ParticleMap(AbstractContinuousParticle):
         spheromap = condor.utils.bodies.make_spheroid_map(N,nA,nC,rotation)
         self._put_custom_map(spheromap)
 
-    def _put_icosahedron(self, radius, e0=0., e1=0., e2=0.):
+    def _put_icosahedron(self, radius):
         # icosahedon size parameter
         a = radius*(16*numpy.pi/5.0/(3+numpy.sqrt(5)))**(1/3.0)
         # radius at corners in meter
@@ -357,10 +358,10 @@ class ParticleMap(AbstractContinuousParticle):
         # leaving a bit of free space around icosahedron 
         N = int(numpy.ceil(2.3*(nRmax)))
         log_info(logger,"Building icosahedron with radius %e (%i pixel) in %i x %i x %i voxel cube." % (radius,nRmax,N,N,N))
-        icomap = condor.utils.bodies.make_icosahedron_map(N,nRmax,e0,e1,e2)
+        icomap = condor.utils.bodies.make_icosahedron_map(N,nRmax)
         self._put_custom_map(icomap)
 
-    def _put_cube(self, a, e0=0., e1=0., e2=0.):
+    def _put_cube(self, a):
         # edge_length in pixels
         nel = a/self._dx 
         # leaving a bit of free space around

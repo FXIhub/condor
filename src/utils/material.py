@@ -23,39 +23,94 @@
 # -----------------------------------------------------------------------------------------------------
 
 # System packages
-import sys, numpy
+import sys, os, numpy
+from scipy import constants
 
 # Logging
 import logging
 logger = logging.getLogger(__name__)
+
+# Condor
 import condor
-import condor.utils.log
+import condor._data
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
-# Constants
-from scipy import constants
+_data_dir = os.path.dirname(os.path.realpath(__file__)) + "/../data"
+atomic_scattering_factors = condor._data.load_atomic_scattering_factors(_data_dir)
+"""
+Dictionary of photon energy vs. real and imaginary part of the atomic scattering factor (forward scattering) for all elements
+"""
 
+atomic_masses             = condor._data.load_atomic_masses(_data_dir)
+"""
+Dictionary of atomic mass (standard atomic weight in unit Dalton) for all elements
+"""
+
+
+atomic_numbers            = condor._data.load_atomic_numbers(_data_dir)
+"""
+Dictionary of atomic numbers for all elements 
+"""
+
+atomic_names = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na''Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cp', 'Uut', 'Uuq', 'Uup', 'Uuh', 'Uus', 'Uuo']
+"""
+List of atom names (i.e. latin abbreviations) for all elements sorted by atomic number (increasing order)
+"""
+
+
+class MaterialType:
+    r"""
+    Standard material types:
+
+    ================= ====================== =================================================================== ===================
+    ``material_type`` :math:`\rho_m` [kg/m3] Atomic composition                                                  Reference
+    ================= ====================== =================================================================== ===================        
+    ``custom``        ``massdensity``        ``atomic_composition``                                              -
+    ``'water'``       995 (25 deg. C)        :math:`H_2O`                                                        [ONeil1868]_
+    ``'protein'``     1350                   :math:`H_{86}C_{52}N_{13}O_{15}S`                                   [Bergh2008]_
+    ``'dna'``         1700                   :math:`H_{11}C_{10}N_4O_6P`                                         [Bergh2008]_
+    ``'lipid'``       1000                   :math:`H_{69}C_{36}O_6P`                                            [Bergh2008]_
+    ``'cell'``        1000                   :math:`H_{23}C_3NO_{10}S`                                           [Bergh2008]_
+    ``'poliovirus'``  1340                   :math:`C_{332652}H_{492388}N_{98245}O_{131196}P_{7501}S_{2340}`     [Molla1991]_
+    ``'styrene'``     902 (25 deg. C)        :math:`C_8H_8`                                                      [Haynes2013]_
+    ``'sucrose'``     1581 (17 deg. C)       :math:`C_{12}H_{22O1}`                                              [Lide1998]_
+    ================= ====================== =================================================================== ===================
+    """
+    atomic_compositions = {
+        'water':       { "H" :     2., "C" :     0., "N" :     0., "O" :     1., "P" :     0., "S" :     0. }, # Water H2O
+        'protein':     { "H" :    86., "C" :    52., "N" :    13., "O" :    15., "P" :     0., "S" :     1. }, # Bergh et al. 2008: H86 C52 N13 O15 S
+        'dna':         { "H" :    11., "C" :    10., "N" :     4., "O" :     6., "P" :     1., "S" :     0. }, # Bergh et al. 2008: H11 C10 N4 O6 P
+        'lipid':       { "H" :    69., "C" :    36., "N" :     0., "O" :     6., "P" :     1., "S" :     0. }, # Bergh et al. 2008: H69 C36 O6 P
+        'cell':        { "H" :    23., "C" :     3., "N" :     1., "O" :    10., "P" :     0., "S" :     1. }, # Bergh et al. 2008: H23 C3 N O10 S
+        'poliovirus':  { "H" :492388., "C" :332652., "N" : 98245., "O" :131196., "P" :  7501., "S" :  2340. }, # Molla et al. 1991: C332652 H492388 N98245 0131196 P7501 S2340
+        'styrene':     { "H" :     8., "C" :     8., "N" :     0., "O" :     0., "P" :     0., "S" :     0. }, # Styrene C8H8
+        'sucrose':     { "H" :    22., "C" :    12., "N" :     0., "O" :    11., "P" :     0., "S" :     0. }, # Sucrose C12H22O11
+    }
+    """
+    Dictionary of atomic compositions (available keys are the tabulated ``material_types``)
+    """
+
+    mass_densities      =  {
+        'water':      995., # at 25 C: O'Neil, M.J. (ed.). The Merck Index - An Encyclopedia of Chemicals, Drugs, and Biologicals. Cambridge, UK: Royal Society of Chemistry, 2013., p. 1868
+        'protein':   1350., # Bergh et al. 2008
+        'dna':       1700., # Bergh et al. 2008
+        'lipid':     1000., # Bergh et al. 2008
+        'cell':      1000., # Bergh et al. 2008
+        'poliovirus':1340., # Dans et al. 1966
+        'styrene':    902., # at 25 C: Haynes, W.M. (ed.). CRC Handbook of Chemistry and Physics. 94th Edition. CRC Press LLC, Boca Raton: FL 2013-2014, p. 3-488
+        'sucrose':   1581., # at 17 C: Lide, D.R. (ed.). CRC Handbook of Chemistry and Physics. 79th ed. Boca Raton, FL: CRC Press Inc., 1998-1999., p. 3-172
+    }
+    """
+    Dictionary of mass densities (available keys are the tabulated ``material_types``)
+    """
+    
 class Material:
     r"""
     Class for material model
     
     **Arguments:**
 
-      :material_type (str): The material type can be either ``custom`` or one of the standard types, i.e. tabulated combinations of massdensity and atomic composition, listed here:
-
-        ================= ====================== =================================================================== ===================
-        ``material_type`` :math:`\rho_m` [kg/m3] Atomic composition                                                  Reference
-        ================= ====================== =================================================================== ===================        
-        ``custom``        ``massdensity``        ``atomic_composition``                                              -
-        ``'water'``       995 (25 deg. C)        :math:`H_2O`                                                        [ONeil1868]_
-        ``'protein'``     1350                   :math:`H_{86}C_{52}N_{13}O_{15}S`                                   [Bergh2008]_
-        ``'dna'``         1700                   :math:`H_{11}C_{10}N_4O_6P`                                         [Bergh2008]_
-        ``'lipid'``       1000                   :math:`H_{69}C_{36}O_6P`                                            [Bergh2008]_
-        ``'cell'``        1000                   :math:`H_{23}C_3NO_{10}S`                                           [Bergh2008]_
-        ``'poliovirus'``  1340                   :math:`C_{332652}H_{492388}N_{98245}O_{131196}P_{7501}S_{2340}`     [Molla1991]_
-        ``'styrene'``     902 (25 deg. C)        :math:`C_8H_8`                                                      [Haynes2013]_
-        ``'sucrose'``     1581 (17 deg. C)       :math:`C_{12}H_{22O1}`                                              [Lide1998]_
-        ================= ====================== =================================================================== ===================
+      :material_type (str): The material type can be either ``custom`` or one of the standard types, i.e. tabulated combinations of massdensity and atomic composition, listed here :class:`condor.utils.material.MaterialType`
 
     **Keyword arguments:**
 
@@ -79,9 +134,9 @@ class Material:
             self.massdensity = massdensity
 
         elif material_type is not None and atomic_composition is None and massdensity is None:
-            for element,quantity in condor.CONDOR_atomic_compositions[material_type].items():
-                self.add_atomic_species(element,quantity)
-            self.massdensity = condor.CONDOR_mass_densities[material_type]
+            for element, concentration in MaterialType.atomic_compositions[material_type].items():
+                self.set_atomic_concentration(element, concentration)
+            self.massdensity = MaterialType.mass_densities[material_type]
 
         else:
             log_and_raise_error(logger, "Invalid arguments in Material initialization.")
@@ -276,7 +331,7 @@ class Material:
         M = 0
         for element in atomic_composition.keys():
             # sum up mass
-            M += atomic_composition[element]*condor.CONDOR_atomic_masses[element]*u
+            M += atomic_composition[element]*atomic_masses[element]*u
 
         number_density = self.massdensity/M
         
@@ -307,8 +362,8 @@ class Material:
         Q = 0
         for element in atomic_composition.keys():
             # sum up electrons
-            M += atomic_composition[element]*condor.CONDOR_atomic_masses[element]*u
-            Q += atomic_composition[element]*condor.CONDOR_atomic_numbers[element]
+            M += atomic_composition[element]*atomic_masses[element]*u
+            Q += atomic_composition[element]*atomic_numbers[element]
 
         electron_density = Q*self.massdensity/M
         
@@ -325,7 +380,7 @@ class Material:
 
           :relative_concentration (float): Relative quantity of atoms of the given atomic species with respect to the others (e.g. for water: hydrogen concentration 2., oxygen concentration 1.)
         """
-        if element not in condor.CONDOR_atomic_numbers:
+        if element not in atomic_numbers:
             log_and_raise_error(logger, "Cannot add element \"%s\". Invalid name." % element)
         self._atomic_composition[element] = relative_concentration
     
@@ -362,17 +417,18 @@ def get_f_element(element, photon_energy_eV):
       :photon_energy_eV: Photon energy in unit eV
     """
     
-    SF_X = condor.CONDOR_atomic_scattering_factors[element]
+    SF_X = atomic_scattering_factors[element]
     f1 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
     f2 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
 
     return complex(f1,f2)
 
 
+
 #class DensityMap:
 #    
 #    def __init__(self, shape):
-#        self.density = numpy.zeros(shape=(shape[0], shape[1], shape[2], len(condor.CONDOR_atomic_numbers.keys())),dtype=numpy.float64)
+#        self.density = numpy.zeros(shape=(shape[0], shape[1], shape[2], len(atomic_numbers.keys())),dtype=numpy.float64)
 #
 #    def get_n(self, wavelength):
 #        """
@@ -390,7 +446,7 @@ def get_f_element(element, photon_energy_eV):
 #        photon_energy_eV = h*c/photon_wavelength/qe
 #
 #        s = numpy.zeros(shape=(shape[0], shape[1], shape[2]), dtype=numpy.complex128)
-#        for (el, de) in zip(condor.CONDOR_atomic_numbers.keys(), self.density):
+#        for (el, de) in zip(atomic_numbers.keys(), self.density):
 #            s += de * get_f_element(el, photon_energy_eV)
 #
 #        n = 1 - r_0 / (2*numpy.pi) * wavelength**2 * s

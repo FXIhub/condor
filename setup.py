@@ -9,7 +9,9 @@
 
 # Installation of Condor
 import sys, os, fileinput
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) + "/src/data/")
+this_dir = os.path.dirname(os.path.realpath(__file__))
+print this_dir
+sys.path.append(this_dir + "/src/data")
 import pickle_tables as pt
 from distutils.core import setup, Extension
 import numpy.distutils.misc_util
@@ -31,6 +33,31 @@ print 'Generate data file with atomic standard weight constants...'
 pt.pickle_atomic_standard_weights_and_numbers("./src/data/sw","./src/data")
 print 'Done.'
 
+print "Concatenating example configuration files..."
+def concatenate_files(infilenames,outfilename,extra_newlines=0):
+    lines = []
+    for infilename in infilenames:
+        with open(infilename, "r") as f:
+            lines += f.readlines()
+        if extra_newlines > 0:
+            lines += ["\n"]*extra_newlines
+    with open(outfilename, "w") as f:
+        f.writelines(lines)
+src = this_dir + "/examples/configfile/source.conf"
+sam = this_dir + "/examples/configfile/sample.conf"
+det = this_dir + "/examples/configfile/detector.conf"
+for m in ["particle_sphere","particle_spheroid","particle_map","particle_molecule"]:
+    par = this_dir + ("/examples/configfile/%s.conf" % m)
+    infilenames = [src, sam, par, det]
+    d = this_dir + ("/examples/configfile/%s" % m)
+    if not os.path.exists(d):
+        os.mkdir(d)
+        # Ensure that user can write to the directory if setup is run by root
+        os.system("chmod a+rwx %s" % d)
+    outfilename = d + "/condor.conf"
+    print "Concatenating " + outfilename + "..."
+    concatenate_files(infilenames, outfilename, 2)
+print "Done."
 
 setup(name='condor',
       description='Simulator for diffractive single-particle imaging experiments with X-ray lasers',

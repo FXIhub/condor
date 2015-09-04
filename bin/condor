@@ -4,7 +4,6 @@ import os
 import condor
 import condor.utils
 from condor.utils.log import log_info
-import condor.utils.tools
 import logging
 logger = logging.getLogger("condor")
 

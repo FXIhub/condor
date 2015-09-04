@@ -38,7 +38,7 @@ from scipy import constants
 
 # Condor modules
 import condor
-from material import Material
+from condor.utils.material import Material
 from condor.utils.variation import Variation
 
 import condor.utils.diffraction
@@ -47,8 +47,7 @@ class AbstractParticle:
     """
     Base class for every derived particle class
 
-    **Keyword arguments:**
-
+    Kwargs:
       :rotation_values: See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
       :rotation_formalism (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
@@ -96,37 +95,8 @@ class AbstractParticle:
         """
         Set rotation scheme of the partice
 
-        Args:
-        
-          :rotation_values: Array of rotation parameters. For simulating patterns of many shots this can be also a sequence of rotation parameters. Input ``None`` for no rotation and for random rotation formalisms (default ``None``)  
-
-            *The format of* ``rotation_values`` *depends on what* ``rotation_formalism`` *you choose:*
-
-              - for ``\'quaternion\'``: [:math:`w`, :math:`x`, :math:`y`, :math:`z`]
-
-              - for ``\'rotation_matrix\'``: [[:math:`R_{11}`, :math:`R_{12}`, :math:`R_{13}`], [:math:`R_{21}`, :math:`R_{22}`, :math:`R_{23}`], [:math:`R_{31}`, :math:`R_{32}`, :math:`R_{33}`]]
-
-              - for ``\'euler_angles_zxz\'`` (or ``\'euler_angles_xyz\'``,...): [:math:`e_1`, :math:`e_2`, :math:`e_3`]
-        
-              - for ``\'random\'``: ``None``
-
-              - for ``\'random_x\'`` (or ``\'random_y\'``, ...): ``None``
-
-          :rotation_formalism (str): Rotation formalism, e.g. ``\'quaternion\'``. If ``None`` no rotation is applied (default ``None``)
-
-            *Choose one of the following options:*
-
-              - ``None`` - no rotation
-           
-              - ``\'quaternion\'`` - quaternion :math:`w + ix + jy + kz`
-
-              - ``\'rotation_matrix\'`` - 3 x 3 rotation matrix :math:`R`
-
-              - ``\'euler_angles_zxz\'`` (or ``\'euler_angles_xyz\'``,...) - Euler angles :math:`e_1`, :math:`e_2`, and :math:`e_3`
-        
-              - ``\'random\'`` - uniform distribution of fully random rotations
-
-              - ``\'random_x\'`` (or ``\'random_y\'``, ...) - uniform distribution of random rotations
+        Args:        
+          :rotation_values: Array of rotation parameters. For simulating patterns of many shots this can be also a sequence of rotation parameters. Input ``None`` for no rotation and for random rotation formalisms. For more documentation see :class:`condor.utils.rotation.Rotations` (default ``None``)  
 
           :rotation_mode (str): If the rotation shall be assigned to the particle choose ``\'extrinsic\'``. Choose ``\'intrinsic\'`` if the coordinate system shall be rotated (default ``\'extrinsic\'``)
 
@@ -139,34 +109,34 @@ class AbstractParticle:
         self._rotations = condor.utils.rotation.Rotations(values=rotation_values, formalism=rotation_formalism)
 
     def set_position_variation(self, position_variation, position_spread, position_variation_n):
-        """
+        r"""
         Set position variation scheme
 
         Args:
-
           :position_variation (str): Statistical variation of the particle position (default ``None``)
 
             *Choose one of the following options:*
-
-              - ``None`` - No positional variation
-
-              - ``\'normal\'`` - Normal (*Gaussian*) variation
-
-              - ``\'uniform\'`` - Uniformly distributed positions within spread limits
-
-              - ``\'range\'`` - Equidistant sequence of position samples within the spread limits. ``position_variation_n`` defines the number of samples in every dimension
+        
+            ====================== ============================================================================================
+            ``position_variation`` Type of variation
+            ====================== ============================================================================================
+            ``None``               No positional variation
+            ``'normal'``           Normal (*Gaussian*) variation
+            ``'uniform'``          Uniformly distributed positions within spread limits
+            ``'range'``            Equidistant sequence of ``position_variation_n`` position samples within ``position_spread``
+            ====================== ============================================================================================
 
           :position_spread (float): Statistical spread of the particle position
 
           :position_variation_n (int): Number of position samples within the specified range in each dimension
 
-            .. note:: The argument ``position_variation_n`` takes effect only in combination with ``position_variation=\'range\'``
+            .. note:: The argument ``position_variation_n`` takes effect only in combination with ``position_variation='range'``
         """
-        self._position_variation = Variation(position_variation,position_spread,position_variation_n,number_of_dimensions=3,name="particle position")
+        self._position_variation = Variation(position_variation,position_spread,position_variation_n,number_of_dimensions=3)
 
     
     def _get_next_extrinsic_rotation(self):
-        rotation = self._rotations.next()
+        rotation = self._rotations.get_next_rotation()
         if self._rotation_mode == "intrinsic":
             rotation = copy.deepcopy(rotation)
             rotation.invert()
@@ -205,14 +175,12 @@ class AbstractParticle:
 
 class AbstractContinuousParticle(AbstractParticle):
     """
-    Base class for derived particle classes that makes use of the continuum approximation
+    Base class for derived particle classes that make use of the continuum approximation (density instead of discrete atoms)
 
-    **Arguments:**
-
+    Args:
       :diameter (float): (Mean) particle diameter in unit meter
-
-    **Keyword arguments:**
     
+    Kwargs:
       :diameter_variation (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
 
       :diameter_spread (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
@@ -281,30 +249,30 @@ class AbstractContinuousParticle(AbstractParticle):
         return O
 
     def set_diameter_variation(self, diameter_variation, diameter_spread, diameter_variation_n):
-        """
+        r"""
         Set the variation scheme of the particle diameter
         
         Args:
-        
           :diameter_variation (str): Variation of the particle diameter
 
             *Choose one of the following options:*
-              
-              - ``None`` - No variation
 
-              - ``\'normal\'`` - Normal (*Gaussian*) variation
-
-              - ``\'uniform\'`` - Uniformly distributed diameters
-
-              - ``\'range\'`` - Equidistant sequence of particle-diameter samples within the spread limits. ``diameter_variation_n`` defines the number of samples within the range
+            ====================== ============================================================================================
+            ``diameter_variation`` Type of variation
+            ====================== ============================================================================================
+            ``None``               No diameter variation
+            ``'normal'``           Normal (*Gaussian*) variation
+            ``'uniform'``          Uniformly distributed diameters within spread limits
+            ``'range'``            Equidistant sequence of ``diameter_variation_n`` diameter samples within ``diameter_spread``
+            ====================== ============================================================================================
 
           :diameter_spread (float): Statistical spread
 
           :diameter_variation_n (int): Number of particle-diameter samples within the specified range
 
-            .. note:: The argument ``diameter_variation_n`` takes effect only if ``diameter_variation=\'range\'``
+            .. note:: The argument ``diameter_variation_n`` takes effect only if ``diameter_variation='range'``
         """
-        self._diameter_variation = Variation(diameter_variation, diameter_spread, diameter_variation_n, name="sample diameter")       
+        self._diameter_variation = Variation(diameter_variation, diameter_spread, diameter_variation_n)       
 
     def _get_next_diameter(self):
         d = self._diameter_variation.get(self.diameter_mean)
@@ -327,7 +295,6 @@ class AbstractContinuousParticle(AbstractParticle):
         Initialise and set the Material class instance of the particle
 
         Args:
-        
           :material_type (str): See :class:`condor.utils.material.Material`
 
           :massdensity (float): See :class:`condor.utils.material.Material`

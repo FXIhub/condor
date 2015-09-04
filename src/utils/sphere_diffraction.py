@@ -33,9 +33,9 @@ Scattering amplitude from homogeneous sphere [Feigin1987]_
 
 .. math::
 
-  F = \sqrt{K} f(r,q_x,q_y)
+  F(q) = \sqrt{K} \cdot f(q)
 
-  f = 3 \frac{ \sin(qr) - qr \cos(qr) }{ (qr)^3 }
+  f(q) =  \frac{ 3 \left[ \sin(qr) - qr \cos(qr) \right]}{ (qr)^3 }
 
 :math:`I_0`: Primary intensity on the sample in unit number of photons per square meter
 
@@ -47,13 +47,11 @@ Scattering amplitude from homogeneous sphere [Feigin1987]_
 
 :math:`r_0`: Classical electron radius in unit meter
 
-:math:`V`: Sphere volume in unit cubic meter
-
-
+:math:`V_r`: Sphere volume in unit cubic meter
 
 Args:
 
-  :K (float): Intensity scaling factor `K = I_0 \left(\rho_e \frac{p}{D} r_0 V\right)^2`
+  :K (float): Intensity scaling factor :math:`K = I_0 \left(\rho_e \frac{p}{D} r_0 V_r\right)^2`
 
   :q (float/array): :math:`q`: Length of scattering vector in unit inverse meter
 
@@ -69,7 +67,7 @@ Scattering Intensity from homogeneous sphere
 
 .. math::
 
-  I = \left|F\right|^2
+  I(q) = \left|F(q)\right|^2
 
 Args:
 

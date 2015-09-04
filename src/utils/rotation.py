@@ -57,7 +57,7 @@ class Rotation:
             if values is not None:
                 log_warning(logger, "Specified formalism=%s but values is not None." % formalism)
 
-            self._next_random(formalism)
+            self._set_as_random_formalism(formalism)
         else:
             log_and_raise_error(logger, "formalism=%s is not implemented" % formalism)
             return
@@ -122,7 +122,7 @@ class Rotation:
         # Set rotation matrix
         self.rotation_matrix = rotmx_from_quat(quaternion)
         
-    def _set_as_random(self, formalism):
+    def _set_as_random_formalism(self, formalism):
         if formalism == "random":
             self.set_as_random()
         elif formalism == "random_x":
@@ -318,13 +318,13 @@ class Rotations:
         """
         return self._formalism
                 
-    def get_next(self):
+    def get_next_rotation(self):
         """
         Iterate and return next rotation
         """
         if self._formalism in ["random","random_x","random_y","random_z"]:
-            self._rotations[0]._next_random(self._formalism)
-        rotation =  self.get_current()
+            self._rotations[0]._set_as_random_formalism(self._formalism)
+        rotation =  self.get_current_rotation()
         self._i += 1
         return rotation
     

@@ -159,7 +159,7 @@ class ParticleSpheroid(AbstractContinuousParticle):
 
             .. note:: The argument ``flattening_variation_n`` takes effect only if ``flattening_variation=\'range\'``
         """
-        self._flattening_variation = Variation(flattening_variation, flattening_spread, flattening_variation_n, name="spheroid flattening")       
+        self._flattening_variation = Variation(flattening_variation, flattening_spread, flattening_variation_n)       
 
     def _get_next_flattening(self):
         f = self._flattening_variation.get(self.flattening_mean)

@@ -16,7 +16,7 @@ Contents:
 
    Welcome <self>
    Installation <installation>
-   Running Condor simulations <config>
+   Running Condor <config>
    Conventions <conventions>
 
 

@@ -130,7 +130,7 @@ class ParticleMolecule(AbstractParticle):
         spsim.free_mol(mol)
         
     def set_atoms_from_arrays(self, atomic_numbers, atomic_positions):
-        """
+        r"""
         Specify atomic positions from atomic numbers and atomic positions
 
         Args:
@@ -163,17 +163,17 @@ class ParticleMolecule(AbstractParticle):
         Return the atomic standard weights in unified atomic mass unit (*u*)
         """
         Z = self.get_atomic_numbers()
-        names = [condor.CONDOR_atomic_names[z-1] for z in Z]
-        M = numpy.array([condor.CONDOR_atomic_masses[n] for n in names], dtype=numpy.float64)
+        names = [condor.utils.material.atomic_names[z-1] for z in Z]
+        M = numpy.array([condor.utils.material.atomic_masses[n] for n in names], dtype=numpy.float64)
         return M
     
     def get_radius_of_gyration(self):
-        """
+        r"""
         Return the radius of gyration :math:`R_g`
 
         Atomic structure of :math:`N` atoms with masses :math:`m_i` at the positions :math:`\vec{r}_i`
 
-        :math:`R_g = 'fract{ \sqrt{ \sum_{i=0}^N{ \vec{r}_i-\vec{r}_{\text{COM}} } } }{ \sum_{i=0}^N{ m_i }}`
+        :math:`R_g = \fract{ \sqrt{ \sum_{i=0}^N{ \vec{r}_i-\vec{r}_{\text{COM}} } } }{ \sum_{i=0}^N{ m_i }}`
         """
         M = self.get_atomic_masses()
         r = self.get_atomic_positions()
@@ -182,7 +182,7 @@ class ParticleMolecule(AbstractParticle):
         return r_g
 
     def get_center_of_mass(self):
-        """
+        r"""
         Return the position of the center of mass :math:`\vec{r}_{\text{COM}}`
 
         Atomic structure of :math:`N` atoms with masses :math:`m_i` at the positions :math:`\vec{r}_i`

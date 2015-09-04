@@ -37,14 +37,12 @@ class Variation:
     """
     Class for statistical variation of a variable
 
-    **Arguments:**
-
+    Args:
       :mode (str): See :meth:`condor.utils.variation.Variation.set_mode`
 
       :spread (float/array): See :meth:`condor.utils.variation.Variation.set_spread`
 
-    **Keyword arguments:**x
-
+    Kwargs:
       :n (int): Number of samples within the specified range (default ``None``)
 
       :number_of_dimensions (int): Number of dimensions of the variable (default ``1``)    
@@ -88,24 +86,24 @@ class Variation:
         return self._number_of_dimensions
 
     def set_mode(self,mode):
-        """
+        r"""
         Set the mode of variation
 
         Args:
+          :mode (str): Mode of variation
 
-          :mode (str): Mode of variation. Choose one of the following options:
-
-            - ``None`` - No variation
-
-            - ``\'uniform\'`` - Uniform random distribution
-
-            - ``\'normal\'`` - Normal random distribution
-
-            - ``\'poisson\'`` - Poissonian random distribution
-            
-            - ``\'normal_poisson\'`` - Normal (*Gaussian*) noise on top of Poisson variation (*shot noise*)
-        
-            - ``\'range\'`` - Equispaced grid around mean center position
+            *Choose one of the following options*
+           
+            ======================= ==================================================================== =====================================================
+            ``mode``                Variation model                                                      ``spread`` parameter
+            ======================= ==================================================================== =====================================================
+            ``None``                No variation                                                         -
+            ``'uniform'``           Uniform random distribution                                          Width
+            ``'normal'``            Normal random distribution                                           Standard deviation
+            ``'poisson'``           Poissonian random distribution                                       -
+            ``'normal_poisson'``    Normal on top of Poissonian random dist.                             Std. dev. of normal distribution
+            ``'range'``             Equispaced grid around mean center position                          Width
+            ======================= ==================================================================== =====================================================
         """
         if mode not in [None,"normal","poisson","normal_poisson","uniform","range"]:
             log_and_raise_error(logger, "Variation object cannot be configured with illegal mode %s" % mode)
@@ -141,10 +139,9 @@ class Variation:
 
     def set_spread(self, spread):
         """
-        Set spread of variation
+        Set spread of variation (standard deviation or full spread of values, see also :meth:`condor.utils.variation.Variation.set_mode`)
 
         Args:
-        
           :spread (float): Width of the variation
         """
         if isinstance(spread, collections.Iterable):
@@ -166,7 +163,6 @@ class Variation:
         Get next value(s)
 
         Args:
-
           :v0 (float/int/array): Value(s) without variational deviation
         """
         if self._number_of_dimensions == 1:
@@ -185,7 +181,7 @@ class Variation:
         elif self._mode == "normal":
             v1 = numpy.random.normal(v0,self._spread[dim])
         elif self._mode == "normal_poisson":
-            v1 = numpy.random.normal(numpy.random.poisson(v0),self._spread[dim]/2.)
+            v1 = numpy.random.normal(numpy.random.poisson(v0),self._spread[dim])
         elif self._mode == "poisson":
             v1 = numpy.random.poisson(v0)
         elif self._mode == "uniform":

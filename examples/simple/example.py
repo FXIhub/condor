@@ -21,5 +21,5 @@ E = condor.Experiment(src, sam, det)
 res = E.propagate()
 
 # Inspect output
-data_fourier = res["entry_1"]["data_1"]["data_fourier"])
-real_space = numpy.fft.fftshift(numpy.fft.ifftn(data_fourier)
+data_fourier = res["entry_1"]["data_1"]["data_fourier"]
+real_space = numpy.fft.fftshift(numpy.fft.ifftn(data_fourier))

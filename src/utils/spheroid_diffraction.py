@@ -62,13 +62,13 @@ Before applying rotations by :math:`theta` and :math:`phi` (see below) the rotat
 
 .. math::
 
-  F = \sqrt{K} \cdot f(a,c,\theta,\phi,q_x,q_y)
+  F(\vec{q}) = \sqrt{K} \cdot f(\vec{q})
 
-  f = 3 \frac{ \sin(qH) - qH \cos(qH) }{ (qH)^3 }
+  f(\vec{q}) = \frac{ 3 \left[\sin(qH(\vec{q})) - qH \cos(qH(\vec{q})) \right]}{ (qH(\vec{q}))^3}
 
-  H = \sqrt{a^2 \sin^2(g)+c^2 \cos^2(g)}
+  H(\vec{q}) = \sqrt{a^2 \sin^2(g(\vec{q}))+c^2 \cos^2(g(\vec{q}))}
 
-  g = \arccos\left( \frac{ -q_x \cos(\theta) sin(\phi) + q_y \cos(\theta) cos(\phi) }{ \sqrt{q_x^2+q_y^2} } \right)
+  g(\vec{q}) = \arccos\left( \frac{ -q_x \cos(\theta) sin(\phi) + q_y \cos(\theta) cos(\phi) }{ q } \right)
 
 :math:`I_0`: Primary intensity on the sample in unit number of photons per square meter
 
@@ -80,11 +80,11 @@ Before applying rotations by :math:`theta` and :math:`phi` (see below) the rotat
 
 :math:`r_0`: Classical electron radius in unit meter
 
-:math:`V`: Spheroid volume in unit cubic meter
+:math:`V_{a,c}`: Spheroid volume in unit cubic meter
 
 Args:
 
-  :K (float): Intensity scaling factor `K = I_0 \left(\rho_e \frac{p}{D} r_0 V\right)^2`
+  :K (float): Intensity scaling factor :math:`K = I_0 \left(\rho_e \frac{p}{D} r_0 V_{a,c}\right)^2`
 
   :q_x (float/array): :math:`q_x`: :math:`x`-coordinate of scattering vector in unit inverse meter
 

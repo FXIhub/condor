@@ -58,7 +58,7 @@ def experiment_from_configfile(configfile):
     
     # Read configuration file into dictionary
     C = condor.utils.config.read_configfile(configfile)
-    return experiment_from_configdict(configdict)
+    return experiment_from_configdict(C)
 
 def experiment_from_configdict(configdict):
     """
@@ -222,7 +222,7 @@ class Experiment:
                 # We multiply by 0.99 to prevent numerical issues
                 dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False) * 0.99
                 dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True) * 0.99
-                map3d, dx = p.get_map3d(D_particle, dx_required, dx_suggested)
+                map3d, dx = p.get_new_map(D_particle, dx_required, dx_suggested)
                 log_debug(logger, "Sampling of map: dx_required = %e m, dx_suggested = %e m, dx = %e m" % (dx_required, dx_suggested, dx))
                 map3d_dn = numpy.array(map3d, dtype=numpy.complex128) * dn
                 if save_map3d:
@@ -259,7 +259,7 @@ class Experiment:
                 # Import only here (otherwise errors if spsim library not installed)
                 import spsim
                 # Create options struct
-                opts = condor.utils.config.conf_to_spsim_opts(D_source, D_particle, D_detector)
+                opts = condor.utils.config._conf_to_spsim_opts(D_source, D_particle, D_detector)
                 spsim.write_options_file("./spsim.confout",opts)
                 # Create molecule struct
                 mol = spsim.get_molecule_from_atoms(D_particle["atomic_numbers"], D_particle["atomic_positions"])
@@ -417,13 +417,13 @@ class Experiment:
     #def get_map3d(self, map3d, dx, dx_req):
     #    map3d = None
     #    if dx > dx_req:
-    #        condor.CONDOR_logger.error("Finer real space sampling required for chosen geometry.")
+    #        logger.error("Finer real space sampling required for chosen geometry.")
     #        return
     #    # has map3d_fine the required real space grid?
     #    if map3d == None and abs(self.dX_fine/self.dX-1) < 0.001:
     #        # ok, we'll take the fine map
     #        map3d = self.map3d_fine
-    #        condor.CONDOR_logger.debug("Using the fine map for proagtion.")
+    #        logger.debug("Using the fine map for proagtion.")
     #        self._map3d = self.map3d_fine
     #    # do we have an interpolated map?
     #    if map3d == None and self._dX != None:
@@ -437,7 +437,7 @@ class Experiment:
     #                    if numpy.all(self.map3d_fine==self._map3d_fine):
     #                        # ok, we take the cached map!
     #                        map3d = self._map3d
-    #                        condor.CONDOR_logger.debug("Using the cached interpolated map for propagtion.")
+    #                        logger.debug("Using the cached interpolated map for propagtion.")
     #    # do we have to do interpolation?
     #    if map3d == None and self.dX_fine < self.dX:
     #        from scipy import ndimage
@@ -454,7 +454,7 @@ class Experiment:
     #        # Cace fine data for later decision whether or not the interpolated map can be used again
     #        self._map3d_fine = self.map3d_fine
     #        self._dX_fine = self.dX_fine
-    #        condor.CONDOR_logger.debug("Using a newly interpolated map for propagtion.")
+    #        logger.debug("Using a newly interpolated map for propagtion.")
     #    return map3d
     # ------------------------------------------------------------------------------------------------
 

@@ -133,7 +133,7 @@ def _list_to_str(L):
     else:
         return str(L)
             
-def conf_to_spsim_opts(D_source,D_particle,D_detector):
+def _conf_to_spsim_opts(D_source,D_particle,D_detector):
     import spsim
     # Create temporary file for pdb file
     tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)

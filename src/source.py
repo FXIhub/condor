@@ -115,7 +115,7 @@ class Source:
 
             .. note:: The argument ``pulse_energy_variation_n`` takes effect only in combination with ``pulse_energy_variation=\'range\'``
         """
-        self._pulse_energy_variation = Variation(pulse_energy_variation, pulse_energy_spread, pulse_energy_variation_n, number_of_dimensions=1, name="pulse energy")
+        self._pulse_energy_variation = Variation(pulse_energy_variation, pulse_energy_spread, pulse_energy_variation_n, number_of_dimensions=1)
 
     def get_intensity(self, position, unit = "ph/m2", pulse_energy = None):
         """

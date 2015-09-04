@@ -38,12 +38,11 @@ class Photon:
     A Photon instance is initialised with one keyword argument - either with ``wavelength``, ``energy`` or ``energy_eV``.
     
     Kwargs:
+      :wavelength (float): Photon wavelength in unit meter
 
-      :wavelength(float): Photon wavelength in unit meter
+      :energy (float): Photon energy in unit Joule
 
-      :energy(float): Photon energy in unit Joule
-
-      :energy_eV(float): Photon energy in unit electron volt
+      :energy_eV (float): Photon energy in unit electron volt
     """
     def __init__(self, wavelength=None, energy=None, energy_eV=None):
         if (wavelength is not None and energy is not None) or (wavelength is not None and energy_eV is not None) or (energy is not None and energy_eV is not None):
@@ -52,11 +51,40 @@ class Photon:
         if wavelength is not None:
             self.set_wavelength(wavelength)
         elif energy is not None:
-            self.set_energy(energy,"J")
+            self.set_energy(energy)
         elif energy_eV is not None:
-            self.set_energy(energy_eV,"eV")
+            self.set_energy_eV(energy_eV)
         else:
             log_and_raise_error(logger, "Photon could not be initialized. It needs to be initialized with either the wavelength, the photon energy in unit Joule or the photon energy in unit eV.")
+
+    def set_energy(self, energy):
+        """
+        Set photon energy in unit Joule
+
+        Args:
+          :energy (float): Photon energy in unit Joule
+        """
+        self._energy = energy
+
+    def set_energy_eV(self, energy_eV):
+        """
+        Set photon energy in unit electron volt
+
+        Args:
+          :energy (float): Photon energy in unit electron volt
+        """
+        self._energy = energy_eV*constants.e
+
+
+    def set_wavelength(self, wavelength):
+        """
+        Set photon wavelength
+
+        Args:
+          :wavelength (float): Photon wavelength in unit meter
+        """
+        self._energy = constants.c*constants.h/wavelength
+
             
     def get_energy(self):
         """
@@ -70,40 +98,11 @@ class Photon:
         """
         return self._energy/constants.e
 
-    def set_energy(self, energy):
-        """
-        Set photon energy in unit Joule
-
-        Args:
-
-          :energy (float): Photon energy in unit Joule
-        """
-        self._energy = energy
-
-    def set_energy_eV(self, energy_eV):
-        """
-        Set photon energy in unit electron volt
-
-        Args:
-
-          :energy (float): Photon energy in unit electron volt
-        """
-        self._energy = energy_eV*constants.e
 
     def get_wavelength(self):
         """
         Return wavelength in unit meter
         """
         return constants.c*constants.h/self._energy
-
-    def set_wavelength(self, wavelength):
-        """
-        Set photon wavelength
-
-        Args:
-        
-          :wavelength (float): Photon wavelength in unit meter
-        """
-        self._energy = constants.c*constants.h/wavelength
 
         
