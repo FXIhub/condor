@@ -78,7 +78,7 @@ def test_compare_molecule_with_map(tolerance = 0.1):
     N_long = 20
     N_short = int(round(short_diameter/long_diameter * N_long))
     dx = long_diameter/(N_long-1)
-    massdensity = condor.utils.material.atomic_masses["H"]*scipy.constants.value("atomic mass constant")/dx**3
+    massdensity = condor.utils.material.get_atomic_mass("H")*scipy.constants.value("atomic mass constant")/dx**3
     # Map
     map3d = numpy.zeros(shape=(N_long,N_long,N_long))
     map3d[:N_short,:,:N_short] = 1.

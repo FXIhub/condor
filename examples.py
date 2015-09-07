@@ -38,7 +38,9 @@ examples = [
 ]
 
     
-for e in examples[4:]:
+for i,e in enumerate(examples):
+    print "Starting example %i" % i
     cmd = "cd %s; %s" % (e["dir"],e["cmd"])
     print cmd
     os.system(cmd)
+    print "Exiting example %i" % i
