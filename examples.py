@@ -20,19 +20,23 @@ examples = [
         "cmd": "condor",
     },
     {
-        "dir": this_dir + "/examples/custom_map",
-        "cmd": "condor -n 2",
+        "dir": this_dir + "/examples/configfile/custom_map",
+        "cmd": "condor",
     },
     {
-        "dir": this_dir + "/examples/particle_models",
+        "dir": this_dir + "/examples/scripts/custom_map",
         "cmd": "python example.py",
     },
     {
-        "dir": this_dir + "/examples/rotations",
+        "dir": this_dir + "/examples/scripts/particle_models",
         "cmd": "python example.py",
     },
     {
-        "dir": this_dir + "/examples/simple",
+        "dir": this_dir + "/examples/scripts/rotations",
+        "cmd": "python example.py",
+    },
+    {
+        "dir": this_dir + "/examples/scripts/simple",
         "cmd": "python example.py",
     },
 ]

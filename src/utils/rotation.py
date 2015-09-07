@@ -285,10 +285,13 @@ class Rotations:
         if values is None and formalism is None:
             single = True
         elif formalism.startswith("euler_angles_") and len(formalism) == len("euler_angles_xyz"):
+            values = numpy.asarray(values)
             single = values.ndim == 1
         elif formalism == "rotation_matrix":
+            values = numpy.asarray(values)
             single = values.ndim == 2 
         elif formalism == "quaternion":
+            values = numpy.asarray(values)
             single = values.ndim == 1
         elif formalism in ["random","random_x","random_y","random_z"]:
             single = True
