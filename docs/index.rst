@@ -11,13 +11,15 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-.. toctree::
-   :hidden:
-
    Welcome <self>
    Installation <installation>
    Running Condor <config>
    Conventions <conventions>
+   References <references>
+	      
+.. toctree::
+   :hidden:
+
 
 
 Indices and tables

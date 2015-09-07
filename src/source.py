@@ -40,16 +40,14 @@ class Source:
     """
     Class for an X-ray source
 
-    **Arguments:**
-
+    Args:
       :wavelength (float): X-ray wavelength in unit meter
 
       :focus_diameter (float): Focus diameter (characteristic transverse dimension) in unit meter
 
       :pulse_energy (float): (Statistical mean of) pulse energy in unit Joule
 
-    **Keyword arguments:**
-
+    Kwargs:
       :profile_model (str): Model for the spatial illumination profile (default `None`)
     
       .. note:: The (keyword) arguments ``focus_diameter`` and ``profile_model`` are passed on to the constructor of :class:`condor.utils.profile.Profile`. For more detailed information read the documentation of the initialisation function.
@@ -96,7 +94,6 @@ class Source:
         Set variation of the pulse energy
 
         Kwargs:
-
           :pulse_energy_variation (str): Statistical variation of the pulse energy (default ``None``)
 
             *Choose one of the following options:*
@@ -122,11 +119,9 @@ class Source:
         Calculate the intensity at a given position in the focus
 
         Args:
-
           :position: Coordinates [*x*, *y*, *z*] of the position where the intensity shall be calculated
            
         Kwargs:
-
           :unit (str): Intensity unit (default ``\'ph/m2\'``)
 
             *Choose one of the following options:*

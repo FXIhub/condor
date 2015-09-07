@@ -33,11 +33,10 @@ import linalg
 
 
 def q_from_p(p, wavelength):
-    """
-    Return scattering vector from pixel position vector and photon wavelength
+    r"""
+    Return scattering vector from pixel position vector and photon wavelength.
 
     Args:
-
       :p (array): Pixel position vector :math:`\vec{p}=(p_x,p_y,p_z)` with respect to the interaction point in unit meter
 
       :wavelength (float): Photon wavelength in unit meter
@@ -50,11 +49,10 @@ def q_from_p(p, wavelength):
     return q
 
 def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation=None, order="xyz"):
-    """
+    r"""
     Generate scattering vector map from experimental parameters
 
     Args:
-    
       :X (array): :math:`x`-coordinates of pixels in unit meter
 
       :Y (array): :math:`y`-coordinates of pixels in unit meter
@@ -66,10 +64,9 @@ def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation
       :wavelength (float): Photon wavelength in unit meter
 
     Kwargs:
-
       :extrinsic_rotation (:class:`condor.utils.rotation.Rotation`): Extrinsic rotation of the sample. If ``None`` no rotation is applied (default ``None``)
 
-      :order (str): Order of scattering vector coordinates in the output array. Choose either ``\'xyz\'`` or ``\'zyx\'`` (default ``\'xyz\'``)    
+      :order (str): Order of scattering vector coordinates in the output array. Choose either ``'xyz'`` or ``'zyx'`` (default ``'xyz'``)    
     """
     log_debug(logger, "Allocating qmap (%i,%i,%i)" % (X.shape[0],X.shape[1],3))
     R_Ewald = 2*numpy.pi/wavelength
@@ -104,7 +101,6 @@ def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
     Generate absolute scattering vector map from experimental parameters
 
     Args:
-    
       :X (array): See :func:`condor.utils.scattering_vector.generate_qmap`
 
       :Y (array): See :func:`condor.utils.scattering_vector.generate_qmap`

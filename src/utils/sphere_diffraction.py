@@ -29,7 +29,7 @@ from scattering_vector import generate_qmap
 _F_sphere_diffraction = lambda K,q,r: numpy.sqrt(abs(K))*3*(numpy.sin(q*r)-q*r*numpy.cos(q*r))/((q*r)**3+numpy.finfo("float64").eps)
 F_sphere_diffraction = lambda K,q,r: ((q*r)**6 < numpy.finfo("float64").resolution)*numpy.sqrt(abs(K)) + ((q*r)**6 >= numpy.finfo("float64").resolution)*_F_sphere_diffraction(K,q,r)
 r"""
-Scattering amplitude from homogeneous sphere [Feigin1987]_
+Scattering amplitude from homogeneous sphere (ref. [Feigin1987]_)
 
 .. math::
 
@@ -50,14 +50,11 @@ Scattering amplitude from homogeneous sphere [Feigin1987]_
 :math:`V_r`: Sphere volume in unit cubic meter
 
 Args:
-
   :K (float): Intensity scaling factor :math:`K = I_0 \left(\rho_e \frac{p}{D} r_0 V_r\right)^2`
 
   :q (float/array): :math:`q`: Length of scattering vector in unit inverse meter
 
   :r (float): :math:`r`: Sphere radius in unit meter
-
-.. [Feigin1987]: Feigin 1987
 """
 
 _I_sphere_diffraction = lambda K,q,r: abs(K)*(3*(numpy.sin(q*r)-q*r*numpy.cos(q*r))/((q*r)**3+numpy.finfo("float64").eps))**2
@@ -70,7 +67,6 @@ Scattering Intensity from homogeneous sphere
   I(q) = \left|F(q)\right|^2
 
 Args:
-
   :K (float): See :func:`condor.utils.sphere_diffraction.F_sphere_diffraction`
 
   :q (float/array): See :func:`condor.utils.sphere_diffraction.F_sphere_diffraction`

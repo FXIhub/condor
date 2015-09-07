@@ -346,7 +346,7 @@ class Experiment:
             calculate = calculate or pixel_size != self._qmap_cache["pixel_size"]
             calculate = calculate or detector_distance != self._qmap_cache["detector_distance"]
             calculate = calculate or wavelength != self._qmap_cache["wavelength"]
-            calculate = calculate or not extrinsic_rotation.similar(self._qmap_cache["extrinsic_rotation"])
+            calculate = calculate or not extrinsic_rotation.is_similar(self._qmap_cache["extrinsic_rotation"])
         if calculate:
             log_debug(logger,  "Calculating qmap")
             Y,X = numpy.meshgrid(numpy.float64(numpy.arange(ny))-cy,

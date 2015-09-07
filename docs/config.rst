@@ -3,7 +3,7 @@ Running Condor simulations
 
 There are generally two ways of configuring and running simulations with Condor:
 
-**A) Configuraion file** (`more info <#a-configuration-file>`_)
+**A) Simulation with a configuration file** (`more info <#a-simulation-with-a-configuration-file>`_)
 
   Write a configuration file based on the examples below, name the file 'condor.conf' and run the Condor executable in the same folder::
 
@@ -15,7 +15,7 @@ There are generally two ways of configuring and running simulations with Condor:
 
      $ condor -h
    
-**B) Scripting in Python** (`more info <#b-scripting-in-python>`_)
+**B) Simulation in Python** (`more info <#b-simulation-directly-in-python>`_)
 
   Create a :class:`condor.experiment.Experiment` instance and call :meth:`condor.experiment.Experiment.propagate` to obtaining the simulation result::
 
@@ -27,35 +27,33 @@ There are generally two ways of configuring and running simulations with Condor:
   The simulation result is a dictionary that contains the simulated pattern and additional output.
 
 
-A) Configuration file
----------------------
+A) Simulation with a configuration files
+----------------------------------------
 
 A Condor configuration file is composed of at least four sections:
 
-  `1) Source`_ ``[source]``
+`1) Source`_ ``[source]``
      
-  `2) Sample`_ ``[sample]``
+`2) Sample`_ ``[sample]``
 
-  `3) Particle`_
-  
-  At least one of the following particle sections:
+`3) Particle`_ - at least one particle section:
 
-     `a) Uniform sphere`_ ``[particle_sphere]``
+   `a) Uniform sphere`_ ``[particle_sphere]``
 
-     `b) Uniform spheroid`_ ``[partice_spheroid]``
+   `b) Uniform spheroid`_ ``[partice_spheroid]``
 
-     `c) Refractive index map`_ ``[particle_map]``
+   `c) Refractive index map`_ ``[particle_map]``
 
-     `d) Atom positions`_ ``[particle_molecule]``
+   `d) Atom positions`_ ``[particle_molecule]``
 
-  `4) Detector`_ ``[detector]``
+`4) Detector`_ ``[detector]``
 
-.. note:: All section titles have to be unique in one configuration file. If you want to specify many particle sections of the same particle model type just append a unique identifier to the standard header (e.g. ``[particle_sphere_2]``).
+.. note:: All section titles have to be unique in a configuration file. If you want to specify more than one particle sections of the same particle model make the section title unique by appending an underscore and a number to the standard title (e.g. ``[particle_sphere_2]``).
 
 1) Source
 ^^^^^^^^^
 
-This section configures the :class:`condor.source.Source` class.
+This section configures the :class:`condor.source.Source` class instance.
 
 **Example:**
 
@@ -120,16 +118,14 @@ This section configures a :class:`condor.detector.Detector` class instance.
 .. literalinclude:: ../examples/configfile/detector.conf
 
 
-B) Scripting in Python
-----------------------
+B) Simulation directly in Python
+--------------------------------
 
-The class *Experiment* holds all information of a simulation. Its constructor requires three arguments
+Simulations are carried out with an instance of the :class:`condor.experiment.Experiment` class. Its constructor requires three arguments
 
-  1) Source instance - :class:`condor.source.Source`
+  1) A Source instance :class:`condor.source.Source`
 
-  2) Sample instance - :class:`condor.sample.Sample`,
-
-     which contains at least one Particle instance out of
+  2) A Sample instance - :class:`condor.sample.Sample`, which contains at least one Particle instance:
 
      - Uniform sphere - :class:`condor.particle.particle_sphere.ParticleSphere`
        
@@ -139,7 +135,9 @@ The class *Experiment* holds all information of a simulation. Its constructor re
 
      - Atom positions - :class:`condor.particle.particle_molecule.ParticleMolecule`
      
-  3) Detector instance - :class:`condor.detector.Detector`
+  3) A Detector instance - :class:`condor.detector.Detector`
+
+Calling the method :meth:`condor.experiment.propagate` starts the simulation of a single diffraction pattern. The method returns a dictionary with various outputs.
 
 Example
 ^^^^^^^

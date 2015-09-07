@@ -1,5 +1,5 @@
 """
-This module is an implementation of a variety of rotation tools in 3D space
+This module is an implementation of a variety of tools for rotations in 3D space.
 """
 
 import sys, numpy, types, pickle, time, math
@@ -107,13 +107,11 @@ class Rotation:
 
         Args:
 
-           :quaternion: Length-4 array representing the quaternion :math:`w+ix+jy+kz`: 
+           :quaternion: Numpy array representing the quaternion :math:`w+ix+jy+kz`: 
 
                         [:math:`w`, :math:`x`, :math:`y`, :math:`z`] = [:math:`\cos(\theta/2)`, :math:`u_x \sin(\theta/2)`, :math:`u_y \sin(\theta/2)`, :math:`u_z \sin(\theta/2)`] 
 
-                        with :math:`\theta` being the rotation angle with respect to the rotation axis defined by the unit vector [:math:`u_x`, :math:`u_y`, :math:`u_z`]. 
-
-                        The direction of rotation follows the right hand rule
+                        with :math:`\theta` being the rotation angle and :math:`\vec{u}=(u_x,u_y,u_z)` the unit vector that defines the axis of rotation.
         """
         # Check input
         if quaternion.size != 4:
@@ -180,8 +178,8 @@ class Rotation:
 
            :tol (float): Tolerance for similarity. This is the maximum distance of the two quaternions in 4D space that will be interpreted for similar rotations. (default 0.00001)
         """
-        q0 = self.get_as_quaternion(uniquify=True)
-        q1 = rotation.get_as_quaternion(uniquify=True)
+        q0 = self.get_as_quaternion(unique_representation=True)
+        q1 = rotation.get_as_quaternion(unique_representation=True)
         err = numpy.sqrt(((q0-q1)**2).sum())
         return (err < tol)
             
@@ -244,7 +242,7 @@ class Rotation:
 
     def get_as_euler_angles(self, rotation_axes="zxz"):
         r"""
-        Get rotation in Euler angle represantation (length-3 array).
+        Get rotation in Euler angle represantation :math:`[e_1^{(z)}, e_2^{(x)}, e_3^{(z)}]` (for the case of ``rotation_axis='zxz'``).
 
         Kwargs:
 
@@ -259,15 +257,16 @@ class Rotation:
         """
         return self.rotation_matrix.copy()
 
-    def get_as_quaternion(self, uniquify=False):
+    def get_as_quaternion(self, unique_representation=False):
         r"""
-        Get rotation in quaternion representation (length-4 array).
+        Get rotation in quaternion representation :math:`[w, x, y, z]`.
+
         Kwargs:
-           :uniquify(bool): Make quaternion unique. For more details check the documentation of the function \'uniquify_quat(q)\' (default = False)
+           :unique_representation (bool): Make quaternion unique. For more details see the documentation of :func:`condor.utils.rotation.unique_representation_quat` (default = False)
         """
         q = quat_from_rotmx(self.rotation_matrix)
-        if uniquify:
-            q = uniquify_quat(q)
+        if unique_representation:
+            q = unique_representation_quat(q)
         return q
 
 class Rotations:
@@ -382,9 +381,7 @@ def R_euler(euler_angles, rotation_axes="zxz"):
 # RANDOM ROTATION
 def rand_quat():
     r"""
-    Obtain a uniform random rotation in quaternion representation [Shoemake1992p129f]_
-    
-    .. [Shoemake1992p129f] K. Shoemake. Uniform random rotations. In D. Kirk, editor, Graphics Gems III, pages 124-132. Academic, New York, 1992. (pages 129f)
+    Obtain a uniform random rotation in quaternion representation ([Shoemake1992]_ pages 129f)
     """
     x0,x1,x2 = numpy.random.random(3)
     theta1 = 2.*numpy.pi*x1
@@ -401,15 +398,13 @@ def rand_quat():
 # CONVERSIONS FROM DIFFERENT REPRESENTATIONS OF ROTATION
 def rotmx_from_quat(q):
     r"""
-    Create a rotation matrix from given quaternion [Shoemake1992p128]_
+    Create a rotation matrix from given quaternion ([Shoemake1992]_ page 128)
 
     Args:
 
        :quaternion (array): :math:`q = w + ix + jy + kz` (``values``: :math:`[w,x,y,z]`)
 
     The direction of rotation follows the right hand rule
-
-    .. [Shoemake1992p128] K. Shoemake. Uniform random rotations. In D. Kirk, editor, Graphics Gems III, pages 124-132. Academic, New York, 1992. (pages 128)
     """
     w,x,y,z = q
     R = numpy.array([[1.-2.*(y**2+z**2),
@@ -450,7 +445,7 @@ def norm_quat(q, tolerance=0.00001):
         q_norm = q.copy()
     return q_norm
 
-def uniquify_quat(q):
+def unique_representation_quat(q):
     r"""
     Return the quaternion in a unique representation of rotations by avoiding the ambiguity that :math:`q` and :math:`-q` determine the same rotation.
 
@@ -536,7 +531,7 @@ def quat_conj(q):
 
     Args:
 
-       :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] that represents the quaternion
+       :q (array): Numpy array :math:`[w,x,y,z]` that represents the quaternion
     """
     iq = q.copy()
     iq[1:] = -iq[1:]
@@ -548,7 +543,7 @@ def rotate_quat(v, q):
 
     Args:
 
-       :v (array): Length-3 array [:math:`v_x`, :math:`v_y`, :math:`v_z`] that represents the vector      
+       :v (array): Length-3 array :math:`[v_x,v_y,v_z]` that represents the vector      
 
        :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] that represents the quaternion
     """
@@ -557,10 +552,10 @@ def rotate_quat(v, q):
 # Quaternion from rotation matrix
 def quat_from_rotmx(R):
     r"""
-    Obtain the quaternion from a given rotation matrix
+    Obtain the quaternion from a given rotation matrix (ref. [euclidianspace_mxToQuat]_)
+
     Args:
-       :R: 3x3 array that represent the rotation matrix
-    Reference: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
+       :R: 3x3 array that represent the rotation matrix (see `Conventions <conventions.html#matrices>`_)
     """
     q = numpy.zeros(4, dtype="float")
     q[0] = numpy.sqrt( max( 0, 1 + R[0,0] + R[1,1] + R[2,2] ) ) / 2.
@@ -576,7 +571,7 @@ def _test_quat_from_rotmx(N=1000):
     err = numpy.ones(N)
     for i in range(N):
         q0 = rand_quat()
-        q0 = uniquify_quat(q0)
+        q0 = unique_representation_quat(q0)
         R = rotmx_from_quat(q0)
         q1 = quat_from_rotmx(R)
         err[i] = abs(q0-q1).sum()
@@ -590,14 +585,13 @@ def _test_quat_from_rotmx(N=1000):
 # Euler angles from rotation matrix
 def euler_from_quat(q, rotation_axes="zxz"):
     r"""
-    Return euler angles from quaternion
-    Args:
-       :q: Length-4 array [w,x,y,z] that represents the quaternion
-    Kwargs:
-       :rotation_axes(str): Rotation axes of the three consecutive Euler rotations (default = \'zxz\') 
-    References: http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/
-                http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToEuler/quat_2_euler_paper_ver2-1.pdf  
+    Return euler angles from quaternion (ref. [euclidianspace_mxToQuat]_, [euclidianspace_quatToEul]_).
 
+    Args:
+       :q: Numpy array :math:`[w,x,y,z]` that represents the quaternion
+
+    Kwargs:
+       :rotation_axes(str): Rotation axes of the three consecutive Euler rotations (default ``\'zxz\'``) 
     """
     if len(rotation_axes) != 3:
         print "Error: rotation_axes = %s is an invalid input." % rotation_axes
@@ -648,23 +642,49 @@ def euler_from_quat(q, rotation_axes="zxz"):
     e2 = numpy.sign(m) * e2_mag
     return numpy.array([e0,e1,e2])
 
-def norm_euler_repax(euler):
+def make_euler_unique_repax(euler):
     r"""
-    Normalising Euler angles for roations with a repeated axis (zxz, zyz, yzy, yxy, xzx, xyx) such that a set uniquely defines a rotation.
-    There are the following ambiguities:
-    1) (euler[0],euler[1],euler[2]) <=> (euler[0]+n*2*pi,euler[1]+n*2*pi,euler[2]+n*2*pi) , n: any integer
-    2) (euler[0],euler[1],euler[2]) <=> (euler[0]+pi,-euler[1],euler[2]+pi)
-    3) If ((euler[0]+euler[2]) mod 2pi) == 0: (euler[0],euler[1],euler[2]) <=> (a,euler[1],-a), a rational 
+    Make Euler angles for roations with a repeated axis (zxz, zyz, yzy, yxy, xzx, xyx) unique (such that three euler angles uniquely define a rotation).
 
-    The follwing conventions are being used (observe order!):
-    1) Modulo 2pi of all angles
-    2) If euler[0] >= pi: 
-       a) euler[0] = (euler[0] + pi) modulo 2pi
-       b) euler[1] = 2pi - euler[1]
-       c) euler[2] = (euker[2] + pi) modulo 2pi
-    3) If | euler[0]+euler[2]-2pi | < epsilon:
-       euler[0] = 0.
-       euler[2] = 0.
+    *There are the following ambiguities:*
+
+      1) Common circularity of rotations:
+
+        .. math::
+
+          (e_1,e_2,e_3) \Leftrightarrow (e_1 + n \cdot 2\pi ,e_2 + n \cdot 2\pi ,e_3 + n \cdot 2\pi) \, , \, n \in \mathbb{Z}
+
+      2) Ambiguity resulting if first and last rotation is increased by :math:`\pi`:
+   
+        .. math::
+    
+          (e_1,e_2,e_3) \Leftrightarrow (e_1 + \pi, -e_2, e_3 + \pi)
+
+      3) Gimbal lock if :math:`(e_1+e_3) \mod 2\pi = 0`:
+
+        .. math::
+
+          (e_1,e_2,e_3) \Leftrightarrow (a,e_2,-a)`, :math:`a \in \mathbb{Q}
+
+    *The follwing conventions are being used (observe order!):*
+
+      1) Allways:
+
+        .. math::
+
+          (e_1 \, \textrm{mod} \, 2\pi, e_2 \, \textrm{mod} \, 2\pi, e_3 \, \textrm{mod} \, 2\pi)
+
+      2) If :math:`e_1 \geq \pi`:
+ 
+        .. math::
+
+          ((e_1 + pi) \mod 2\pi, 2\pi - e_2, (e_3 + \pi) \mod 2\pi)
+
+      3) If :math:`| e_1+e_3-2\pi | < \epsilon`:
+   
+        .. math::
+
+          (0,e_1,0)
     """
     pi = numpy.pi
     twopi = 2*pi
@@ -704,14 +724,14 @@ def _test_euler_from_quat(N=1000):
             exec "R0 = R_%s(euler0[0]).dot(R_%s(euler0[1]).dot(R_%s(euler0[2])))" % (ax[0],ax[1],ax[2])
             # For testing
             q0 = quat_from_rotmx(R0)
-            q0 = uniquify_quat(q0)
+            q0 = unique_representation_quat(q0)
             # Important call
             euler1 = euler_from_quat(q0, ax)
             # ----
             #euler1 = norm_euler_zxz(euler1)
             exec "R1 = R_%s(euler1[0]).dot(R_%s(euler1[1]).dot(R_%s(euler1[2])))" % (ax[0],ax[1],ax[2])
             q1 = quat_from_rotmx(R1)
-            q1 = uniquify_quat(q1)
+            q1 = unique_representation_quat(q1)
             #de = euler0-euler1
             dq = q0-q1
             #err[k] = abs(de).sum()

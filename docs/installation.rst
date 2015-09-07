@@ -13,16 +13,18 @@ Make sure that you have the followin python packages installed:
   - *scipy*
   - *h5py*
 
-If any of these is missing install it with *pip* (or *easy_install*):
+If any of these packages is missing simply install it with *pip* (or *easy_install*):
 
 .. code::
    
    $ pip install numpy scipy h5py
 
+You might need to prepend ``sudo`` to obtain root privileges.
+   
 b) NFFT
 ^^^^^^^
 
-Install the NFFT library:
+Install the `NFFT library <https://www-user.tu-chemnitz.de/~potts/nfft/>`_:
 
 .. code::
    
@@ -37,7 +39,7 @@ Install the NFFT library:
 c) libspimage and spsim (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Install the libspimage and the spsim libraries:
+Install the libraries `libspimage <https://github.com/FilipeMaia/libspimage>`_ and the `spsim <https://github.com/FilipeMaia/libspimage>`_:
 
 i) libspimage
 ,,,,,,,,,,,,,
@@ -50,9 +52,9 @@ i) libspimage
    cd build
    ccmake ..
 
-Hit the "C" key for automatic configuration.
+Hit the **C** key for automatic configuration.
    
-Make sure everything is set up correctly, then press the "G" key for generation of the Makefile.
+Make sure everything is set up correctly, then press the **G** key for generation of the Makefile.
 
 .. code:: bash
 
@@ -71,9 +73,9 @@ ii) spsim
    cd build
    ccmake ..
 
-Hit the "C" key for automatic configuration.
+Hit the **C** key for automatic configuration.
    
-Make sure everything is set up correctly, then press the "G" key for generation of the Makefile.
+Make sure everything is set up correctly, then press the **G** key for generation of the Makefile.
 
 .. code::
 
@@ -97,7 +99,7 @@ Make sure everything is set up correctly, then press the "G" key for generation 
 
    python tests.py
 
-If all tests have been passed successfully you should read:
+If all tests were successful you will read:
 
   ``=> SUCCESS: All tests passed successfully``
    

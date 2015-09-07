@@ -30,12 +30,10 @@ class ParticleSphere(AbstractContinuousParticle):
 
     *Model:* Uniformly filled spherical particle (continuum approximation)
 
-    **Arguments:**
-
+    Args:
       :diameter (float): Sphere diameter
 
-    **Keyword arguments:**
-    
+    Kwargs:
       :diameter_variation (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
 
       :diameter_spread (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)

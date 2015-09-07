@@ -21,7 +21,7 @@ examples = [
     },
     {
         "dir": this_dir + "/examples/custom_map",
-        "cmd": "condor",
+        "cmd": "condor -n 2",
     },
     {
         "dir": this_dir + "/examples/particle_models",

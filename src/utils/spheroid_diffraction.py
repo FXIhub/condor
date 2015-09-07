@@ -27,28 +27,6 @@ import numpy
 from scattering_vector import generate_qmap
 import rotation
 
-# scattering amplitude from homogeneous spheroid:
-# -----------------------------------------------
-# Sources:
-# Feigin 1987
-# Hamzeh,Bragg 1974
-#
-# a: radius perpendicular to the rotation axis of the ellipsoid (a)
-# c: radius along the rotation axis of the ellipsoid (c)
-# Before applying rotations by theta and phi the rotation axis is parallel to the the y-axis
-# theta: extrinisc rotation around x-axis (1st, counter clockwise / right hand rule)
-# phi: extrinsic rotation around z-axis (2nd, counter clockwise / right hand rule)
-#
-# F = sqrt(I_0) rho_e p/D r_0 4/3 pi a^2 c [ 3 { sin(qH) - qH cos(qH) } / (qH)^3 ]
-#   = sqrt(I_0) rho_e p/D r_0 V f(a,c,theta,phi,qx,qy)
-# f = 3 { sin(qH) - qH cos(qH) } / (qH)^3
-# H = sqrt(asq sin^2(g)+csq cos^2(g))
-# g = arccos( ( -qX cos(theta) sin(phi) + qy cos(theta) cos(phi) ) / sqrt(qX^2+qy^2) )
-# K = I_0 (rho_e p/D r_0 V)^2
-# S = I_0 rho_e^2 = K / (p/D r_0 V)^2
-# ============================================================================================
-# I = K [ f(asq,csq,theta,phi,qx,qy) ]^2
-# ============================================================================================
 _q_spheroid_diffraction = lambda q_x, q_y: numpy.sqrt(q_x**2+q_y**2)
 _g_spheroid_diffraction = lambda q_x, q_y, theta, phi: numpy.arccos((numpy.cos(theta)*(1-numpy.finfo("float64").eps))*(-q_x*numpy.sin(phi)+q_y*numpy.cos(phi))/(_q_spheroid_diffraction(q_x,q_y)+numpy.finfo("float64").eps))
 _H_spheroid_diffraction = lambda q_x, q_y, a, c,theta, phi: numpy.sqrt(a**2*numpy.sin(_g_spheroid_diffraction(q_x,q_y,theta,phi))**2+c**2*numpy.cos(_g_spheroid_diffraction(q_x,q_y,theta,phi))**2)
@@ -56,9 +34,9 @@ _qH_spheroid_diffraction = lambda q_x, q_y ,a, c,theta, phi: _q_spheroid_diffrac
 _F_spheroid_diffraction = lambda K, q_x, q_y, a, c, theta, phi: numpy.sqrt(abs(K))*3.*(numpy.sin(_qH_spheroid_diffraction(q_x,q_y,a,c,theta,phi))-_qH_spheroid_diffraction(q_x,q_y,a,c,theta,phi)*numpy.cos(_qH_spheroid_diffraction(q_x,q_y,a,c,theta,phi)))/(_qH_spheroid_diffraction(q_x,q_y,a,c,theta,phi)**3+numpy.finfo("float64").eps)
 F_spheroid_diffraction = lambda K, q_x, q_y, a, c, theta, phi: (_qH_spheroid_diffraction(q_x,q_y,a,c,theta,phi)**6 < numpy.finfo("float64").resolution)*numpy.sqrt(abs(K)) + (_qH_spheroid_diffraction(q_x,q_y,a,c,theta,phi)**6 >= numpy.finfo("float64").resolution)*_F_spheroid_diffraction(K,q_x,q_y,a,c,theta,phi)
 r"""
-Scattering amplitude from homogeneous spheroid [Feigin1987]_, [Hamzeh1974]_
+Scattering amplitude from homogeneous spheroid (ref. [Feigin1987]_, [Hamzeh1974]_)
 
-Before applying rotations by :math:`theta` and :math:`phi` (see below) the rotation axis is parallel to the the :math:`y`-axis
+The rotation axis is alligned parallel to the the :math:`y`-axis before the rotations by :math:`theta` and :math:`phi` are applied (see below).
 
 .. math::
 
@@ -83,7 +61,6 @@ Before applying rotations by :math:`theta` and :math:`phi` (see below) the rotat
 :math:`V_{a,c}`: Spheroid volume in unit cubic meter
 
 Args:
-
   :K (float): Intensity scaling factor :math:`K = I_0 \left(\rho_e \frac{p}{D} r_0 V_{a,c}\right)^2`
 
   :q_x (float/array): :math:`q_x`: :math:`x`-coordinate of scattering vector in unit inverse meter
@@ -97,12 +74,7 @@ Args:
   :theta (float): :math:`\theta`: extrinisc rotation around :math:`x`-axis (1st, counter clockwise / right hand rule)
 
   :phi (float): :math:`\phi`: extrinsic rotation around :math:`z`-axis (2nd, counter clockwise / right hand rule)
-
-.. [Feigin1987] Feigin 1987
-.. [Hamzeh1974] Hamzeh,Bragg 1974
 """
-
-
 
 _I_spheroid_diffraction = lambda K, qX, qY, a, c, theta, phi: abs(K)*(3.*(numpy.sin(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi))-_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)*numpy.cos(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)))/(_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**3+numpy.finfo("float64").eps))**2
 I_spheroid_diffraction = lambda K, qX, qY, a, c, theta, phi: (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 < numpy.finfo("float64").resolution)*abs(K) + (_qH_spheroid_diffraction(qX,qY,a,c,theta,phi)**6 >= numpy.finfo("float64").resolution)*_I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
@@ -114,7 +86,6 @@ Scattering Intensity from homogeneous spheroid
   I = \left|F\right|^2
 
 Args:
-
   :K (float): See :func:`condor.utils.spheroid_diffraction.F_spheroid_diffraction`
 
   :q_x (float/array): See :func:`condor.utils.spheroid_diffraction.F_spheroid_diffraction`
@@ -129,18 +100,6 @@ Args:
 
   :phi (float): See :func:`condor.utils.spheroid_diffraction.F_spheroid_diffraction`
 """
-
-#def get_spheroid_diffraction_formula(p,D,wavelength,X=None,Y=None):
-#    if X != None and Y != None:
-#        qmap = generate_qmap(X,Y,p,D,wavelength)
-#        qX = qmap[:,:,2]
-#        qY = qmap[:,:,1]
-#        qZ = qmap[:,:,0]
-#        I = lambda K,a,c,theta,phi: I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
-#    else:
-#        qmap = lambda X,Y: generate_qmap(X,Y,p,D,wavelength)
-#        I = lambda X,Y,K,a,c,theta,phi: I_sphere_diffraction(K,qmap(X,Y)[0],qmap(X,Y)[1],a,c,theta,phi)
-#    return I
 
 to_spheroid_semi_diameter_a = lambda diameter,flattening: flattening**(1/3.)*diameter/2.
 """
@@ -162,6 +121,18 @@ to_spheroid_flattening = lambda a,c: a/c
 Conversion from spheroid semi-diameters :math:`a` and :math:`c` to flattening (:math:`a/c`)
 """
 
+
+#def get_spheroid_diffraction_formula(p,D,wavelength,X=None,Y=None):
+#    if X != None and Y != None:
+#        qmap = generate_qmap(X,Y,p,D,wavelength)
+#        qX = qmap[:,:,2]
+#        qY = qmap[:,:,1]
+#        qZ = qmap[:,:,0]
+#        I = lambda K,a,c,theta,phi: I_spheroid_diffraction(K,qX,qY,a,c,theta,phi)
+#    else:
+#        qmap = lambda X,Y: generate_qmap(X,Y,p,D,wavelength)
+#        I = lambda X,Y,K,a,c,theta,phi: I_sphere_diffraction(K,qmap(X,Y)[0],qmap(X,Y)[1],a,c,theta,phi)
+#    return I
 
 #def to_spheroid_theta(euler_angle_0,euler_angle_1,euler_angle_2):
 #    v_z = numpy.array([1.0,0.0,0.0])

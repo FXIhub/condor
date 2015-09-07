@@ -41,8 +41,7 @@ class ParticleMolecule(AbstractParticle):
 
     *Model:* Discrete atomic positions
 
-    **Keyword arguments:**
-
+    Kwargs:
       :pdb_filename (str): See :meth:`set_atoms_from_pdb_file` (default ``None``)
 
       :atomic_numbers (array): See :meth:`set_atoms_from_arrays` (default ``None``)
@@ -121,7 +120,6 @@ class ParticleMolecule(AbstractParticle):
         The PDB file format is described here: `http://www.wwpdb.org/documentation/file-format <http://www.wwpdb.org/documentation/file-format>`
 
         Args:
-
           :pdb_filename (str): Location of the PDB file
         """
         import spsim
@@ -134,7 +132,6 @@ class ParticleMolecule(AbstractParticle):
         Specify atomic positions from atomic numbers and atomic positions
 
         Args:
-
           :atomic_numbers (array): Integer array of atomic numbers specifies the element species of each atom. Array shape: (:math:`N`,) with :math:`N` denoting the number of atoms.
 
           :atomic_position (array): Float array of atomic positions [:math:`x`, :math:`y`, :math:`z`] in unit meter. Array shape: (:math:`N`, 3,) with :math:`N` denoting the number of atoms

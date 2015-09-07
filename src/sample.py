@@ -38,8 +38,7 @@ class Sample:
     """
     Class for a sample
 
-    Keyword arguments:
-
+    Kwargs:
       :number_of_particles (float): Expectation value for the number of particles in the interaction volume (default = 1.)
     
       :number_of_particles_variation (str): Variation of the number of particles (default ``None``)
@@ -99,7 +98,6 @@ class Sample:
         Add a particle model to the sample (at the end of the particles list)
         
         Args:
-
            :particle_model: Particle model instance
 
            :name (str): Name of the new particle (must be unique)
@@ -150,7 +148,6 @@ class Sample:
         Set statistical variation model for the number of particles
 
         Args:
-
           :number_of_particles_variation (str): Variation of the number of particles
 
             *Choose one of the following options:*

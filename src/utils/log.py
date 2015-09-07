@@ -137,8 +137,12 @@ class CXIWriter:
                     self._f.create_dataset(name, shape, maxshape=maxshape, dtype=dtype)
                     self._f[name].attrs.modify("axes",[axes])
                 if self._f[name].shape[0] <= self._i:
-                    new_shape = tuple([self._chunksize*(self._i/self._chunksize+1)]+list(data.shape))
-                    log_debug(logger, "Resize dataset [old shape: %s, new shape: %s]" % (name,str(shape),str(new_shape)))
+                    if numpy.isscalar(data):
+                        data_shape = []
+                    else:
+                        data_shape = data.shape
+                    new_shape = tuple([self._chunksize*(self._i/self._chunksize+1)]+list(data_shape))
+                    log_debug(logger, "Resize dataset %s [old shape: %s, new shape: %s]" % (name,str(self._f[name].shape),str(new_shape)))
                     self._f[name].resize(new_shape)
                 log_debug(logger, "Write to dataset %s at stack position %i" % (name, self._i))
                 if numpy.isscalar(data):

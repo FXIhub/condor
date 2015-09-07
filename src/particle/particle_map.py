@@ -191,10 +191,9 @@ class ParticleMap(AbstractContinuousParticle):
         Set map from numpy array
 
         Args:
+          :map3d (array): Numpy array with three equal dimensions of float values. If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
 
-          :map3d: Numpy array with three equal dimensions of float values. If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
-
-          :dx: Grid spacing in unit meter
+          :dx (float): Grid spacing in unit meter
         """
         s = numpy.array(map3d.shape)
         if not numpy.all(s==s[0]):
@@ -210,10 +209,9 @@ class ParticleMap(AbstractContinuousParticle):
         Load map from dataset in HDF5 file
 
         Args:
+          :map3d_filename (str): Location of the HDF5 file that contains the map data
 
-          :map3d_filename: Location of the HDF5 file that contains the map data
-
-          :map3d_dataset: Dataset location in the file. The dataset must have three equal dimensions of float values. If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
+          :map3d_dataset (str): Dataset location in the file. The dataset must have three equal dimensions of float values. If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
           :dx: Grid spacing in unit meter
         """
         import h5py

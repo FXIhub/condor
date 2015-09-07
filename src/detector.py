@@ -44,6 +44,8 @@ import condor.utils.scattering_vector
 class Detector:
     """
     Class for a photon area-detector
+
+    .. image:: images/detector_schematic.jpg
         
     **Arguments:**
 
@@ -77,7 +79,7 @@ class Detector:
 
       :binning (int): Pixel binning factor, intensies are integrated over square patches that have an area of ``binning`` x ``binning`` pixels (default ``None``)
 
-      :mask_CXI_bitmask(bool): If ``True`` the provided mask (``mask_dataset`` or ``mask``) is a CXI bitmask. For documentation on the implementation of CXI bitmasks see :class:`condor.utils.pixelmask.PixelMask` (default ``False``)
+      :mask_CXI_bitmask (bool): If ``True`` the provided mask (``mask_dataset`` or ``mask``) is a CXI bitmask. For documentation on the implementation of CXI bitmasks see :class:`condor.utils.pixelmask.PixelMask` (default ``False``)
 
         *Choose one of the following options:*
 
@@ -106,13 +108,12 @@ class Detector:
 
           :mask_filename (str): Location of HDF5 file that contains dataset for mask (default ``None``)
 
-          :mask_dataset (str): HDF5 dataset (in the file specified by the argument ``mask_filename``) that contains the mask data (default ``None``)
+          :mask_dataset (str): HDF5 dataset (in the file specified by the argument ``mask_filename``) that contains the mask data. Toggle the option ``mask_CXI_bitmask`` for decoding options (default ``None``)
 
 
         *C) Numpy array for mask*
 
-          :mask: 2D numpy integer array that defines the mask (default ``None``)
-   
+          :mask (array): 2D numpy integer array that defines the mask. Toggle ``mask_CXI_bitmask`` for decoding options (default ``None``)
     """
     def __init__(self, distance, pixel_size,
                  x_gap_size_in_pixel=0, y_gap_size_in_pixel=0, hole_diameter_in_pixel=0, cx_hole=None, cy_hole=None,
@@ -290,6 +291,7 @@ class Detector:
        
         Kwargs:
           :intensities: Numpy array of photon intensities for masking saturated pixels (default ``None``)
+
           :boolmask (bool): If ``True`` the output will be a boolean array. Mask values are converted to ``True`` if no bit is set and to ``False`` otherwise
         """
         if intensities is not None:
@@ -347,8 +349,8 @@ class Detector:
         
         Kwargs:
           :x_off: *x*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
-          :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
 
+          :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
         """
         r_max = numpy.sqrt(x_off**2+y_off**2) * self.pixel_size
         it = isinstance(r_max, collections.Iterable)
@@ -372,8 +374,8 @@ class Detector:
         
         Args:
           :cx (float): *x*-coordinate of the center position in unit pixel
-          :cy (float): *y*-coordinate of the center position in unit pixel
 
+          :cy (float): *y*-coordinate of the center position in unit pixel
         """
         Y,X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-cy,
                              numpy.float64(numpy.arange(self._nx))-cx,
@@ -405,8 +407,11 @@ class Detector:
         
         Kwargs:
           :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
           :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
           :pos (str): Position constraint can be either ``pos='corner'`` or ``pos='edge'``. (default ``'corner'``)
+
           :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others  (default ``False``)
         """
         x, y = self._get_xy_max_dist(cx=cx, cy=cy, center_variation=center_variation)
@@ -435,6 +440,7 @@ class Detector:
 
         Kwargs:
           :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
           :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
         """
         p = abs(self.get_p_max_dist(cx=cx, cy=cy, pos=pos, center_variation=center_variation))
@@ -454,7 +460,9 @@ class Detector:
 
         Kwargs:
           :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
           :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
           :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others (default ``False``)
         """
         return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")
@@ -468,7 +476,9 @@ class Detector:
 
         Kwargs:
           :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
           :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
           :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others (default ``False``)
         """
         return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[1]
@@ -482,7 +492,9 @@ class Detector:
 
         Kwargs:
           :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
           :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
           :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others (default ``False``)
         """
         return self._get_resolution_element(wavelength, cx=cx, cy=cy, center_variation=center_variation, pos="corner")[0]
@@ -496,7 +508,9 @@ class Detector:
 
         Kwargs:
           :cx (float): *x*-coordinate of the center position in unit pixel (default ``None``)
+
           :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
+
           :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others (default ``False``)
         """
         
@@ -509,7 +523,7 @@ class Detector:
         Return measurement of intensities from an array of expectation values of intensities. This method also returns the mask of the pattern
 
         Args:
-          :I: Intensity pattern represented as 2D array
+          :I (array): Intensity pattern represented as 2D array
         """
         I_det = self._noise.get(I)
         if self._noise_filename is not None:
@@ -530,8 +544,9 @@ class Detector:
         Return the tuple of binned diffraction pattern and mask. If binning has not been specified a tuple ``(None, None)`` is returned
 
         Args:
-          :I_det: Intensity pattern (before binning) represented by a 2D array
-          :M_det: CXI bitmask (before binning) represented by a 2D array (see also :class:`condor.utils.pixelmask.PixelMask`)
+          :I_det (array): Intensity pattern (before binning) represented by a 2D array
+
+          :M_det (array): CXI bitmask (before binning) represented by a 2D array (see also :class:`condor.utils.pixelmask.PixelMask`)
         """
         if self.binning is not None:
             IXxX_det, MXxX_det = utils.resample.downsample(I_det,self.binning,mode="integrate",

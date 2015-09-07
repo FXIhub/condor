@@ -36,45 +36,64 @@ import condor._data
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
 _data_dir = os.path.dirname(os.path.realpath(__file__)) + "/../data"
-atomic_scattering_factors = condor._data.load_atomic_scattering_factors(_data_dir)
+
+_atomic_scattering_factors = condor._data.load_atomic_scattering_factors(_data_dir)
+get_atomic_scattering_factors = lambda element: _atomic_scattering_factors[element]
 """
-Dictionary of photon energy vs. real and imaginary part of the atomic scattering factor (forward scattering) for all elements
+Returns array of photon energy vs. real and imaginary part of the atomic scattering factor (forward scattering) for a given element.
+
+  Args:
+    :element (str): Element name (latin abbreviation).
 """
 
-atomic_masses             = condor._data.load_atomic_masses(_data_dir)
+_atomic_masses             = condor._data.load_atomic_masses(_data_dir)
+get_atomic_mass = lambda element: _atomic_masses[element]
 """
-Dictionary of atomic mass (standard atomic weight in unit Dalton) for all elements
+Returns the atomic mass (standard atomic weight in unit Dalton) for a given element.
+
+  Args:
+    :element (str): Element name (latin abbreviation).
 """
 
-
-atomic_numbers            = condor._data.load_atomic_numbers(_data_dir)
+_atomic_numbers             = condor._data.load_atomic_numbers(_data_dir)
+get_atomic_number = lambda element: _atomic_numbers[element]
 """
-Dictionary of atomic numbers for all elements 
+Returns the atomic number for a given element.
+
+  Args:
+    :element (str): Element name (latin abbreviation).
 """
 
 atomic_names = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na''Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cp', 'Uut', 'Uuq', 'Uup', 'Uuh', 'Uus', 'Uuo']
 """
-List of atom names (i.e. latin abbreviations) for all elements sorted by atomic number (increasing order)
+List of atom names (i.e. latin abbreviations) for all elements sorted by atomic number (increasing order).
 """
+
+
+atomic_numbers = range(1,len(atomic_names)+1)
+"""
+List of atomic numbers of all elements in increasing order.
+"""
+
 
 
 class MaterialType:
     r"""
     Standard material types:
 
-    ================= ====================== =================================================================== ===================
+    ================= ====================== =================================================================== ======================
     ``material_type`` :math:`\rho_m` [kg/m3] Atomic composition                                                  Reference
-    ================= ====================== =================================================================== ===================        
+    ================= ====================== =================================================================== ======================      
     ``custom``        ``massdensity``        ``atomic_composition``                                              -
-    ``'water'``       995 (25 deg. C)        :math:`H_2O`                                                        [ONeil1868]_
+    ``'water'``       995 (25 deg. C)        :math:`H_2O`                                                        [ONeil1868]_ p. 1868
     ``'protein'``     1350                   :math:`H_{86}C_{52}N_{13}O_{15}S`                                   [Bergh2008]_
     ``'dna'``         1700                   :math:`H_{11}C_{10}N_4O_6P`                                         [Bergh2008]_
     ``'lipid'``       1000                   :math:`H_{69}C_{36}O_6P`                                            [Bergh2008]_
     ``'cell'``        1000                   :math:`H_{23}C_3NO_{10}S`                                           [Bergh2008]_
     ``'poliovirus'``  1340                   :math:`C_{332652}H_{492388}N_{98245}O_{131196}P_{7501}S_{2340}`     [Molla1991]_
-    ``'styrene'``     902 (25 deg. C)        :math:`C_8H_8`                                                      [Haynes2013]_
-    ``'sucrose'``     1581 (17 deg. C)       :math:`C_{12}H_{22O1}`                                              [Lide1998]_
-    ================= ====================== =================================================================== ===================
+    ``'styrene'``     902 (25 deg. C)        :math:`C_8H_8`                                                      [Haynes2013]_ p. 3-488
+    ``'sucrose'``     1581 (17 deg. C)       :math:`C_{12}H_{22O1}`                                              [Lide1998]_ p. 3-172
+    ================= ====================== =================================================================== ======================
     """
     atomic_compositions = {
         'water':       { "H" :     2., "C" :     0., "N" :     0., "O" :     1., "P" :     0., "S" :     0. }, # Water H2O
@@ -108,21 +127,13 @@ class Material:
     r"""
     Class for material model
     
-    **Arguments:**
-
+    Args:
       :material_type (str): The material type can be either ``custom`` or one of the standard types, i.e. tabulated combinations of massdensity and atomic composition, listed here :class:`condor.utils.material.MaterialType`
 
-    **Keyword arguments:**
-
+    Kwargs:
       :massdensity (float): Mass density in unit kilogram per cubic meter (default ``None``)
     
       :atomic_composition (dict): Dictionary of key-value pairs for atom species (e.g. ``'H'`` for hydrogen) and concentration (default ``None``)    
-
-    .. [ONeil1868] O'Neil, M.J. (ed.). The Merck Index - An Encyclopedia of Chemicals, Drugs, and Biologicals. Cambridge, UK: Royal Society of Chemistry, 2013., p. 1868
-    .. [Bergh2008] Bergh et al. 2008
-    .. [Molla1991] Molla et al. 1991
-    .. [Haynes2013] Haynes, W.M. (ed.). CRC Handbook of Chemistry and Physics. 94th Edition. CRC Press LLC, Boca Raton: FL 2013-2014, p. 3-488
-    .. [Lide1998] Lide, D.R. (ed.). CRC Handbook of Chemistry and Physics. 79th ed. Boca Raton, FL: CRC Press Inc., 1998-1999., p. 3-172
     """
     def __init__(self, material_type, massdensity = None, atomic_composition = None):
 
@@ -260,7 +271,7 @@ class Material:
 
     def get_transmission(self,thickness,photon_wavelength):
         r"""
-        Return transmission coefficient :math:`T` for given material thickness :math:`t` at a given wavelength :math:`\lambda` (Henke, 1993)
+        Return transmission coefficient :math:`T` for given material thickness :math:`t` and wavelength :math:`\lambda` [Henke1993]_
 
         .. math::
 
@@ -275,6 +286,10 @@ class Material:
           :thickness (float): Material thickness in unit meter
         
           :photon_wavelength (float): Photon wavelength in unit meter
+
+        .. [Henke1993] B.L. Henke, E.M. Gullikson, and J.C. Davis. X-ray interactions: photoabsorption, scattering, transmission, and reflection at E=50-30000 eV, Z=1-92, Atomic Data and Nuclear Data Tables Vol. 54 (no.2), 181-342 (July 1993).
+          
+          See also `http://henke.lbl.gov/ <http://henke.lbl.gov/>`_.
         """
 
         n = self.get_n(photon_wavelength)
@@ -331,7 +346,7 @@ class Material:
         M = 0
         for element in atomic_composition.keys():
             # sum up mass
-            M += atomic_composition[element]*atomic_masses[element]*u
+            M += atomic_composition[element]*get_atomic_mass(element)*u
 
         number_density = self.massdensity/M
         
@@ -362,8 +377,8 @@ class Material:
         Q = 0
         for element in atomic_composition.keys():
             # sum up electrons
-            M += atomic_composition[element]*atomic_masses[element]*u
-            Q += atomic_composition[element]*atomic_numbers[element]
+            M += atomic_composition[element]*get_atomic_mass(element)*u
+            Q += atomic_composition[element]*get_atomic_number(element)
 
         electron_density = Q*self.massdensity/M
         
@@ -378,9 +393,9 @@ class Material:
         
           :element (str): Atomic species (e.g. ``'H'`` for hydrogen)
 
-          :relative_concentration (float): Relative quantity of atoms of the given atomic species with respect to the others (e.g. for water: hydrogen concentration 2., oxygen concentration 1.)
+          :relative_concentration (float): Relative quantity of atoms of the given atomic species with respect to the others (e.g. for water: hydrogen concentration ``2.``, oxygen concentration ``1.``)
         """
-        if element not in atomic_numbers:
+        if element not in atomic_names:
             log_and_raise_error(logger, "Cannot add element \"%s\". Invalid name." % element)
         self._atomic_composition[element] = relative_concentration
     
@@ -417,7 +432,7 @@ def get_f_element(element, photon_energy_eV):
       :photon_energy_eV: Photon energy in unit eV
     """
     
-    SF_X = atomic_scattering_factors[element]
+    SF_X = get_atomic_scattering_factors(element)
     f1 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,1])
     f2 = numpy.interp(photon_energy_eV,SF_X[:,0],SF_X[:,2])
 
