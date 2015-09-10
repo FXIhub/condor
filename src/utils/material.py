@@ -173,7 +173,6 @@ class Material:
         :math:`f_q(0)`: atomic scattering factor (forward scattering) of atom species :math:`i`
 
         Args:
-         
           :photon_wavelength (float): Photon wavelength in unit meter
         """
         f = self.get_f(photon_wavelength)
@@ -198,9 +197,7 @@ class Material:
         See also :meth:`condor.utils.material.Material.get_n`
 
         Args:
-
           :photon_wavelength (float): Photon wavelength in unit meter
-
         """
         return (1-self.get_n(photon_wavelength))
 
@@ -219,7 +216,6 @@ class Material:
         See also :meth:`condor.utils.material.Material.get_n`
 
         Args:
-
           :photon_wavelength (float): Photon wavelength in unit meter
 
         """        
@@ -238,7 +234,6 @@ class Material:
         See also :meth:`condor.utils.material.Material.get_n`
 
         Args:
-
           :photon_wavelength (float): Photon wavelength in unit meter
 
         """        
@@ -257,7 +252,6 @@ class Material:
         :math:`f_2`: imaginary part of the atomic scattering factor     
 
         Args:
-
           :photon_wavelength (float): Photon wavelength in unit meter
         """        
         r_0 = constants.value("classical electron radius")
@@ -282,7 +276,6 @@ class Material:
         :math:`\mu_a(\lambda)`: Photoabsorption cross section at photon energy :math:`\lambda`
         
         Args:
-
           :thickness (float): Material thickness in unit meter
         
           :photon_wavelength (float): Photon wavelength in unit meter
@@ -303,8 +296,7 @@ class Material:
         Read complex scattering factor at a given photon wavlength from Henke tables
 
         Args:
-    
-          :photon_wavlength (float): Photon wavelength in unit meter
+              :photon_wavlength (float): Photon wavelength in unit meter
         """
     
         atomic_composition = self.get_atomic_composition(normed=True)
@@ -390,7 +382,6 @@ class Material:
         Set the concentration of a given atomic species
 
         Args:
-        
           :element (str): Atomic species (e.g. ``'H'`` for hydrogen)
 
           :relative_concentration (float): Relative quantity of atoms of the given atomic species with respect to the others (e.g. for water: hydrogen concentration ``2.``, oxygen concentration ``1.``)
@@ -404,7 +395,6 @@ class Material:
         Return dictionary of atomic concentrations
 
         Args:
-
           :normed (bool): If ``True`` the concentrations are rescaled by a common factor such that their sum equals 1 (default ``False``)
         """
         
@@ -426,7 +416,6 @@ def get_f_element(element, photon_energy_eV):
     Get the scattering factor for an element through linear interpolation of the tabulated values (Henke tables)
 
     Args:
-    
       :element (str): Atomic species (e.g. ``'H'`` for hydrogen)
 
       :photon_energy_eV: Photon energy in unit eV

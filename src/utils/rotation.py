@@ -67,11 +67,9 @@ class Rotation:
         Set rotation with an array of three euler angles
 
         Args:
-
            :euler_angles: Array of the three euler angles representing consecutive rotations
 
         Kwargs:
-
            :rotation_axes(str): Rotation axes of the three consecutive rotations (default = \'zxz\') 
         """
         # Check input
@@ -86,7 +84,6 @@ class Rotation:
         Set rotation with a rotation matrix
 
         Args:
-
            :rotation_matrix: 3x3 array representing the rotation matrix
         """
         # Check input
@@ -106,7 +103,6 @@ class Rotation:
         Set rotation with a quaternion
 
         Args:
-
            :quaternion: Numpy array representing the quaternion :math:`w+ix+jy+kz`: 
 
                         [:math:`w`, :math:`x`, :math:`y`, :math:`z`] = [:math:`\cos(\theta/2)`, :math:`u_x \sin(\theta/2)`, :math:`u_y \sin(\theta/2)`, :math:`u_z \sin(\theta/2)`] 
@@ -171,11 +167,9 @@ class Rotation:
         Compare rotation with another instance of the Rotation class. If quaternion distance is smaller than tol return ``True``
 
         Args:
-
            :rotation (:class:`condor.utils.rotation.Rotation`): Instance of the Rotation class
 
         Kwargs:
-
            :tol (float): Tolerance for similarity. This is the maximum distance of the two quaternions in 4D space that will be interpreted for similar rotations. (default 0.00001)
         """
         q0 = self.get_as_quaternion(unique_representation=True)
@@ -188,11 +182,9 @@ class Rotation:
         Return the rotated copy of a given vector
 
         Args:
-
            :vector (array): 3D vector
 
         Kwargs:
-
            :order (str): Order of geometrical axes in array representation of the given vector (default ``'xyz'``)
         """
         # Check input
@@ -212,11 +204,9 @@ class Rotation:
         Return the rotated copy of a given array of vectors
 
         Args:
-
            :vectors (array): Array of 3D vectors with shape (:math:`N`, 3) with :math:`N` denoting the number of 3D vectors
 
         Kwargs:
-
            :order (str): Order of geometrical axes in array representation of the given vector (default ``'xyz'``)
         """        
         # Check input
@@ -274,7 +264,6 @@ class Rotations:
     Class for a list of rotations in 3D space
 
     Args:
-    
       :values (array): Arrays of values that define the rotation. For random rotations set ``values = None`` (default ``None``)
 
       :formalism (str): See :class:`condor.utils.rotation.Rotation`. For no rotation set ``formalism = None`` (default ``None``)
@@ -361,11 +350,9 @@ def R_euler(euler_angles, rotation_axes="zxz"):
     Obtain rotation matrix from three euler angles and the rotation axes
 
     Args:
-
       :euler_angles (array): Length-3 array of euler angles
 
     Kwargs:
-
       :rotation_axes (str): Rotation axes of the three consecutive Euler rotations (default ``'zxz'``) 
     """
     R = numpy.identity(3)
@@ -404,7 +391,6 @@ def rotmx_from_quat(q):
     Create a rotation matrix from given quaternion ([Shoemake1992]_ page 128)
 
     Args:
-
        :quaternion (array): :math:`q = w + ix + jy + kz` (``values``: :math:`[w,x,y,z]`)
 
     The direction of rotation follows the right hand rule
@@ -437,7 +423,6 @@ def norm_quat(q, tolerance=0.00001):
     Return a copy of the normalised quaternion (adjust length to 1 if deviation larger than given tolerance).
 
     Args:
-
        :tolerance(float): Maximum deviation of length before rescaling (default ``0.00001``)
     """
     # Adjust length
@@ -455,7 +440,6 @@ def unique_representation_quat(q):
     The convention is that the first non-zero coordinate value of the quaternion array has to be positive.
 
     Args:
-      
       :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] representing the qauternion :math:`q = w + ix + jy + kz`
     """
     if q[0] < 0:
@@ -502,7 +486,6 @@ def quat_mult(q1, q2):
     Return the product of two quaternions
 
     Args:
-
        :q1 (array): Length-4 array [:math:`w_1`, :math:`x_1`, :math:`y_1`, :math:`z_1`] that represents the first quaternion
 
        :q2 (array): Length-4 array [:math:`w_2`, :math:`x_2`, :math:`y_2`, :math:`z_2`] that represents the second quaternion
@@ -520,7 +503,6 @@ def quat_vec_mult(q, v):
     Return the product of a quaternion and a vector
 
     Args:
-
        :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] that represents the quaternion
 
        :v (array): Length-3 array [:math:`v_x`, :math:`v_y`, :math:`v_z`] that represents the vector
@@ -533,7 +515,6 @@ def quat_conj(q):
     Return the conjugate quaternion as a length-4 array [w,-ix,-jy,-kz]
 
     Args:
-
        :q (array): Numpy array :math:`[w,x,y,z]` that represents the quaternion
     """
     iq = q.copy()
@@ -545,7 +526,6 @@ def rotate_quat(v, q):
     Return rotated version of a given vector by a given quaternion
 
     Args:
-
        :v (array): Length-3 array :math:`[v_x,v_y,v_z]` that represents the vector      
 
        :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] that represents the quaternion
@@ -688,6 +668,9 @@ def make_euler_unique_repax(euler):
         .. math::
 
           (0,e_1,0)
+
+    Args:
+      euler (array): Numpy array with the three euler angles in radian.
     """
     pi = numpy.pi
     twopi = 2*pi

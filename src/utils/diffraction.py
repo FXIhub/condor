@@ -33,10 +33,9 @@ def crystallographic_resolution(wavelength, pixel_center_distance, detector_dist
       R_f = \frac{ \lambda }{ \sin\left( \arctan\left( \frac{X}{D} \right) \right) }
 
     Args:
+      :wavelength (float): Photon wavelength :math:`\lambda` in unit meter
 
-      :wavelength: Photon wavelength :math:`\lambda` in unit meter
-
-      :pixel_center_distance: Distance :math:`X` between beam center and pixel measured orthogonally with respect to the beam axis. The unit is meter
+      :pixel_center_distance (float): Distance :math:`X` between beam center and pixel measured orthogonally with respect to the beam axis. The unit is meter
     
       :detector_distance: Distance :math:`D` between interaction point and detector plane in unit meter
     """
@@ -51,10 +50,9 @@ def resolution_element(wavelength, pixel_center_distance, detector_distance):
       R_h = \frac{ \lambda }{ 2 \, \sin\left( \arctan \left( \frac{X}{D} \right) \right) }
 
     Args:
+      :wavelength (float): Photon wavelength :math:`\lambda` in unit meter
 
-      :wavelength: Photon wavelength :math:`\lambda` in unit meter
-
-      :pixel_center_distance: Distance :math:`X` between beam center and pixel measured orthogonally with respect to the beam axis. The unit is meter
+      :pixel_center_distance (float): Distance :math:`X` between beam center and pixel measured orthogonally with respect to the beam axis. The unit is meter
     
       :detector_distance: Distance :math:`D` between interaction point and detector plane in unit meter
     """
@@ -69,11 +67,10 @@ def nyquist_pixel_size(wavelength, detector_distance, particle_size):
       p_N = \frac{ D \lambda }{ d }
 
     Args:
-
-      :wavelength: Photon wavelength :math:`\lambda` in unit meter
+      :wavelength (float): Photon wavelength :math:`\lambda` in unit meter
     
-      :detector_distance: Distance :math:`D` between interaction point and detector plane in unit meter
+      :detector_distance (float): Distance :math:`D` between interaction point and detector plane in unit meter
 
-      :particle_size: Size or characteristic dimension :math:`d` of the particle in unit meter
+      :particle_size (float): Size or characteristic dimension :math:`d` of the particle in unit meter
     """
     return detector_distance * wavelength / particle_size

@@ -16,7 +16,8 @@ Contents:
    Running Condor <config>
    Conventions <conventions>
    References <references>
-	      
+   Contact <contact>
+      
 .. toctree::
    :hidden:
 

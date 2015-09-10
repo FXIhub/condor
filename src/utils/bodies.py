@@ -37,10 +37,9 @@ def make_sphere_map(N,nR):
     The result is quite rough (i.e. linear interpolation)
 
     Args:
+      :N (int): Edge length of the grid in unit pixels
 
-      :N: Edge length of the grid in unit pixels
-
-      :nR: Radius in unit pixels
+      :nR (float): Radius in unit pixels
 
     .. note:: This function was written for testing purposes and generates a map with rough edges. Use :class:`condor.particle.particle_sphere.ParticleSphere` for more accurate uniform sphere diffraction simulations.
     """
@@ -63,16 +62,15 @@ def make_spheroid_map(N, nA, nC, rotation=None):
     The result is very rough (i.e. nearest-neighbor interpolation)
 
     Args:
+      :N (int): Edge length of the grid in unit pixels
 
-      :N: Edge length of the grid in unit pixels
+      :nA (float): Radius perpendicular to the rotation axis of the ellipsoid in unit pixels
 
-      :nA: Radius perpendicular to the rotation axis of the ellipsoid in unit pixels
-
-      :nC: Radius along the rotation axis of the ellipsoid in unit pixels
+      :nC (float): Radius along the rotation axis of the ellipsoid in unit pixels
 
     Kwargs:
     
-      :rotation: Rotation instance for extrinsic rotation of the icosahedron. 
+      :rotation (:class:`condor.utils.rotation.Rotation`): Rotation instance for extrinsic rotation of the icosahedron. 
 
     .. note:: This function was written for testing purposes and generates a map with rough edges. Use :class:`condor.particle.particle_spheroid.ParticleSpheroid` for more accurate uniform spheroid diffraction simulations.
     """
@@ -98,14 +96,12 @@ def make_icosahedron_map(N,nRmax,extrinsic_rotation=None):
     Orientation: The cartesian grid axis all lie parallel to 2-fold symmetry axes of the icosahedron.
 
     Args:
-    
-      :N: Edge length of the grid in unit pixels
+      :N (int): Edge length of the grid in unit pixels
 
-      :nRmax: Outer radius of the icosahedron in unit pixels
+      :nRmax (float): Outer radius of the icosahedron in unit pixels
 
     Kwargs:
-    
-      :rotation: Rotation instance for extrinsic rotation of the icosahedron. 
+      :rotation (:class:`condor.utils.rotation.Rotation`): Rotation instance for extrinsic rotation of the icosahedron. 
     """
     log_debug(logger, "Building icosahedral geometry")
     log_debug(logger, "Grid: %i x %i x %i (%i voxels)" % (N,N,N,N**3))
@@ -126,14 +122,13 @@ def make_icosahedron_map_slow(N,nRmax,extrinsic_rotation=None):
     Orientation: The cartesian grid axis all lie parallel to 2-fold symmetry axes of the icosahedron.
 
     Args:
-    
-      :N: Edge length of the grid in unit pixels
+      :N (int): Edge length of the grid in unit pixels
 
-      :nRmax: Outer radius of the icosahedron in unit pixels
+      :nRmax (float): Outer radius of the icosahedron in unit pixels
 
     Kwargs:
     
-      :rotation: Rotation instance for extrinsic rotation of the icosahedron. 
+      :rotation (:class:`condor.utils.rotation.Rotation`): Rotation instance for extrinsic rotation of the icosahedron. 
     """
     na = nRmax/numpy.sqrt(10.0+2*numpy.sqrt(5))*4.
     nRmin = numpy.sqrt(3)/12*(3.0+numpy.sqrt(5))*na # radius at faces

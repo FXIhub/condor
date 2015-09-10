@@ -47,11 +47,15 @@ if __name__ == "__main__":
     else:
         d = get_python_lib() + "/condor"
     if not os.path.exists(d):
-        print "ERROR:\tCannot find or access Condor installation in %s." % d
-        print "\tUse the --prefix argument if your installation is not in the standard installation directory."
-    else:
-        # Delete installation directory
-        print "Removing directory %s ..." % d 
-        shutil.rmtree("%s/" % d)
-        print "Done"
+        try:
+            import condor
+            d = os.path.dirname(os.path.realpath(condor.__file__))
+        except:
+            print "ERROR:\tCannot find or access Condor installation in %s." % d
+            print "\tUse the --prefix argument if your installation is not in the standard installation directory."
+            exit(0)
+    # Delete installation directory
+    print "Removing directory %s ..." % d 
+    shutil.rmtree("%s/" % d)
+    print "Done"
 
