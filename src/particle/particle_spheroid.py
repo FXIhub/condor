@@ -71,7 +71,9 @@ class ParticleSpheroid(AbstractContinuousParticle):
 
       :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
-      :concentration (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+:number_density (float): Number density of this particle species in units of the interaction volume. (defaukt ``1.``)
+
+      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of the ``number_density``. If ``'random'`` the number of particles is Poissonian and the ``number_density`` is the expectation value. (default ``'synchronised'``)
 
       :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
 
@@ -92,7 +94,7 @@ class ParticleSpheroid(AbstractContinuousParticle):
                  diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
                  flattening = 0.75, flattening_variation = None, flattening_spread = None, flattening_variation_n = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
-                 concentration = 1.,
+                 number_density = 1., arrival = "synchronised",
                  position = None, position_variation = None, position_spread = None, position_variation_n = None,
                  material_type = 'water', massdensity = None, atomic_composition = None):
 
@@ -100,7 +102,7 @@ class ParticleSpheroid(AbstractContinuousParticle):
         AbstractContinuousParticle.__init__(self,
                                             diameter=diameter, diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n,
                                             rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode,
-                                            concentration=concentration,
+                                            number_density=number_density, arrival=arrival,
                                             position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n,
                                             material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
         self.flattening_mean = flattening

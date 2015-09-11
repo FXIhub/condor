@@ -23,8 +23,6 @@ else:
 
 # Source
 src = condor.Source(wavelength=1.0E-9, pulse_energy=1E-3, focus_diameter=1E-6)
-# Sample
-sam = condor.Sample()
 # Detector
 det = condor.Detector(distance=1.0, pixel_size=300E-6, nx=256, ny=256)
 # Map
@@ -32,9 +30,8 @@ print "Simulating map"
 par = condor.ParticleMap(diameter=600E-9, material_type="cell", geometry="custom",
                          map3d_filename="../../map3d.h5", map3d_dataset="data", dx=5E-9,
                          rotation_formalism=rotation_formalism, rotation_values=rotation_values)
-s = "custom_map"
-sam.append_particle(par, s)
-E = condor.Experiment(src, sam, det)
+s = "particle_map"
+E = condor.Experiment(src, {s : par}, det)
 
 W = condor.utils.log.CXIWriter("./condor.cxi")
 for i in range(N):

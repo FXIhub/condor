@@ -24,7 +24,6 @@
 
 from .experiment import Experiment
 from .source import Source
-from .sample import Sample
 from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleMolecule
 from .detector import Detector
 

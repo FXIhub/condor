@@ -31,7 +31,6 @@ import numpy, os, sys, copy
 import logging
 logger = logging.getLogger(__name__)
 
-import sample
 from condor.utils.log import log,log_execution_time
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 import condor.utils.config
@@ -41,7 +40,6 @@ import condor.utils.spheroid_diffraction
 import condor.utils.scattering_vector
 import condor.utils.resample
 from condor.utils.rotation import Rotation
-import condor.sample
 import condor.particle
 
 
@@ -72,11 +70,11 @@ def experiment_from_configdict(configdict):
     """
     # Source
     source = condor.Source(**configdict["source"])
-    # Sample
-    sample = condor.Sample(**configdict["sample"])
     # Particles
     particle_keys = [k for k in configdict.keys() if k.startswith("particle")]
     particles = {}
+    if len(particle_keys) == 0:
+        log_and_raise_error(logger, "No particles defined.")
     for k in particle_keys:
         if k.startswith("particle_sphere"):
             particles[k] = condor.ParticleSphere(**configdict[k])
@@ -88,13 +86,9 @@ def experiment_from_configdict(configdict):
             particles[k] = condor.ParticleMolecule(**configdict[k])
         else:
             log_and_raise_error(logger,"Particle model for %s is not implemented." % k)
-            sys.exit(1)
-    # Add particles to sample    
-    for k, par in particles.items():
-        sample.append_particle(par, k)
     # Detector
     detector = condor.Detector(**configdict["detector"])
-    experiment = Experiment(source, sample, detector)
+    experiment = Experiment(source, particles, detector)
     return experiment
 
 
@@ -107,14 +101,29 @@ class Experiment:
     
       :source: Source instance
 
-      :sample: Sample instance
+      :particles: Dictionary of particle instances
 
       :detector: Detector instance
     """
-    def __init__(self, source, sample, detector):
-        self.source   = source
-        self.sample   = sample
-        self.detector = detector
+    def __init__(self, source, particles, detector):
+        self.source    = source
+        for n,p in particles.items():
+            if n.startswith("particle_sphere"):
+                if not isinstance(p, condor.particle.ParticleSphere):
+                    log_and_raise_error(logger, "Particle %s is not a condor.particle.ParticleSphere instance." % n)
+            elif n.startswith("particle_spheroid"):
+                if not isinstance(p, condor.particle.ParticleSpheroid):
+                    log_and_raise_error(logger, "Particle %s is not a condor.particle.ParticleSpheroid instance." % n)
+            elif n.startswith("particle_map"):
+                if not isinstance(p, condor.particle.ParticleMap):
+                    log_and_raise_error(logger, "Particle %s is not a condor.particle.ParticleMap instance." % n)
+            elif n.startswith("particle_molecule"):
+                if not isinstance(p, condor.particle.ParticleMolecule):
+                    log_and_raise_error(logger, "Particle %s is not a condor.particle.ParticleMolecule instance." % n)
+            else:
+                log_and_raise_error(logger, "The particle model name %s is invalid. The name has to start with either particle_sphere, particle_spheroid, particle_map or particle_molecule.")
+        self.particles = particles
+        self.detector  = detector
         self._qmap_cache = {}
 
     def get_conf(self):
@@ -128,9 +137,23 @@ class Experiment:
         """
         conf = {}
         conf.update(self.source.get_conf())
-        conf.update(self.sample.get_conf())
+        for n,p in self.particles.items():
+            conf[n] = p.get_conf()
         conf.update(self.detector.get_conf())
         return conf
+
+    def _get_next_particles(self):
+        D_particles = {}
+        while len(D_particles) == 0:
+            i = 0
+            for p in self.particles.values():
+                n = p.get_next_number_of_particles()
+                for i_n in range(n):
+                    D_particles["particle_%02i" % i] = p.get_next()
+                    i += 1
+            if len(D_particles) == 0:
+                log_info(logger, "Miss - no particles in the interaction volume. Shooting again...")
+        return D_particles
 
     @log_execution_time(logger)
     def propagate(self, save_map3d = False, save_qmap = False):
@@ -138,9 +161,9 @@ class Experiment:
         log_debug(logger, "Start propagation")
         
         # Iterate objects
-        D_source   = self.source.get_next()
-        D_sample   = self.sample.get_next()
-        D_detector = self.detector.get_next()
+        D_source    = self.source.get_next()
+        D_particles = self._get_next_particles()
+        D_detector  = self.detector.get_next()
 
         # Pull out variables
         nx                  = D_detector["nx"]
@@ -154,7 +177,7 @@ class Experiment:
         F_singles    = {}
         qmap_singles = {}
         # Calculate patterns of all single particles individually
-        for particle_key, D_particle in D_sample["particles"].items():
+        for particle_key, D_particle in D_particles.items():
             p  = D_particle["_class_instance"]
             # Intensity at interaction point
             pos  = D_particle["position"]
@@ -294,8 +317,8 @@ class Experiment:
 
         F_tot = numpy.zeros_like(F)
         # Superimpose patterns
-        for particle_key in D_sample["particles"].keys():
-            v = D_sample["particles"][particle_key]["position"]
+        for particle_key in D_particles.keys():
+            v = D_particles[particle_key]["position"]
             F_tot = F_tot + F_singles[particle_key] * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
         I_tot, M_tot = self.detector.detect_photons(abs(F_tot)**2)
         IXxX_tot, MXxX_tot = self.detector.bin_photons(I_tot, M_tot)
@@ -307,7 +330,7 @@ class Experiment:
         
         O = {}
         O["source"]            = D_source
-        O["sample"]            = D_sample
+        O["particles"]         = D_particles
         O["detector"]          = D_detector
 
         O["entry_1"] = {}
@@ -377,7 +400,7 @@ class Experiment:
             log_and_raise_error(logger, "Invalid input: convention=%s. Must be either \"full_period\" or \"half_period\"." % convention)
             return
 
-    def get_linear_sampling_ratio(self, wavelength = None, particle_diameter = None):
+    def get_linear_sampling_ratio(self, wavelength = None, particle_diameter = None, particle_key = None):
         """
         Returns the linear sampling ratio :math:`o` of the diffraction pattern:
 
@@ -393,16 +416,13 @@ class Experiment:
             wavelength = self.source.photon.get_wavelength()
         detector_distance = self.detector.distance
         if particle_diameter is None:
-            pm = self.sample.get_particle_models()
-            N = len(pm.keys()) 
-            if N == 0:
-                log_and_raise_error(logger, "You need to specify a particle_diameter because no particle model is defined.")
-                return
-            elif N > 1:
-                log_and_raise_error(logger, "The particle_diameter is ambiguous because more than one particle model is defined.")
-                return
+            if len(self.particles) == 1:
+                p = self.particles.values()[0]
+            elif particle_key is None:
+                log_and_raise_error(logger, "You need to specify a particle_key because there are more than one particle models.")
             else:
-                particle_diameter = pm.values()[0]
+                p = self.particles[particle_key]
+            particle_diameter = p.diameter_mean
         pN = utils.diffraction.nyquist_pixel_size(wavelength, detector_distance, particle_diameter)
         pD = self.detector.pixel_size
         ratio = pN/pD

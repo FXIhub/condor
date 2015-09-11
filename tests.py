@@ -13,7 +13,6 @@ def test_compare_spheroid_with_map(tolerance = 0.15):
     Compare the output of two diffraction patterns, one simulated with the direct formula and the other one from a 3D refractive index map on a regular grid
     """
     src = condor.Source(wavelength=0.1E-9, pulse_energy=1E-3, focus_diameter=1E-6)
-    sam = condor.Sample()
     det = condor.Detector(distance=0.5, pixel_size=750E-6, nx=100, ny=100, cx=45, cy=59)
     angle_d = 72.
     angle = angle_d/360.*2*numpy.pi
@@ -29,19 +28,15 @@ def test_compare_spheroid_with_map(tolerance = 0.15):
     spheroid_flattening = condor.utils.spheroid_diffraction.to_spheroid_flattening(short_diameter/2.,long_diameter/2.)
     # Ideal spheroid
     par = condor.ParticleSpheroid(diameter=spheroid_diameter, material_type="water", flattening=spheroid_flattening, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-    s = "spheroid"
-    sam.append_particle(par, s)
-    E = condor.Experiment(src, sam, det)
+    s = "particle_spheroid"
+    E = condor.Experiment(src, {s : par}, det)
     res = E.propagate()
-    sam.remove_all_particles()
     F_ideal = res["entry_1"]["data_1"]["data_fourier"]
     # Map (spheroid)
     par = condor.ParticleMap(diameter=spheroid_diameter, material_type="water", flattening=spheroid_flattening, geometry="spheroid", rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-    s = "map_spheroid"
-    sam.append_particle(par, s)
-    E = condor.Experiment(src, sam, det)
+    s = "particle_map_spheroid"
+    E = condor.Experiment(src, {s : par}, det)
     res = E.propagate()
-    sam.remove_all_particles()
     F_map = res["entry_1"]["data_1"]["data_fourier"]
     # Compare
     I_ideal = abs(F_ideal)**2
@@ -63,7 +58,6 @@ def test_compare_molecule_with_map(tolerance = 0.1):
     Compare the output of two diffraction patterns, one simulated with descrete atoms (spsim) and the other one from a 3D refractive index map on a regular grid.
     """
     src = condor.Source(wavelength=0.1E-9, pulse_energy=1E-3, focus_diameter=1E-6)
-    sam = condor.Sample()
     det = condor.Detector(distance=0.5, pixel_size=750E-6, nx=100, ny=100, cx=45, cy=59)
     angle_d = 72.
     angle = angle_d/360.*2*numpy.pi
@@ -84,12 +78,10 @@ def test_compare_molecule_with_map(tolerance = 0.1):
     map3d[:N_short,:,:N_short] = 1.
     map3d[N_short:N_short+N_short,:N_short,:N_short] = 1.
     par = condor.ParticleMap(diameter=long_diameter, material_type="custom", massdensity=massdensity, atomic_composition={"H":1.}, geometry="custom", map3d=map3d, dx=dx, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-    s = "map_custom"
-    sam.append_particle(par, s)
-    E = condor.Experiment(src, sam, det)
+    s = "particle_map_custom"
+    E = condor.Experiment(src, {s : par}, det)
     res = E.propagate()
     F_map = res["entry_1"]["data_1"]["data_fourier"]
-    sam.remove_all_particles()
     # Molecule
     Z1,Y1,X1 = numpy.meshgrid(numpy.linspace(0, short_diameter, N_short),
                               numpy.linspace(0, long_diameter,   N_long),
@@ -105,12 +97,10 @@ def test_compare_molecule_with_map(tolerance = 0.1):
     atomic_positions = numpy.array([[x,y,z] for x,y,z in zip(X.ravel(),Y.ravel(),Z.ravel())])
     atomic_numbers   = numpy.ones(atomic_positions.size/3, dtype=numpy.int16)
     par = condor.ParticleMolecule(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-    s = "molecule"
-    sam.append_particle(par, s)
-    E = condor.Experiment(src, sam, det)
+    s = "particle_molecule"
+    E = condor.Experiment(src, {s : par}, det)
     res = E.propagate()
     F_molecule = res["entry_1"]["data_1"]["data_fourier"]
-    sam.remove_all_particles()
     # Compare
     I_molecule = abs(F_molecule)**2
     I_map = abs(F_map)**2

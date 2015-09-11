@@ -44,7 +44,7 @@ from condor.utils.variation import Variation
 import condor.utils.diffraction
 
 class AbstractParticle:
-    """
+    r"""
     Base class for every derived particle class
 
     Kwargs:
@@ -54,7 +54,9 @@ class AbstractParticle:
 
       :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
-      :concentration (float): Particle model concentration (*frequency*) in the sample with respect to the other particle models that are present in the sample (default ``1.``)
+      :number_density (float): Number density of this particle species in units of the interaction volume. (defaukt ``1.``)
+
+      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of the ``number_density``. If ``'random'`` the number of particles is Poissonian and the ``number_density`` is the expectation value. (default ``'synchronised'``)
     
       :position: (Mean) position vector [*x*, *y*, *z*] of the particle. If set to ``None`` the particle is placed at the origin (default ``None``)
 
@@ -67,13 +69,24 @@ class AbstractParticle:
     """
     def __init__(self,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
-                 concentration = 1.,
+                 number_density = 1., arrival = "synchronised",
                  position = None,  position_variation = None, position_spread = None, position_variation_n = None):
-        
         self.set_alignment(rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
         self.set_position_variation(position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n)
         self.position_mean = position if position is not None else [0., 0., 0.]
-        self.concentration = concentration
+        self.number_density = number_density
+        self.arrival = arrival
+
+    def get_next_number_of_particles(self):
+        """
+        Iterate the number of partices
+        """
+        if self.arrival == "random":
+            return int(numpy.random.poisson(self.number_density))
+        elif self.arrival == "synchronised":
+            return int(numpy.round(self.number_density))
+        else:
+            log_and_raise_error(logger, "self.arrival=%s is invalid. Has to be either \'synchronised\' or \'random\'." % self.arrival)
         
     def get_next(self):
         """
@@ -152,7 +165,8 @@ class AbstractParticle:
         conf = {}
         conf.update(self._get_conf_rotation())
         conf.update(self._get_conf_position_variation())
-        conf["concentration"] = self.concentration
+        conf["number_density"] = self.number_density
+        conf["arrival"]        = self.arrival
         return conf
 
     def _get_conf_alignment(self):
@@ -193,7 +207,9 @@ class AbstractContinuousParticle(AbstractParticle):
 
       :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
-      :concentration (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
+      :number_density (float): Number density of this particle species in units of the interaction volume. (defaukt ``1.``)
+
+      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of the ``number_density``. If ``'random'`` the number of particles is Poissonian and the ``number_density`` is the expectation value. (default ``'synchronised'``)
 
       :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
 
@@ -212,14 +228,14 @@ class AbstractContinuousParticle(AbstractParticle):
     def __init__(self,
                  diameter, diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
-                 concentration = 1.,
+                 number_density = 1., arrival = "synchronised",
                  position = None,  position_variation = None, position_spread = None, position_variation_n = None,
                  material_type = 'water', massdensity = None, atomic_composition = None):
         
         # Initialise base class
         AbstractParticle.__init__(self,
                                   rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode,
-                                  concentration=concentration,
+                                  number_density=number_density, arrival=arrival,
                                   position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n)
         # Diameter
         self.set_diameter_variation(diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n)

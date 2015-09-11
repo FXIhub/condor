@@ -30,13 +30,11 @@ There are generally two ways of configuring and running simulations with Condor:
 A) Simulation with a configuration files
 ----------------------------------------
 
-A Condor configuration file is composed of at least four sections:
+A Condor configuration file is composed of at least three sections:
 
 `1) Source`_ ``[source]``
      
-`2) Sample`_ ``[sample]``
-
-`3) Particle`_ - at least one particle section:
+`2) Particle`_ - at least one particle section:
 
    `a) Uniform sphere`_ ``[particle_sphere]``
 
@@ -46,7 +44,7 @@ A Condor configuration file is composed of at least four sections:
 
    `d) Atom positions`_ ``[particle_molecule]``
 
-`4) Detector`_ ``[detector]``
+`3) Detector`_ ``[detector]``
 
 .. note:: All section titles have to be unique in a configuration file. If you want to specify more than one particle sections of the same particle model make the section title unique by appending an underscore and a number to the standard title (e.g. ``[particle_sphere_2]``).
 
@@ -59,16 +57,7 @@ This section configures the :class:`condor.source.Source` class instance.
 
 .. literalinclude:: ../examples/configfile/source.conf
 
-2) Sample
-^^^^^^^^^
-
-This section configures the :class:`condor.sample.Sample` class instance.
-
-**Example:**
-
-.. literalinclude:: ../examples/configfile/sample.conf
-
-3) Particle
+2) Particle
 ^^^^^^^^^^^
 		    
 a) Uniform sphere
@@ -108,7 +97,7 @@ This section configures a :class:`condor.particle.particle_molecule.ParticleMole
 .. literalinclude:: ../examples/configfile/particle_molecule.conf
 		 
 
-4) Detector
+3) Detector
 ^^^^^^^^^^^
 
 This section configures a :class:`condor.detector.Detector` class instance.
@@ -125,15 +114,15 @@ Simulations are carried out with an instance of the :class:`condor.experiment.Ex
 
   1) A Source instance :class:`condor.source.Source`
 
-  2) A Sample instance - :class:`condor.sample.Sample`, which contains at least one Particle instance:
+  2) A dictionary with at least one Particle instance:
 
-     - Uniform sphere - :class:`condor.particle.particle_sphere.ParticleSphere`
+     - Uniform sphere - :class:`condor.particle.particle_sphere.ParticleSphere` (the key has to start with ``'particle_sphere'``)
        
-     - Uniform spheroid - :class:`condor.particle.particle_spheroid.ParticleSpheroid`
+     - Uniform spheroid - :class:`condor.particle.particle_spheroid.ParticleSpheroid` (the key has to start with ``'particle_spheroid'``)
 
-     - Refractive index map - :class:`condor.particle.particle_map.ParticleMap`
+     - Refractive index map - :class:`condor.particle.particle_map.ParticleMap` (the key has to start with ``'particle_map'``)
 
-     - Atom positions - :class:`condor.particle.particle_molecule.ParticleMolecule`
+     - Atom positions - :class:`condor.particle.particle_molecule.ParticleMolecule` (the key has to start with ``'particle_molecule'``)
      
   3) A Detector instance - :class:`condor.detector.Detector`
 

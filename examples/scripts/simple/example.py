@@ -5,17 +5,13 @@ import condor
 
 # Construct source, sample, detector instanec
 src = condor.Source(wavelength=0.1E-9, pulse_energy=1E-3, focus_diameter=1E-6)
-sam = condor.Sample()
 det = condor.Detector(distance=0.05, pixel_size=110E-6, nx=1000, ny=1000)
 
 # Construct particle instance
 par = condor.ParticleSphere(diameter=1E-9, material_type="water")
 
-# Add particle to sample
-sam.append_particle(par, "sphere")
-
 # Construct experiment instance
-E = condor.Experiment(src, sam, det)
+E = condor.Experiment(src, {"particle_sphere" : par}, det)
 
 # Calculate diffraction pattern
 res = E.propagate()

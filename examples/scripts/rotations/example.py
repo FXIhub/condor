@@ -18,8 +18,6 @@ os.mkdir(out_dir)
 
 # Source
 src = condor.Source(wavelength=0.1E-9, pulse_energy=1E-3, focus_diameter=1E-6)
-# Sample
-sam = condor.Sample()
 # Detector
 det = condor.Detector(distance=0.5, pixel_size=750E-6, nx=100, ny=100)#, cx=55, cy=55)
 
@@ -56,29 +54,25 @@ for angle_d in angles_d:
         # Ideal spheroid
         print "Simulating spheroid"
         par = condor.ParticleSpheroid(diameter=spheroid_diameter, material_type="water", flattening=spheroid_flattening, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-        s = "spheroid"
-        sam.append_particle(par, s)
-        E = condor.Experiment(src, sam, det)
+        s = "particle_spheroid"
+        E = condor.Experiment(src, {s : par}, det)
         res = E.propagate()
         real_space = numpy.fft.fftshift(numpy.fft.ifftn(res["entry_1"]["data_1"]["data_fourier"]))
         vmin = numpy.log10(res["entry_1"]["data_1"]["data"].max()/10000.)
         pypl.imsave(out_dir + "/%s_%2.2fdeg.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
         pypl.imsave(out_dir + "/%s_rs_%2.2fdeg.png" % (s,angle_d), abs(real_space))
-        sam.remove_all_particles()
     
     if True:
         # Map (spheroid)
         print "Simulating map (spheroid)"
         par = condor.ParticleMap(diameter=spheroid_diameter, material_type="water", flattening=spheroid_flattening, geometry="spheroid", rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-        s = "map_spheroid"
-        sam.append_particle(par, s)
-        E = condor.Experiment(src, sam, det)
+        s = "particle_map_spheroid"
+        E = condor.Experiment(src, {s : par}, det)
         res = E.propagate()
         real_space = numpy.fft.fftshift(numpy.fft.ifftn(res["entry_1"]["data_1"]["data_fourier"]))
         vmin = numpy.log10(res["entry_1"]["data_1"]["data"].max()/10000.)
         pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
         pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
-        sam.remove_all_particles()
 
     # Box
     if True:
@@ -90,9 +84,8 @@ for angle_d in angles_d:
         # Map
         print "Simulating map (custom)"
         par = condor.ParticleMap(diameter=long_diameter, material_type="water", geometry="custom", map3d=map3d, dx=dx, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-        s = "map_custom"
-        sam.append_particle(par, s)
-        E = condor.Experiment(src, sam, det)
+        s = "particle_map_custom"
+        E = condor.Experiment(src, {s : par}, det)
         res = E.propagate()
         data_fourier = res["entry_1"]["data_1"]["data_fourier"]
         #data_fourier = abs(data_fourier)*numpy.exp(-1.j*numpy.angle(data_fourier))
@@ -102,7 +95,6 @@ for angle_d in angles_d:
         pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
         pypl.imsave(out_dir + "/%s_%2.2f_phases.png" % (s,angle_d), numpy.angle(res["entry_1"]["data_1"]["data_fourier"])%(2*numpy.pi))
         pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
-        sam.remove_all_particles()
 
     if True:
         # Molecule (box)
@@ -126,9 +118,8 @@ for angle_d in angles_d:
         atomic_positions = numpy.array([[x,y,z] for x,y,z in zip(X.ravel(),Y.ravel(),Z.ravel())])
         atomic_numbers   = numpy.ones(atomic_positions.size/3, dtype=numpy.int16)
         par = condor.ParticleMolecule(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-        s = "molecule"
-        sam.append_particle(par, s)
-        E = condor.Experiment(src, sam, det)
+        s = "particle_molecule"
+        E = condor.Experiment(src, {s : par}, det)
         res = E.propagate()
         real_space = numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(res["entry_1"]["data_1"]["data_fourier"])))
         fourier_space = res["entry_1"]["data_1"]["data_fourier"]
@@ -136,5 +127,4 @@ for angle_d in angles_d:
         pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
         pypl.imsave(out_dir + "/%s_%2.2f_phases.png" % (s,angle_d), numpy.angle(fourier_space)%(2*numpy.pi))
         pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
-        sam.remove_all_particles()
     

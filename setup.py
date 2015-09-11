@@ -44,11 +44,10 @@ def concatenate_files(infilenames,outfilename,extra_newlines=0):
     with open(outfilename, "w") as f:
         f.writelines(lines)
 src = this_dir + "/examples/configfile/source.conf"
-sam = this_dir + "/examples/configfile/sample.conf"
 det = this_dir + "/examples/configfile/detector.conf"
 for m in ["particle_sphere","particle_spheroid","particle_map","particle_molecule"]:
     par = this_dir + ("/examples/configfile/%s.conf" % m)
-    infilenames = [src, sam, par, det]
+    infilenames = [src, par, det]
     d = this_dir + ("/examples/configfile/%s" % m)
     if not os.path.exists(d):
         os.mkdir(d)
