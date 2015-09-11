@@ -182,8 +182,6 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector):
     # Read configuration into options struct
     spsim.read_options_file(tmpf_conf_name, opts)
     # This deletes the temporary files
-
-    os.system("cp %s /Users/hantke/foo.pdb" % tmpf_pdb_name)
     os.unlink(tmpf_pdb_name)
     os.unlink(tmpf_conf_name)
     return opts
