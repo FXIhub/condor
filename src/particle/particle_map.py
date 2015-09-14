@@ -210,15 +210,24 @@ class ParticleMap(AbstractContinuousParticle):
         """
         Load map from dataset in HDF5 file
 
+        If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
+
         Args:
           :map3d_filename (str): Location of the HDF5 file that contains the map data
 
-          :map3d_dataset (str): Dataset location in the file. The dataset must have three equal dimensions of float values. If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
+          :map3d_dataset (str): Dataset location in the file. The dataset must have three equal dimensions of float values.
+
           :dx: Grid spacing in unit meter
         """
         import h5py
         with h5py.File(map3d_filename,"r") as f:
-            map3d = numpy.array(f[map3d_dataset][:,:,:], dtype="float")
+            if map3d_dataset is not None:
+                ds = map3d_dataset
+            elif len(f.keys()) == 1:
+                ds = f.keys()[0]
+            else:
+                log_and_raise_error(logger, "No dataset specified where to find the map.")
+            map3d = numpy.array(f[ds][:,:,:], dtype="float")
         self.set_custom_geometry_by_array(map3d, dx)                
 
     def get_current_map(self):
