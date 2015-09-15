@@ -41,6 +41,8 @@ import condor.utils.bodies
 
 from particle_abstract import AbstractContinuousParticle
 
+ENABLE_MAP_INTERPOLATION = True
+
 class ParticleMap(AbstractContinuousParticle):
     """
     Class for a particle model
@@ -311,7 +313,7 @@ class ParticleMap(AbstractContinuousParticle):
                     # Change back to original fine map
                     self._map3d = self._map3d_orig
             # Can we downsample current map?
-            if (dx_suggested/dx >= 2.) and (dx_suggested/self._dx_orig >= 2.):
+            if (dx_suggested/dx >= 2.) and (dx_suggested/self._dx_orig >= 2.) and ENABLE_MAP_INTERPOLATION:
                 N1 = self._map3d_orig.shape[0]
                 m1 = numpy.zeros(shape=(N1,N1,N1), dtype=numpy.float64)
                 m1[:self._map3d_orig.shape[0],:self._map3d_orig.shape[0],:self._map3d_orig.shape[0]] = self._map3d_orig[:,:,:]

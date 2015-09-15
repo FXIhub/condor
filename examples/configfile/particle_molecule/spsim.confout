@@ -1,6 +1,6 @@
 number_of_dimensions = 2;
 input_type = "pdb";
-pdb_filename = "/var/folders/dv/m8kz_s0n7jd79_7v7y1j6bj4000100/T/tmp_spsim0i_6sv.conf";
+pdb_filename = "/var/folders/dv/m8kz_s0n7jd79_7v7y1j6bj4000100/T/tmp_spsimKamOYy.conf";
 box_type = "spherical";
 detector_distance = 7.300000e-01;
 detector_width = 7.680000e-02;
