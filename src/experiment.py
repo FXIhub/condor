@@ -243,8 +243,8 @@ class Experiment:
                 Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 # Generate map
                 # We multiply by 0.99 to prevent numerical issues
-                dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False) * 0.99
-                dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True) * 0.99
+                dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)# * 0.99
+                dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)# * 0.99
                 map3d, dx = p.get_new_map(D_particle, dx_required, dx_suggested)
                 log_debug(logger, "Sampling of map: dx_required = %e m, dx_suggested = %e m, dx = %e m" % (dx_required, dx_suggested, dx))
                 map3d_dn = numpy.array(map3d, dtype=numpy.complex128) * dn
@@ -275,7 +275,7 @@ class Experiment:
                 # reshaping
                 fourier_pattern = numpy.reshape(fourier_pattern, (qmap_scaled.shape[0], qmap_scaled.shape[1]))
                 log_debug(logger, "Got pattern of %i x %i pixels." % (fourier_pattern.shape[1], fourier_pattern.shape[0]))
-                F = F0 * fourier_pattern * dx**3 * numpy.sqrt(Omega_p)
+                F = F0 * fourier_pattern * dx_required**3 * numpy.sqrt(Omega_p)
 
             # MOLECULE
             elif isinstance(p, condor.particle.ParticleMolecule):

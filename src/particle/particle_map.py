@@ -41,7 +41,7 @@ import condor.utils.bodies
 
 from particle_abstract import AbstractContinuousParticle
 
-ENABLE_MAP_INTERPOLATION = True
+ENABLE_MAP_INTERPOLATION = False
 
 class ParticleMap(AbstractContinuousParticle):
     """
@@ -314,6 +314,7 @@ class ParticleMap(AbstractContinuousParticle):
                     self._map3d = self._map3d_orig
             # Can we downsample current map?
             if (dx_suggested/dx >= 2.) and (dx_suggested/self._dx_orig >= 2.) and ENABLE_MAP_INTERPOLATION:
+                print "ENABLE_MAP_INTERPOLATION=%i" % ENABLE_MAP_INTERPOLATION
                 N1 = self._map3d_orig.shape[0]
                 m1 = numpy.zeros(shape=(N1,N1,N1), dtype=numpy.float64)
                 m1[:self._map3d_orig.shape[0],:self._map3d_orig.shape[0],:self._map3d_orig.shape[0]] = self._map3d_orig[:,:,:]
@@ -328,9 +329,9 @@ class ParticleMap(AbstractContinuousParticle):
                 #imsave("m1.png", m1.sum(0))
                 #imsave("m2.png", m2.sum(0))
                 self._dx    = self._dx_orig * float(N1)/float(N2)
-                self._map3d = m2/m2.sum()*m1.sum()
-            dx = O["diameter"] / self.diameter_mean * self._dx
+                self._map3d = m2 / m2.sum() * m1.sum()
             m = self._map3d
+            dx = O["diameter"] / self.diameter_mean * self._dx
 
         self._geometry   = O["geometry"]
         self._diameter   = O["diameter"]
