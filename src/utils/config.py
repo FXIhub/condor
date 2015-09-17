@@ -45,28 +45,7 @@ def read_configfile(configfile):
             confDict[section] = {}
             c = config.items(section)
             for (key,value) in c:
-                v = _estimate_type(value)
-                if isinstance(v,str):
-                    v = v.replace(" ","")
-                    if v.startswith("[") and v.endswith("]"):
-                        v = _str_to_list(v)
-                        for i in range(len(v)):
-                            v[i] = os.path.expandvars(v[i]) if isinstance(v[i], str) else v[i] 
-                    elif v.startswith("{") and v.endswith("}"):
-                        v = v[1:-1].split(",")
-                        v = [w for w in v if len(w) > 0]
-                        d = {}
-                        for w in v:
-                            key,value = w.split(":")
-                            value = _estimate_type(value)
-                            if value.startswith("$"):
-                                value = os.path.expandvars(value)
-                            d[key] = value
-                        v = d
-                    else:
-                        if v.startswith("$"):
-                            v = os.path.expandvars(v)
-                confDict[section][key] = v
+                confDict[section][key] = _estimate_class(v)
     return confDict
 
 def write_configfile(configdict, filename):
@@ -85,7 +64,41 @@ def write_configfile(configdict, filename):
             ls.append("\n")
     with open(filename, "w") as f:
         f.writelines(ls)
- 
+
+def read_configdict(configdict):
+    C = {}
+    for k,v in configdict.items():
+        if isinstance(v, dict):
+            v_new = read_configdict(v)
+        else:
+            v_new = _estimate_class(v)
+        C[k] = v_new
+    return C
+
+def _estimate_class(var):
+    v = _estimate_type(var)
+    if isinstance(v,str):
+        v = v.replace(" ","")
+        if v.startswith("[") and v.endswith("]"):
+            v = _str_to_list(v)
+            for i in range(len(v)):
+                v[i] = os.path.expandvars(v[i]) if isinstance(v[i], str) else v[i] 
+        elif v.startswith("{") and v.endswith("}"):
+            v = v[1:-1].split(",")
+            v = [w for w in v if len(w) > 0]
+            d = {}
+            for w in v:
+                key,value = w.split(":")
+                value = _estimate_type(value)
+                if value.startswith("$"):
+                    value = os.path.expandvars(value)
+                d[key] = value
+            v = d
+        else:
+            if v.startswith("$"):
+                v = os.path.expandvars(v)
+    return v
+        
 def _estimate_type(var):
     #first test bools
     if var.lower() == 'true':
