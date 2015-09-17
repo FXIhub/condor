@@ -100,6 +100,8 @@ def _estimate_class(var):
     return v
         
 def _estimate_type(var):
+    if not isinstance(var, str):
+        return var
     #first test bools
     if var.lower() == 'true':
         return True
