@@ -49,12 +49,13 @@ class Variation:
     """
     
     def __init__(self,mode,spread,n=None,number_of_dimensions=1):
-        self._number_of_dimensions = number_of_dimensions
+        self.set_number_of_dimensions()
         self.set_mode(mode)
         self.set_spread(spread)
         self.n = n
         self.reset_counter()
-
+        self.validate()
+        
     def get_conf(self):
         """
         Get configuration in form of a dictionary. Another identically configured Variation instance can be initialised by:
@@ -79,6 +80,12 @@ class Variation:
         """
         self._i = 0
 
+    def set_number_of_dimensions(self, number_of_dimensions):
+        if number_of_dimensions < 1 or number_of_dimensions > 2:
+            log_and_raise_error(logger, "Number of dimensions for variation objects can be only either 1 or 2")
+            return
+        self._number_of_dimensions = number_of_dimensions
+        
     def get_number_of_dimensions(self):
         """
         Return the number of dimensions of the variation variable
@@ -108,27 +115,6 @@ class Variation:
         if mode not in [None,"normal","poisson","normal_poisson","uniform","range"]:
             log_and_raise_error(logger, "Variation object cannot be configured with illegal mode %s" % mode)
             return
-        if mode in ["normal","normal_poisson","uniform","range"] and spread is None:
-            log_and_raise_error(logger, "Variation object cannot be configured because mode \'%s\' requires valid keyword for \'spread\'" % mode)
-            return
-        if mode in ["range"]:
-            if n is None:
-                log_and_raise_error(logger, "Variation object cannot be configured because mode \'%s\' requires valid keyword for \'n\'" % mode)
-                return
-            else:
-                if self._number_of_dimensions < 1:
-                    log_and_raise_error(logger, "Variation object does not accept values smaller 1 for \'number_of_dimensions\'.")
-                    return
-                elif self._number_of_dimensions > 2:
-                    log_and_raise_error(logger, "Variation object does not accept values greater 2 for \'number_of_dimensions\'.")
-                    return
-                elif self._number_of_dimensions == 1:
-                    self._grid = numpy.array([numpy.linspace(-spread/2.,spread/2.,n)])
-                elif self._number_of_dimensions == 2:
-                    Y,X = numpy.meshgrid(numpy.linspace(-spread[0]/2.,spread[0]/2.,n),numpy.linspace(-spread[1]/2.,spread[1]/2.,n),indexing="ij")
-                    self._grid = numpy.array([Y.flatten(),X.flatten()])
-        else:
-            self._grid = None
         self._mode = mode
 
     def get_mode(self):
@@ -137,6 +123,30 @@ class Variation:
         """
         return self._mode
 
+    def validate(self):
+        mode = self.get_mode()
+        spread = self.get_spread()
+        number_of_dimensions = self.get_number_of_dimensions()
+        if m in ["normal","normal_poisson","uniform","range"] and spread is None:
+            log_and_raise_error(logger, "Variation object configuration is invalid because mode \'%s\' requires \'spread\' to be not None." % m)
+        if m in ["range"]:
+            if self.n is None:
+                log_and_raise_error(logger, "Variation object cannot be configured because mode \'%s\' requires that \'n\' is not None." % m)
+        if spread is not None:
+            if number_of_dimensions != len(spread):
+                log_and_raise_error(logger, "Specified number of dimensions (%i) and length of spread array (%i) do not match." % (number_of_dimensions, len(spread)))
+                
+    def _get_grid(self):
+        mode = self.get_mode()
+        if mode == "range":
+            if self._number_of_dimensions == 1:
+                return numpy.array([numpy.linspace(-self._spread/2.,self._spread/2.,n)])
+            elif self._number_of_dimensions == 2:
+                Y,X = numpy.meshgrid(numpy.linspace(-self._spread[0]/2.,self._spread[0]/2.,n),numpy.linspace(-self._spread[1]/2.,self._spread[1]/2.,n),indexing="ij")
+                return numpy.array([Y.flatten(),X.flatten()])
+        else:
+            return None
+
     def set_spread(self, spread):
         """
         Set spread of variation (standard deviation or full spread of values, see also :meth:`condor.utils.variation.Variation.set_mode`)
@@ -144,7 +154,9 @@ class Variation:
         Args:
           :spread (float): Width of the variation
         """
-        if isinstance(spread, collections.Iterable):
+        if spread is None:
+            self._spread = None
+        elif isinstance(spread, collections.Iterable):
             self._spread = list(spread)
         else:
             self._spread = [spread]
@@ -153,7 +165,7 @@ class Variation:
         """
         Get spread of variation
         """
-        if len(self._spread) > 1:
+        if len(self._spread) > 1 or self._spread is None:
             return self._spread
         else:
             return self._spread[0]
@@ -187,5 +199,5 @@ class Variation:
         elif self._mode == "uniform":
             v1 = numpy.random.uniform(v0-self._spread[dim]/2.,v0+self._spread[dim]/2.)
         elif self._mode == "range":
-            v1 = v0 + self._grid[dim,self._i % self._n]
+            v1 = v0 + self._get_grid()[dim,self._i % self._n]
         return v1
