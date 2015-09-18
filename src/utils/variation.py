@@ -49,7 +49,7 @@ class Variation:
     """
     
     def __init__(self,mode,spread,n=None,number_of_dimensions=1):
-        self.set_number_of_dimensions()
+        self.set_number_of_dimensions(number_of_dimensions)
         self.set_mode(mode)
         self.set_spread(spread)
         self.n = n
@@ -81,8 +81,8 @@ class Variation:
         self._i = 0
 
     def set_number_of_dimensions(self, number_of_dimensions):
-        if number_of_dimensions < 1 or number_of_dimensions > 2:
-            log_and_raise_error(logger, "Number of dimensions for variation objects can be only either 1 or 2")
+        if number_of_dimensions < 1 or number_of_dimensions > 3:
+            log_and_raise_error(logger, "Number of dimensions for variation objects can be only either 1, 2 or 3.")
             return
         self._number_of_dimensions = number_of_dimensions
         
@@ -127,13 +127,13 @@ class Variation:
         mode = self.get_mode()
         spread = self.get_spread()
         number_of_dimensions = self.get_number_of_dimensions()
-        if m in ["normal","normal_poisson","uniform","range"] and spread is None:
-            log_and_raise_error(logger, "Variation object configuration is invalid because mode \'%s\' requires \'spread\' to be not None." % m)
-        if m in ["range"]:
+        if mode in ["normal","normal_poisson","uniform","range"] and spread is None:
+            log_and_raise_error(logger, "Variation object configuration is invalid because mode \'%s\' requires \'spread\' to be not None." % mode)
+        if mode in ["range"]:
             if self.n is None:
-                log_and_raise_error(logger, "Variation object cannot be configured because mode \'%s\' requires that \'n\' is not None." % m)
+                log_and_raise_error(logger, "Variation object cannot be configured because mode \'%s\' requires that \'n\' is not None." % mode)
         if spread is not None:
-            if number_of_dimensions != len(spread):
+            if number_of_dimensions != len(self._spread):
                 log_and_raise_error(logger, "Specified number of dimensions (%i) and length of spread array (%i) do not match." % (number_of_dimensions, len(spread)))
                 
     def _get_grid(self):
@@ -144,6 +144,9 @@ class Variation:
             elif self._number_of_dimensions == 2:
                 Y,X = numpy.meshgrid(numpy.linspace(-self._spread[0]/2.,self._spread[0]/2.,n),numpy.linspace(-self._spread[1]/2.,self._spread[1]/2.,n),indexing="ij")
                 return numpy.array([Y.flatten(),X.flatten()])
+            elif self._number_of_dimensions == 3:
+                Z,Y,X = numpy.meshgrid(numpy.linspace(-self._spread[0]/2.,self._spread[0]/2.,n),numpy.linspace(-self._spread[1]/2.,self._spread[1]/2.,n),numpy.linspace(-self._spread[2]/2.,self._spread[2]/2.,n),indexing="ij")
+                return numpy.array([Z.flatten(),Y.flatten(),X.flatten()])                
         else:
             return None
 
@@ -165,7 +168,7 @@ class Variation:
         """
         Get spread of variation
         """
-        if len(self._spread) > 1 or self._spread is None:
+        if self._spread is None or len(self._spread) > 1:
             return self._spread
         else:
             return self._spread[0]
