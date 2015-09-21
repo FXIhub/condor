@@ -45,7 +45,7 @@ def read_configfile(configfile):
             confDict[section] = {}
             c = config.items(section)
             for (key,value) in c:
-                confDict[section][key] = _estimate_class(v)
+                confDict[section][key] = _estimate_class(value)
     return confDict
 
 def write_configfile(configdict, filename):

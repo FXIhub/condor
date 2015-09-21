@@ -229,7 +229,7 @@ class ParticleMap(AbstractContinuousParticle):
                 ds = f.keys()[0]
             else:
                 log_and_raise_error(logger, "No dataset specified where to find the map.")
-            map3d = numpy.array(f[ds][:,:,:], dtype="float")
+            map3d = numpy.array(f[ds][:,:,:])
         self.set_custom_geometry_by_array(map3d, dx)                
 
     def get_current_map(self):
@@ -339,7 +339,7 @@ class ParticleMap(AbstractContinuousParticle):
         return m,dx
             
     def _put_custom_map(self, map_add):
-        self._map3d = numpy.array(map_add, dtype=numpy.float64)
+        self._map3d = numpy.array(map_add)
     
     def _put_sphere(self, radius):
         nR = radius/self._dx

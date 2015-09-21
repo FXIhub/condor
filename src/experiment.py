@@ -275,7 +275,8 @@ class Experiment:
                 # reshaping
                 fourier_pattern = numpy.reshape(fourier_pattern, (qmap_scaled.shape[0], qmap_scaled.shape[1]))
                 log_debug(logger, "Got pattern of %i x %i pixels." % (fourier_pattern.shape[1], fourier_pattern.shape[0]))
-                F = F0 * fourier_pattern * dx_required**3 * numpy.sqrt(Omega_p)
+                #F = F0 * fourier_pattern * dx_required**3 * numpy.sqrt(Omega_p)
+                F = F0 * fourier_pattern * dx**3 * numpy.sqrt(Omega_p)
 
             # MOLECULE
             elif isinstance(p, condor.particle.ParticleMolecule):

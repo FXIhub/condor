@@ -142,9 +142,9 @@ def test_map_interpolation(tolerance=0.1):
     E = condor.Experiment(src, {s : par}, det)
     res1 = E.propagate()
     I1 = res1["entry_1"]["data_1"]["data"]
-    import matplotlib.pyplot as pypl
-    pypl.imsave("./Imap_interp.png", abs(I0), vmin=0, vmax=I0.max())
-    pypl.imsave("./Imap_no_interp.png", abs(I1), vmin=0, vmax=I0.max())
+    #import matplotlib.pyplot as pypl
+    #pypl.imsave("./Imap_interp.png", abs(I0), vmin=0, vmax=I0.max())
+    #pypl.imsave("./Imap_no_interp.png", abs(I1), vmin=0, vmax=I0.max())
     err = abs(I0-I1).sum() / ((I0+I1).sum() / 2.)
     if err < tolerance:
         print "\t=> Test successful (err = %e)" % err
