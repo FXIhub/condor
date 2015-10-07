@@ -14,3 +14,4 @@ tests/ensemble_out
 tests/ensemble_out/*
 build
 build/**
+docs/_build
