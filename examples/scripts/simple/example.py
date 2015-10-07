@@ -1,6 +1,4 @@
 import numpy
-import matplotlib.pyplot as pypl
-
 import condor
 
 # Construct source, sample, detector instanec

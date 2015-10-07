@@ -35,7 +35,7 @@ if __name__ == "__main__":
     #])
     #with PyCallGraph(output=GraphvizOutput(),config=config):
 
-    W = condor.utils.log.CXIWriter("./condor.cxi")
+    W = condor.utils.cxiwriter.CXIWriter("./condor.cxi")
     for i in range(args.number_of_patterns):
         res = E.propagate()
         W.write(res)

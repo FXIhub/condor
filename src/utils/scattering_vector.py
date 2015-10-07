@@ -48,6 +48,7 @@ def q_from_p(p, wavelength):
     q = k0 - k1
     return q
 
+
 def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation=None, order="xyz"):
     r"""
     Generate scattering vector map from experimental parameters

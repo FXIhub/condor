@@ -33,7 +33,7 @@ par = condor.ParticleMap(diameter=600E-9, material_type="cell", geometry="custom
 s = "particle_map"
 E = condor.Experiment(src, {s : par}, det)
 
-W = condor.utils.log.CXIWriter("./condor.cxi")
+W = condor.utils.cxiwriter.CXIWriter("./condor.cxi")
 for i in range(N):
     res = E.propagate()
     real_space = numpy.fft.fftshift(numpy.fft.ifftn(res["entry_1"]["data_1"]["data_fourier"]))

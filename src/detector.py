@@ -282,7 +282,7 @@ class Detector:
             tmp = R<=hole_diameter_in_pixel/2.0
             if tmp.sum() > 0:
                 self._mask[tmp] |= PixelMask.PIXEL_IS_MISSING
-        
+
     def get_mask(self,intensities=None, boolmask=False):
         """
         Return mask. The mask has information about the status of each individual detector pixel. The output can be either a CXI bitmask (default) or a boolean mask
@@ -444,7 +444,7 @@ class Detector:
           :cy (float): *y*-coordinate of the center position in unit pixel (default ``None``)
         """
         p = abs(self.get_p_max_dist(cx=cx, cy=cy, pos=pos, center_variation=center_variation))
-        q = condor.utils.scattering_vector.q_from_p(p, wavelength)
+        q = abs(condor.utils.scattering_vector.q_from_p(p, wavelength))
         return q
 
     def _get_resolution_element(self, wavelength, cx = None, cy = None, center_variation = False, pos="edge"):
