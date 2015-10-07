@@ -131,6 +131,6 @@ Calling the method :meth:`condor.experiment.propagate` starts the simulation of 
 Example
 ^^^^^^^
 
-.. literalinclude:: ../examples/simple/example.py
+.. literalinclude:: ../examples/scripts/simple/example.py
    :language: python
 

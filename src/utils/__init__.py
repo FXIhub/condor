@@ -36,3 +36,4 @@ import scattering_vector
 import sphere_diffraction
 import spheroid_diffraction
 import variation
+import cxiwriter

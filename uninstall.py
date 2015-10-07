@@ -56,6 +56,6 @@ if __name__ == "__main__":
             exit(0)
     # Delete installation directory
     print "Removing directory %s ..." % d 
-    shutil.rmtree("%s/" % d)
+    shutil.rmtree("%s/" % d, ignore_errors=True)
     print "Done"
 

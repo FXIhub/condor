@@ -16,13 +16,16 @@
 
 import numpy, h5py, os
 
+import logging
+logger = logging.getLogger(__name__)
+
 import log
 
 class CXIWriter:
     def __init__(self, filename, chunksize=2):
         self._filename = os.path.expandvars(filename)
         if os.path.exists(filename):
-            log_warning(logger, "File %s exists and is being overwritten" % filename)
+            log.log_warning(logger, "File %s exists and is being overwritten" % filename)
         self._f = h5py.File(filename, "w")
         self._i = 0
         self._chunksize = chunksize
@@ -35,13 +38,13 @@ class CXIWriter:
         for k in D.keys():
             if isinstance(D[k],dict):
                 group_prefix_new = group_prefix + k + "/"
-                log_debug(logger, "Writing group %s" % group_prefix_new)
+                log.log_debug(logger, "Writing group %s" % group_prefix_new)
                 if k not in self._f[group_prefix]:
                     self._f.create_group(group_prefix_new)
                 self._write_without_iterate(D[k], group_prefix_new)
             else:
                 name = group_prefix + k
-                log_debug(logger, "Writing dataset %s" % name)
+                log.log_debug(logger, "Writing dataset %s" % name)
                 data = D[k]
                 if k not in self._f[group_prefix]:
                     if numpy.isscalar(data):
@@ -56,7 +59,7 @@ class CXIWriter:
                         try:
                             h5py.h5t.py_create(data.dtype, logical=1)
                         except TypeError:
-                            log_warning(logger, "Could not save dataset %s. Conversion to numpy array failed" % name)
+                            log.log_warning(logger, "Could not save dataset %s. Conversion to numpy array failed" % name)
                             continue
                         maxshape = tuple([None]+list(data.shape))
                         shape = tuple([self._chunksize]+list(data.shape))
@@ -66,7 +69,7 @@ class CXIWriter:
                         if ndim == 1: axes = axes + ":x"
                         elif ndim == 2: axes = axes + ":y:x"
                         elif ndim == 3: axes = axes + ":z:y:x"
-                    log_debug(logger, "Create dataset %s [shape=%s, dtype=%s]" % (name,str(shape),str(dtype)))
+                    log.log_debug(logger, "Create dataset %s [shape=%s, dtype=%s]" % (name,str(shape),str(dtype)))
                     self._f.create_dataset(name, shape, maxshape=maxshape, dtype=dtype)
                     self._f[name].attrs.modify("axes",[axes])
                 if self._f[name].shape[0] <= self._i:
@@ -75,9 +78,9 @@ class CXIWriter:
                     else:
                         data_shape = data.shape
                     new_shape = tuple([self._chunksize*(self._i/self._chunksize+1)]+list(data_shape))
-                    log_debug(logger, "Resize dataset %s [old shape: %s, new shape: %s]" % (name,str(self._f[name].shape),str(new_shape)))
+                    log.log_debug(logger, "Resize dataset %s [old shape: %s, new shape: %s]" % (name,str(self._f[name].shape),str(new_shape)))
                     self._f[name].resize(new_shape)
-                log_debug(logger, "Write to dataset %s at stack position %i" % (name, self._i))
+                log.log_debug(logger, "Write to dataset %s at stack position %i" % (name, self._i))
                 if numpy.isscalar(data):
                     self._f[name][self._i] = data
                 else:
@@ -87,7 +90,7 @@ class CXIWriter:
         for k in self._f[group_prefix].keys():
             name = group_prefix + k
             if isinstance(self._f[name], h5py.Dataset):
-                log_debug(logger, "Shrinking dataset %s to stack length %i" % (name, self._i))
+                log.log_debug(logger, "Shrinking dataset %s to stack length %i" % (name, self._i))
                 s = list(self._f[name].shape)
                 s.pop(0)
                 s.insert(0, self._i)
@@ -98,6 +101,6 @@ class CXIWriter:
                     
     def close(self):
         self._shrink_stacks()
-        log_debug(logger, "Closing file %s" % self._filename)
+        log.log_debug(logger, "Closing file %s" % self._filename)
         self._f.close()
 
