@@ -9,7 +9,7 @@ There are generally two ways of configuring and running simulations with Condor:
 
      $ condor -n [number_of_patterns]
      
-  Condor will create an HDF5 file named 'condor.cxi', which contains the simulated pattern(s) and additional output. The file follows the standards of CXI-DB files (`www.cxidb.org <http://www.cxidb.org>`_) and can be opened with the file viewer *Owl* (`github.com/FilipeMaia/owl/wiki/Owl-wiki <http://github.com/FilipeMaia/owl/wiki/Owl-wiki>`_).
+  Condor will create an HDF5 file named 'condor.cxi', which contains the simulated pattern(s) and additional output (:any:`Reading CXI files`).
 
   For help and more options run::
 
@@ -110,7 +110,7 @@ This section configures a :class:`condor.detector.Detector` class instance.
 B) Simulation directly in Python
 --------------------------------
 
-Simulations are carried out with an instance of the :class:`condor.experiment.Experiment` class. Its constructor requires three arguments
+Simulations are carried out from an instance of the :class:`condor.experiment.Experiment` class. Its constructor requires three arguments
 
   1) A Source instance :class:`condor.source.Source`
 
@@ -126,7 +126,7 @@ Simulations are carried out with an instance of the :class:`condor.experiment.Ex
      
   3) A Detector instance - :class:`condor.detector.Detector`
 
-Calling the method :meth:`condor.experiment.propagate` starts the simulation of a single diffraction pattern. The method returns a dictionary with various outputs.
+Calling the method :meth:`condor.experiment.propagate` starts the simulation of a single diffraction pattern. The method returns a dictionary that include the diffraction patterns and various other outputs.
 
 Example
 ^^^^^^^
