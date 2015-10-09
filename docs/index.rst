@@ -14,6 +14,7 @@ Contents:
    Welcome <self>
    Installation <installation>
    Running Condor <config>
+   Reading CXI files <cxi>
    Conventions <conventions>
    References <references>
    Contact <contact>

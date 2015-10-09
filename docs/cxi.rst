@@ -1,45 +1,74 @@
 Reading CXI files
 =================
 
+1) File structure
+-----------------
+
 CXI files are really HDF5 files with a defined structure and naming convention. The files follow the standards of CXI-DB files (`www.cxidb.org <http://www.cxidb.org>`_).
 
 The CXI files that are produced by Condor have the following structure:
 
-+-------------------------------+--------------------------------------------+---------------------------------------+
-| Dataset path                  | Array dimensions                           | Content                               |
-                                | (from fastest to slowest changing dim.)    |                                       |
-+===============================+============================================+=======================================+
-| /entry_1/data_1/data          | (# patterns, # pixels in Y, # pixels in X) | Intensity patterns                    |
-+-------------------------------+--------------------------------------------+---------------------------------------+
-| /entry_1/data_1/data_fourier  | (# patterns, # pixels in Y, # pixels in X) | Complex valued diffraction amplitudes |
-+-------------------------------+--------------------------------------------+---------------------------------------+
+
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| Path                                        | Content                                                  | Shape                           |
++=============================================+==========================================================+=================================+
+| **/entry_1/data_1/**                        | **Image data group**                                     |                                 |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /entry_1/data_1/data                        | Intensity patterns                                       | (N,X,Y)                         |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /entry_1/data_1/data_fourier                | Diffraction amplitudes (complex valued)                  | (N,X,Y)                         |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /entry_1/data_1/mask                        | Pixel masks (see                                         | (N,X,Y)                         |
+|                                             | :class:`condor.utils.pixelmask.PixelMask <Pixel masks>`) |                                 | 
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| **/source/**                                | **Source data group**                                    |                                 |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /source/pulse_energy                        | pulse_energy                                             | N                               |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /source/. . .                               | . . .                                                    | . . .                           |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| **/particles/particle_0i**                  | **Particle #i data group**                               |                                 |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /particles/particle_00/extrinsic_quaternion | Quaternions defining particle orientation                | (N,4)                           |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /particles/particle_00/. . .                | . . .                                                    | . . .                           |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| **/detector**                               | **Detector data group**                                  |                                 |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /detector/cx                                | X-coord. for center of the diffraction patterns          | N                               |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+| /detector/. . .                             | . . .                                                    | . . .                           |
++---------------------------------------------+----------------------------------------------------------+---------------------------------+
+
+CXI files can be opened with any HDF5 file reader. For browsing and inspecting diffraction patterns produced with *Condor* the viewer *Owl* can come handy (`github.com/FilipeMaia/owl/wiki/Owl-wiki <http://github.com/FilipeMaia/owl/wiki/Owl-wiki>`_).
 
 
-CXI files can be opened with any HDF5 file reader. Here three examples shall demonstrate the procedure.
 
-A) Python
----------
+2) Examples
+-----------
 
-Check first whether you have installed the python package *h5py*. In case of a working *h5py* installation you should be able to execute the following command without any error.
+Here are examples for Python and Matlab demonstrating how to access the data stored in a CXI file.
 
+a) Python
+^^^^^^^^^
 .. code::
 
-   python -c "import h5py"
+   import h5py, numpy
 
-If *h5py* is not installed just do:
+   with h5py.File('condor.cxi', 'r') as f:
+     intensity_pattern0 = numpy.asarray(f["entry_1/data_1/data"])
 
-.. code::
-
-   pip install h5py
-
-The following Python script demonstrates how to read the simulated intensity patterns.
- 
-
+   print "Maximum intensity value in first pattern: %f photons" % intensity_pattern[0].max()
    
-B) Matlab
----------
+b) Matlab
+^^^^^^^^^
+.. code::
+   
+   fid = H5F.open('condor.cxi');
+   dset_id = H5D.open(fid,'/entry_1/data_1/data');
 
-C) Owl
-------
+   intensity_patterns = H5D.read(dset_id);
 
- and can be opened with the file viewer *Owl* (`github.com/FilipeMaia/owl/wiki/Owl-wiki <http://github.com/FilipeMaia/owl/wiki/Owl-wiki>`_).
+   H5D.close(dset_id);
+   H5F.close(fid); 
+
