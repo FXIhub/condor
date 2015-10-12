@@ -136,13 +136,9 @@ class ParticleMap(AbstractContinuousParticle):
         self.flattening = flattening
 
         # Init chache
-        self._geometry               = None
-        self._dx                     = None
+        self._cache = {}
         self._dx_orig                = None
-        self._map3d                  = None
         self._map3d_orig             = None
-        self._diameter               = None
-        self._flattening             = None
 
         if geometry == "custom":
             if (map3d_filename is not None or map3d_dataset is not None) and map3d is not None:
@@ -204,10 +200,10 @@ class ParticleMap(AbstractContinuousParticle):
             log_and_raise_error(logger, "Condor only accepts maps with equal dimensions.")
             return
         self._map3d_orig = map3d
-        self._dx_orig = dx
-        self._map3d = map3d
-        self._dx = dx
-        
+        self._dx_orig    = dx
+        self._map3d      = map3d
+        self._set_cache(map3d, dx, geometry="custom")
+
     def set_custom_geometry_by_h5file(self, map3d_filename, map3d_dataset, dx):
         """
         Load map from dataset in HDF5 file
@@ -251,7 +247,36 @@ class ParticleMap(AbstractContinuousParticle):
         else:
             m,dx = self.get_current_map()
         return m, dx
-            
+
+    def _set_cache(self, map3d, dx, geometry, diameter=None, flattening=None):
+        self._cache = {
+            "map3d"      : map3d,
+            "dx"         : dx,
+            "geometry"   : geometry,
+            "diameter"   : diameter,
+            "flattening" : flattening,
+        }
+    
+    def _is_map_in_cache(self, O):
+        # Empty cache?
+        if not self._cache:
+            return False
+        # Correct geometry?
+        elif self._cache["geometry"] != O["geometry"]:
+            return False
+        # Correct size?
+        elif abs(self._cache["diameter"] - O["diameter"]) > 1E-10:
+            return False
+        # Correct spheroid flattening?
+        elif O["geometry"] == "spheroid":
+            if abs(self._cache["flattening"] - O["flattening"]) > 1E-10:
+                return False
+        # Sufficient resolution?
+        elif self._cache["dx"] > dx_required:
+            return False
+        else:
+            return True
+        
     def get_new_map(self, O, dx_required, dx_suggested):
         """
         Return new map with given parameters
@@ -264,118 +289,119 @@ class ParticleMap(AbstractContinuousParticle):
 
           :dx_suggested (float): Suggested resolution (grid spacing) of the map. If the map has a very high resolution it will be interpolated to a the suggested resolution value
         """
-        if O["geometry"] != "custom":
-            # Decide whether we need to build a new map
-            build_map = False
-            if self._map3d is None:
-                build_map = True
-            if self._diameter is None:
-                build_map = True
-            else:
-                if abs(self._diameter - O["diameter"]) > 1E-10:
-                    build_map = True
-                if O["flattening"] is not None and self._flattening is not None:
-                    if abs(self._flattening - O["flattening"]) > 1E-10:
-                        build_map = True
-            if self._dx > dx_required:
-                build_map = True
-                self._map3d = None
+        
+        if O["geometry"] in ["icosahedron", "sphere", "spheroid", "cube"]:
+            
+            if not self._is_map_in_cache(O):
+
+                dx = dx_suggested
                 
-            if build_map:
-                self._map3d = None
-                self._dx = dx_suggested
                 if O["geometry"] == "icosahedron":
-                    self._put_icosahedron(O["diameter"]/2.)
+                    m = self._get_map_icosahedron(O["diameter"]/2., dx)
+
                 elif O["geometry"] == "spheroid":
                     a = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
                     c = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
-                    self._put_spheroid(a, c)
+                    m = self._get_map_spheroid(a, c, dx)
+
                 elif O["geometry"] == "sphere":
-                    self._put_sphere(O["diameter"]/2.)
+                    m = self._put_sphere(O["diameter"]/2., dx)
+
                 elif O["geometry"] == "cube":
-                    self._put_cube(O["diameter"]/2.)
+                    m = self._get_map_cube(O["diameter"]/2., dx)
+
                 else:
                     log_and_raise_error(logger, "Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
                     sys.exit(1)
-            m = self._map3d
-            dx = self._dx
+
+                self._set_cache(map3d=m,
+                                dx=dx,
+                                geometry=O["geometry"],
+                                diameter=O["diameter"],
+                                flattening=(None if O["geometry"] != "spheroid" else O["flattening"]))
+
+            else:
+
+                log_debug(logger, "No need for calculating a new map. Reading map from cache.")
+                m  = self._cache["map3d"]
+                dx = self._cache["dx"]
+
+        elif O["geometry"] == "custom":
             
-        else:
-            dx = O["diameter"] / self.diameter_mean * self._dx
+            dx_needed = O["diameter"] / self.diameter_mean * self._cache["dx"]
+            
             # Map fine enough?
-            if dx/dx_required >= 1.:
-                # Original map fine enough?
+            if dx_needed/dx_required >= 1.:
+            
                 if self._dx_orig/dx_required >= 1.:
                     # Not fine enough -> exit
-                    log_and_raise_error(logger, "Resolution of custom map is not sufficient for simulation. %e, %e" % (dx_required, self._dx))
+                    log_and_raise_error(logger, "Resolution of given custom map is insufficient for simulation. required %e m vs. provided %e m." % (dx_required, self._dx_orig))
                     sys.exit(1)
-                else:
-                    # Change back to original fine map
-                    self._map3d = self._map3d_orig
+                    
+                # Change back to original fine map
+                self.set_cache(map3d=self._map3d_orig,
+                               dx=self._dx_orig,
+                               geometry="custom")
+                    
             # Can we downsample current map?
-            if (dx_suggested/dx >= 2.) and (dx_suggested/self._dx_orig >= 2.) and ENABLE_MAP_INTERPOLATION:
-                print "ENABLE_MAP_INTERPOLATION=%i" % ENABLE_MAP_INTERPOLATION
-                N1 = self._map3d_orig.shape[0]
-                m1 = numpy.zeros(shape=(N1,N1,N1), dtype=numpy.float64)
-                m1[:self._map3d_orig.shape[0],:self._map3d_orig.shape[0],:self._map3d_orig.shape[0]] = self._map3d_orig[:,:,:]
-                fm1 = numpy.fft.fftshift(numpy.fft.ifftn(m1))
-                N1 = m1.shape[0]
-                N2 = int(numpy.ceil(N1 * self._dx_orig / dx_suggested))
-                x1 = numpy.linspace(-0.5,0.5,N2)*(1-0.5/N2)
-                Z,Y,X = numpy.meshgrid(x1,x1,x1,indexing="ij")
-                coords = numpy.array([[z,y,x] for z,y,x in zip(Z.ravel(),Y.ravel(),X.ravel())])
-                m2 = abs(numpy.fft.fftshift(condor.utils.nfft.nfft(fm1,coords).reshape((N2,N2,N2))))
-                #from pylab import *
-                #imsave("m1.png", m1.sum(0))
-                #imsave("m2.png", m2.sum(0))
-                self._dx    = self._dx_orig * float(N1)/float(N2)
-                self._map3d = m2 / m2.sum() * m1.sum()
-            m = self._map3d
-            dx = O["diameter"] / self.diameter_mean * self._dx
+            #if (dx_suggested/dx_needed >= 2.) and (dx_suggested/self._dx_orig >= 2.) and ENABLE_MAP_INTERPOLATION:
+            #    print "ENABLE_MAP_INTERPOLATION=%i" % ENABLE_MAP_INTERPOLATION
+            #    N1 = self._map3d_orig.shape[0]
+            #    m1 = numpy.zeros(shape=(N1,N1,N1), dtype=numpy.float64)
+            #    m1[:self._map3d_orig.shape[0],:self._map3d_orig.shape[0],:self._map3d_orig.shape[0]] = self._map3d_orig[:,:,:]
+            #    fm1 = numpy.fft.fftshift(numpy.fft.ifftn(m1))
+            #    N1 = m1.shape[0]
+            #    N2 = int(numpy.ceil(N1 * self._dx_orig / dx_suggested))
+            #    x1 = numpy.linspace(-0.5,0.5,N2)*(1-0.5/N2)
+            #    Z,Y,X = numpy.meshgrid(x1,x1,x1,indexing="ij")
+            #    coords = numpy.array([[z,y,x] for z,y,x in zip(Z.ravel(),Y.ravel(),X.ravel())])
+            #    m2 = abs(numpy.fft.fftshift(condor.utils.nfft.nfft(fm1,coords).reshape((N2,N2,N2))))
+            #    #from pylab import *
+            #    #imsave("m1.png", m1.sum(0))
+            #    #imsave("m2.png", m2.sum(0))
+            #    self._dx    = self._dx_orig * float(N1)/float(N2)
+            #    self._map3d = m2 / m2.sum() * m1.sum()
 
-        self._geometry   = O["geometry"]
-        self._diameter   = O["diameter"]
-        self._flattening = O.get("flattening",None)
-        return m,dx
+            m  = self._cache["map3d"]
+            dx = O["diameter"] / self.diameter_mean * self._cache["dx"]
             
-    def _put_custom_map(self, map_add):
-        self._map3d = numpy.array(map_add)
-    
-    def _put_sphere(self, radius):
-        nR = radius/self._dx
+        return m,dx
+                
+    def _get_map_sphere(self, radius, dx):
+        nR = radius/dx
         N = int(round((nR*1.2)*2))
-        spheremap = condor.utils.bodies.make_sphere_map(N,nR)
-        self._put_custom_map(spheremap)
+        m = condor.utils.bodies.make_sphere_map(N,nR)
+        return numpy.asarray(m, dtype=numpy.float64)
  
-    def _put_spheroid(self, a, c, rotation=None):
+    def _get_map_spheroid(self, a, c, dx, rotation=None):
         # maximum radius
         Rmax = max([a,c])
         # maximum radius in pixel
-        nRmax = Rmax/self._dx
+        nRmax = Rmax/dx
         # dimensions in pixel
-        nA = a/self._dx
-        nC = c/self._dx
+        nA = a/dx
+        nC = c/dx
         # leaving a bit of free space around spheroid
         N = int(round((nRmax*1.2)*2))
-        spheromap = condor.utils.bodies.make_spheroid_map(N,nA,nC,rotation)
-        self._put_custom_map(spheromap)
+        m = condor.utils.bodies.make_spheroid_map(N,nA,nC,rotation)
+        return numpy.asarray(m, dtype=numpy.float64)
 
-    def _put_icosahedron(self, radius):
+    def _get_map_icosahedron(self, radius, dx):
         # icosahedon size parameter
         a = radius*(16*numpy.pi/5.0/(3+numpy.sqrt(5)))**(1/3.0)
         # radius at corners in meter
         Rmax = numpy.sqrt(10.0+2*numpy.sqrt(5))*a/4.0 
         # radius at corners in pixel
-        nRmax = Rmax/self._dx 
+        nRmax = Rmax/dx 
         # leaving a bit of free space around icosahedron 
         N = int(numpy.ceil(2.3*(nRmax)))
         log_info(logger,"Building icosahedron with radius %e (%i pixel) in %i x %i x %i voxel cube." % (radius,nRmax,N,N,N))
-        icomap = condor.utils.bodies.make_icosahedron_map(N,nRmax)
-        self._put_custom_map(icomap)
-
-    def _put_cube(self, a):
+        m = condor.utils.bodies.make_icosahedron_map(N,nRmax)
+        return numpy.asarray(m, dtype=numpy.float64)
+        
+    def _get_map_cube(self, a, dx):
         # edge_length in pixels
-        nel = a/self._dx 
+        nel = a/dx 
         # leaving a bit of free space around
         N = int(numpy.ceil(2.3*nel))
         # make map
@@ -387,11 +413,10 @@ class ParticleMap(AbstractContinuousParticle):
         DY = abs(Y)-nel/2.
         DZ = abs(Z)-nel/2.
         D = numpy.array([DZ,DY,DX])
-        cubemap = numpy.zeros(shape=(N,N,N))
+        m = numpy.zeros(shape=(N,N,N))
         Dmax = D.max(0)
-        cubemap[Dmax<-0.5] = 1.
-        temp = (Dmax<0.5)*(cubemap==0.)
+        m[Dmax<-0.5] = 1.
+        temp = (Dmax<0.5)*(m==0.)
         d = Dmax[temp]
-        cubemap[temp] = 0.5-d
-        self._put_custom_map(cubemap)        
-
+        m[temp] = 0.5-d
+        return numpy.asarray(m, dtype=numpy.float64)

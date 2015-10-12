@@ -1,15 +1,8 @@
-# ----------------------------------------------------------------------------------------------------- 
-# CONDOR 
-# Simulator for diffractive single-particle imaging experiments with X-ray lasers
-# http://xfel.icm.uu.se/condor/
-# ----------------------------------------------------------------------------------------------------- 
-# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
-# Condor is distributed under the terms of the GNU General Public License
-# ----------------------------------------------------------------------------------------------------- 
+CONDOR 
+Simulator for diffractive single-particle imaging experiments with X-ray lasers
+http://lmb.icm.uu.se/condor/
 
-INSTALLATION
-------------
+Documentation: http://lmb.icm.uu.se/condor/doc/
 
-For installation please read the installation instructions given in the documentation.
-The documentation can be found on http://xfel.icm.uu.se/condor_doc/.
-
+Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+Condor is distributed under the terms of the GNU General Public License

@@ -235,7 +235,6 @@ class Rotation:
         Get rotation in Euler angle represantation :math:`[e_1^{(z)}, e_2^{(x)}, e_3^{(z)}]` (for the case of ``rotation_axis='zxz'``).
 
         Kwargs:
-
            :rotation_axes (str): Rotation axes of the three rotations (default ``'zxz'``) 
         """
         q = self.get_as_quaternion()
