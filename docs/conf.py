@@ -21,13 +21,16 @@ import shlex
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #sys.path.insert(0, os.path.abspath('.'))
-#THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-#venv_path = THIS_DIR+"/../../virtualenv/"
-#activate_this = os.path.join(venv_path, "bin/activate_this.py")
-#execfile(activate_this, dict(__file__=activate_this))
+
+import socket
+if socket.gethostname() == "login":
+    THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+    venv_path = THIS_DIR+"/../../virtualenv/"
+    activate_this = os.path.join(venv_path, "bin/activate_this.py")
+    execfile(activate_this, dict(__file__=activate_this))
 
 sys.path.insert(0, os.path.abspath('./../../'))
-print sys.path
+#print sys.path
 
 import condor
 print condor.__file__

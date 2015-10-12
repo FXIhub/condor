@@ -257,7 +257,7 @@ class ParticleMap(AbstractContinuousParticle):
             "flattening" : flattening,
         }
     
-    def _is_map_in_cache(self, O):
+    def _is_map_in_cache(self, O, dx_required):
         # Empty cache?
         if not self._cache:
             return False
@@ -292,7 +292,7 @@ class ParticleMap(AbstractContinuousParticle):
         
         if O["geometry"] in ["icosahedron", "sphere", "spheroid", "cube"]:
             
-            if not self._is_map_in_cache(O):
+            if not self._is_map_in_cache(O, dx_required):
 
                 dx = dx_suggested
                 
