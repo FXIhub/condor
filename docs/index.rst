@@ -6,19 +6,20 @@
 Welcome to Condor's documentation!
 ==================================
 
-Contents:
-
 .. toctree::
    :maxdepth: 2
 
-   Welcome <self>
    Installation <installation>
    Running Condor <config>
    Reading CXI files <cxi>
    Conventions <conventions>
+   * :ref:`genindex`
+   * :ref:`modindex`
+   * :ref:`search`
    References <references>
    Contact <contact>
-      
+
+
 .. toctree::
    :hidden:
 
@@ -27,7 +28,4 @@ Contents:
 Indices and tables
 ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 

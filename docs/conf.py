@@ -32,8 +32,8 @@ if socket.gethostname() == "login":
 sys.path.insert(0, os.path.abspath('./../../'))
 #print sys.path
 
-import condor
-print condor.__file__
+#import condor
+#print condor.__file__
 
 # -- General configuration ------------------------------------------------
 
