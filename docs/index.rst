@@ -13,9 +13,6 @@ Welcome to Condor's documentation!
    Running Condor <config>
    Reading CXI files <cxi>
    Conventions <conventions>
-   * :ref:`genindex`
-   * :ref:`modindex`
-   * :ref:`search`
    References <references>
    Contact <contact>
 
@@ -29,3 +26,6 @@ Indices and tables
 ==================
 
 
+   * :ref:`genindex`
+   * :ref:`modindex`
+   * :ref:`search`
