@@ -1,4 +1,4 @@
 include README copyright
-global-include *.py *.c *.txt *.nff
+global-include *.py *.c *.txt *.nff *.rst
 include examples/map3d.h5 examples/DNA.pdb
 include examples/configfile/*.conf
