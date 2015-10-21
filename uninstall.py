@@ -8,6 +8,7 @@
 #--------------------------------------------------------------------------
 
 import os,sys
+import time
 import shutil
 
 import argparse
@@ -24,38 +25,67 @@ args = parser.parse_args()
 
 
 if __name__ == "__main__":
-
-    # Delete build directory
-    d = os.path.dirname(os.path.realpath(__file__)) + "/build"
-    if os.path.exists(d):
-        print "Removing build directory %s ..." % d
-        shutil.rmtree("%s/" % d)
-        print "Done"
-    else:
-        print "WARNING: Cannot find build directory in %s. Skipping removal of build directory." % d
-
-    # Delete data files
-    d = os.path.dirname(os.path.realpath(__file__)) + "/src/data/"
-    for f in [d+f for f in os.listdir(d) if f.endswith(".dat")]: 
-        print "Removing data file %s ..." % f
-        os.remove(f)
-        print "Done"
-    
+   
     # Check existence of installation directory
     if args.prefix:
-        d = get_python_lib(prefix=args.prefix) + "/condor"
+        plib = get_python_lib(prefix=args.prefix)
     else:
-        d = get_python_lib() + "/condor"
-    if not os.path.exists(d):
+        plib = get_python_lib()
+    dirs = [(plib + "/" + d) for d in os.listdir(plib) if d.startswith("condor")]
+        
+    if len(dirs) == 0:
         try:
             import condor
-            d = os.path.dirname(os.path.realpath(condor.__file__))
+            dirs = [os.path.dirname(os.path.realpath(condor.__file__))]
         except:
-            print "ERROR:\tCannot find or access Condor installation in %s." % d
-            print "\tUse the --prefix argument if your installation is not in the standard installation directory."
-            exit(0)
-    # Delete installation directory
-    print "Removing directory %s ..." % d 
-    shutil.rmtree("%s/" % d, ignore_errors=True)
-    print "Done"
+            print "WARNING:\tCannot find or access Condor installation"
+            print "\t\tUse the --prefix argument if your installation is not in the standard installation directory."
+            time.sleep(2)
+
+    # Build directory
+    d = os.path.dirname(os.path.realpath(__file__)) + "/build"
+    if os.path.exists(d): 
+        dirs.append(d)
+    else:
+        print "WARNING:\tCannot find build directory in %s. Skipping removal of build directory." % d
+
+    # Data files
+    d = os.path.dirname(os.path.realpath(__file__)) + "/src/data"
+    if os.path.exists(d):
+        files = [d+"/"+f for f in os.listdir(d) if f.endswith(".dat")]
+        if len(files) == 0:
+            print "WARNING:\tCannot find data files in %s. Skipping removal of data files." % d            
+        else:
+            for f in files:
+                dirs.append(f)
+    else:
+        print "WARNING:\tCannot find data files in %s. Skipping removal of data directory." % d            
+
+    print ""
+        
+    if len(dirs) == 0:
+        print "WARNING:\tNo files found to delete."
+    else:
+        while True:
+            print('Found the following directories/files:')
+            print(str(dirs))
+            s = raw_input('Do you really want to delete them?\n[yes/no] ')
+            print ""
+            if s == "yes":
+                # Delete installation files
+                for d in dirs:
+                    print "Removing %s ..." % d
+                    if os.path.isfile(d):
+                        os.remove(d)
+                    elif os.path.isdir(d):
+                        shutil.rmtree("%s" % d, ignore_errors=True)
+                    else:
+                        print "ERROR: Neither file nor dir: %s" % d
+                    print "--> Done"
+                break
+            elif s == "no":
+                print("--> Do not delete files and exit")
+                break
+            else:
+                print("--> Did not understand input \"%s\", please answer either \"yes\" or \"no\"" % s)
 

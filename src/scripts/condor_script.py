@@ -7,7 +7,8 @@ from condor.utils.log import log_info
 import logging
 logger = logging.getLogger("condor")
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='Condor - simulation of single particle X-ray diffraction patterns')
     parser.add_argument('-v', '--verbose', dest='verbose',  action='store_true', help='verbose mode', default=False)
     parser.add_argument('-d', '--debug', dest='debug',  action='store_true', help='debugging mode (even more output than in verbose mode)', default=False)

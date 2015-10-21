@@ -1,5 +1,13 @@
 #!/usr/bin/env python
 
+import sys
+#sys.path.remove("/Library/Python/2.7/site-packages")
+import spsim
+print spsim.__file__
+
+import condor
+print condor.__file__
+
 import numpy, scipy.constants
 import os
 this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -108,9 +116,9 @@ def test_compare_molecule_with_map(tolerance = 0.1):
     I_map = abs(F_map)**2
     diff = I_molecule-I_map
     err = abs(diff).sum() / ( ( I_molecule.sum() + I_map.sum() ) / 2. )
-    #import matplotlib.pyplot as pypl
-    #pypl.imsave("./Imolecule_mol.png", abs(I_molecule))
-    #pypl.imsave("./Imolecule_map.png", abs(I_map))
+    import matplotlib.pyplot as pypl
+    pypl.imsave("./Imolecule_mol.png", abs(I_molecule))
+    pypl.imsave("./Imolecule_map.png", abs(I_map))
     if err < tolerance:
         print "\t=> Test successful (err = %e)" % err
         return False
@@ -142,9 +150,9 @@ def test_map_interpolation(tolerance=0.1):
     E = condor.Experiment(src, {s : par}, det)
     res1 = E.propagate()
     I1 = res1["entry_1"]["data_1"]["data"]
-    #import matplotlib.pyplot as pypl
-    #pypl.imsave("./Imap_interp.png", abs(I0), vmin=0, vmax=I0.max())
-    #pypl.imsave("./Imap_no_interp.png", abs(I1), vmin=0, vmax=I0.max())
+    import matplotlib.pyplot as pypl
+    pypl.imsave("./Imap_interp.png", abs(I0), vmin=0, vmax=I0.max())
+    pypl.imsave("./Imap_no_interp.png", abs(I1), vmin=0, vmax=I0.max())
     err = abs(I0-I1).sum() / ((I0+I1).sum() / 2.)
     if err < tolerance:
         print "\t=> Test successful (err = %e)" % err
