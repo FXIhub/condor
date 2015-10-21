@@ -32,12 +32,12 @@ logger = logging.getLogger(__name__)
 
 # Condor
 import condor
-import condor._data
+import condor._load_data
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
 _data_dir = os.path.dirname(os.path.realpath(__file__)) + "/../data"
 
-_atomic_scattering_factors = condor._data.load_atomic_scattering_factors(_data_dir)
+_atomic_scattering_factors = condor._load_data.load_atomic_scattering_factors(_data_dir)
 get_atomic_scattering_factors = lambda element: _atomic_scattering_factors[element]
 """
 Returns array of photon energy vs. real and imaginary part of the atomic scattering factor (forward scattering) for a given element.
@@ -46,7 +46,7 @@ Returns array of photon energy vs. real and imaginary part of the atomic scatter
     :element (str): Element name (latin abbreviation).
 """
 
-_atomic_masses             = condor._data.load_atomic_masses(_data_dir)
+_atomic_masses             = condor._load_data.load_atomic_masses(_data_dir)
 get_atomic_mass = lambda element: _atomic_masses[element]
 """
 Returns the atomic mass (standard atomic weight in unit Dalton) for a given element.
@@ -55,7 +55,7 @@ Returns the atomic mass (standard atomic weight in unit Dalton) for a given elem
     :element (str): Element name (latin abbreviation).
 """
 
-_atomic_numbers             = condor._data.load_atomic_numbers(_data_dir)
+_atomic_numbers             = condor._load_data.load_atomic_numbers(_data_dir)
 get_atomic_number = lambda element: _atomic_numbers[element]
 """
 Returns the atomic number for a given element.

@@ -18,51 +18,6 @@ import numpy
 
 here = os.path.dirname(os.path.realpath(__file__))
 
-# Pickle tables from text files
-sys.path.append(here + "/src/data")
-import pickle_tables as pt
-# Atomic scattering factors from the Henke tables
-# B.L. Henke, E.M. Gullikson, and J.C. Davis. X-ray interactions: photoabsorption, scattering, transmission, and reflection at E=50-30000 eV, Z=1-92
-# Atomic Data and Nuclear Data Tables Vol. 54 (no.2), 181-342 (July 1993).
-# http://henke.lbl.gov/optical_constants/asf.html
-print 'Generate data file with atomic scattering constants...'
-pt.pickle_atomic_scattering_factors("./src/data/sf","./src/data")
-print 'Done.'
-# Standard atomic weights from the IUPAC tables
-# Atomic weights of the elements 2011 (IUPAC Technical Report) Michael E. Wieser et al., Pure and Applied Chemistry. Volume 85, Issue 5, Pages 1047-1078
-# ISSN (Online) 1365-3075, ISSN (Print) 0033-4545
-# DOI: 10.1351/PAC-REP-13-03-02, April 2013
-# Data loaded from: http://www.chem.qmul.ac.uk/iupac/AtWt/ table 2 (2015/07/01)
-print 'Generate data file with atomic standard weight constants...'
-pt.pickle_atomic_standard_weights_and_numbers("./src/data/sw","./src/data")
-print 'Done.'
-
-# Create example configuration files by concatenation
-print "Concatenating example configuration files..."
-def concatenate_files(infilenames,outfilename,extra_newlines=0):
-    lines = []
-    for infilename in infilenames:
-        with open(infilename, "r") as f:
-            lines += f.readlines()
-        if extra_newlines > 0:
-            lines += ["\n"]*extra_newlines
-    with open(outfilename, "w") as f:
-        f.writelines(lines)
-src = here + "/examples/configfile/source.conf"
-det = here + "/examples/configfile/detector.conf"
-for m in ["particle_sphere","particle_spheroid","particle_map","particle_molecule"]:
-    par = here + ("/examples/configfile/%s.conf" % m)
-    infilenames = [src, par, det]
-    d = here + ("/examples/configfile/%s" % m)
-    if not os.path.exists(d):
-        os.mkdir(d)
-        # Ensure that user can write to the directory if setup is run by root
-        os.system("chmod a+rwx %s" % d)
-    outfilename = d + "/condor.conf"
-    print "Concatenating " + outfilename + "..."
-    concatenate_files(infilenames, outfilename, 2)
-print "Done."
-
 def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_include_dirs=[]):
 
     ext_icosahedron = Extension(
@@ -111,6 +66,69 @@ class InstallCommand(install):
         )
         install.run(self)
 
+
+def _post_install(dir):
+    from subprocess import call
+    call(
+        [sys.executable, 'pickle_tables.py'],
+        cwd=os.path.join(dir, 'condor/data'),
+    )   
+    call(
+        [sys.executable, '_concat_examples.py'],
+        cwd=here,
+    )   
+
+    
+def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_include_dirs=[]):
+
+    ext_icosahedron = Extension(
+        "condor.utils.icosahedron",
+        sources=["src/utils/icosahedron/icosahedronmodule.c"],
+        include_dirs=[numpy.get_include()],
+    )
+
+    _nfft_libraries = {
+        "disable_threads": ["nfft3"],
+        "enable_threads": ["nfft3_threads" ,"fftw3_threads" ,"fftw3"]
+    }
+    _nfft_macros = {
+        "disable_threads" : [],
+        "enable_threads" : [("ENABLE_THREADS", None)],
+    }    
+    ext_nfft = Extension(
+        "condor.utils.nfft",
+        sources=["src/utils/nfft/nfftmodule.c"],
+        library_dirs=nfft_library_dirs,
+        libraries=_nfft_libraries[mode],
+        include_dirs=[numpy.get_include()] + nfft_include_dirs,
+        define_macros=_nfft_macros[mode],
+    )
+
+    return [ext_icosahedron, ext_nfft]
+
+class InstallCommand(install):
+    user_options = install.user_options + [
+        ('nfft-include-dir=', None, 'Specify the include directory of the NFFT library.'),
+        ('nfft-library-dir=', None, 'Specify the library directory of the NFFT library.'),
+        ('enable-threads=', None, 'Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf).'),
+    ]
+    
+    def initialize_options(self):
+        self.nfft_include_dir = None
+        self.nfft_library_dir = None
+        self.enable_threads   = False
+        install.initialize_options(self)
+        
+    def run(self):
+        self.distribution.ext_modules = make_extension_modules(
+            "enable_threads" if self.enable_threads else "disable_threads",
+            nfft_library_dirs = [self.nfft_library_dir] if self.nfft_library_dir is not None else [],
+            nfft_include_dirs = [self.nfft_include_dir] if self.nfft_include_dir is not None else [],
+        )
+        install.run(self)
+        self.execute(_post_install, (self.install_lib,),
+                     msg="Running post install tasks")
+
 # Get the long description from the README file
 with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
@@ -125,7 +143,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.0',
+    version='1.0.1',
 
     description='Condor: Simulation of single particle X-ray diffraction patterns',
     long_description=long_description,
@@ -171,7 +189,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages = ['condor', 'condor.utils', 'condor.particle', 'condor.scripts'],
+    packages = ['condor', 'condor.utils', 'condor.particle', 'condor.scripts', 'condor.data'],
     package_dir = {'condor':'src'},
     
     # Alternatively, if you want to distribute just a my_module.py, uncomment 
@@ -197,11 +215,10 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_data={
-        'condor': ['data/sf.dat',
-                   'data/sw.dat',
-                   'data/z.dat',
-                   'data/condor.conf',
-                   'data/DNA.pdb']
+        'condor': [
+            'data/sf/*.nff',
+            'data/sw/standard_weights.txt',
+        ]
     },
 
     # Although 'package_data' is the preferred approach, in some case you may

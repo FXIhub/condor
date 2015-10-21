@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+"""
+Pickle constants data form text tables
+"""
 # ----------------------------------------------------------------------------------------------------- 
 # CONDOR 
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
@@ -11,6 +15,9 @@
 # ----------------------------------------------------------------------------------------------------- 
 
 import os, glob, numpy, pickle, sys, re
+
+here = os.path.dirname(os.path.realpath(__file__))
+
 
 def pickle_atomic_scattering_factors(inpath, outpath): 
     S = {}
@@ -57,3 +64,25 @@ def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
 
     with open(outpath + "/z.dat", "w") as f:
         pickle.dump(Z,f)
+
+
+
+if __name__ == "__main__":
+    
+    # Atomic scattering factors from the Henke tables
+    # B.L. Henke, E.M. Gullikson, and J.C. Davis. X-ray interactions: photoabsorption, scattering, transmission, and reflection at E=50-30000 eV, Z=1-92
+    # Atomic Data and Nuclear Data Tables Vol. 54 (no.2), 181-342 (July 1993).
+    # http://henke.lbl.gov/optical_constants/asf.html
+    print 'Generate data file with atomic scattering constants...'
+    pickle_atomic_scattering_factors(here + "/sf", here)
+    print 'Done.'
+    
+    # Standard atomic weights from the IUPAC tables
+    # Atomic weights of the elements 2011 (IUPAC Technical Report) Michael E. Wieser et al., Pure and Applied Chemistry. Volume 85, Issue 5, Pages 1047-1078
+    # ISSN (Online) 1365-3075, ISSN (Print) 0033-4545
+    # DOI: 10.1351/PAC-REP-13-03-02, April 2013
+    # Data loaded from: http://www.chem.qmul.ac.uk/iupac/AtWt/ table 2 (2015/07/01)
+    print 'Generate data file with atomic standard weight constants...'
+    pickle_atomic_standard_weights_and_numbers(here + "/sw", here)
+    print 'Done.'
+

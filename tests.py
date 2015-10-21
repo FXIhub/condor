@@ -1,16 +1,9 @@
 #!/usr/bin/env python
 
 import sys
-#sys.path.remove("/Library/Python/2.7/site-packages")
-import spsim
-print spsim.__file__
-
-import condor
-print condor.__file__
-
 import numpy, scipy.constants
 import os
-this_dir = os.path.dirname(os.path.realpath(__file__))
+here = os.path.dirname(os.path.realpath(__file__))
 
 import logging
 logger = logging.getLogger('condor')
@@ -134,7 +127,7 @@ def test_map_interpolation(tolerance=0.1):
     src = condor.Source(wavelength=10.0E-9, pulse_energy=1E-3, focus_diameter=1E-6)
     det = condor.Detector(distance=1.0, pixel_size=300E-6, nx=256, ny=256)
     par = condor.ParticleMap(diameter=600E-9, material_type="cell", geometry="custom",
-                             map3d_filename=this_dir+"/examples/map3d.h5", map3d_dataset="data", dx=5E-9)
+                             map3d_filename=here+"/examples/map3d.h5", map3d_dataset="data", dx=5E-9)
     s = "particle_map"
     E = condor.Experiment(src, {s : par}, det)
     res0 = E.propagate()
@@ -145,7 +138,7 @@ def test_map_interpolation(tolerance=0.1):
     src = condor.Source(wavelength=10.0E-9, pulse_energy=1E-3, focus_diameter=1E-6)
     det = condor.Detector(distance=1.0, pixel_size=300E-6, nx=256, ny=256)
     par = condor.ParticleMap(diameter=600E-9, material_type="cell", geometry="custom",
-                             map3d_filename=this_dir+"/examples/map3d.h5", map3d_dataset="data", dx=5E-9)
+                             map3d_filename=here+"/examples/map3d.h5", map3d_dataset="data", dx=5E-9)
     s = "particle_map"
     E = condor.Experiment(src, {s : par}, det)
     res1 = E.propagate()

@@ -11,7 +11,7 @@ import os,sys
 import time
 import shutil
 
-import argparse
+import argparse, subprocess
 
 
 from distutils.core import setup, Extension
@@ -19,28 +19,30 @@ from distutils.core import setup, Extension
 from distutils.sysconfig import get_python_lib
 
 parser = argparse.ArgumentParser(description='Deinstallation script for Condor')
-parser.add_argument('-p', '--prefix', metavar='prefix', type=str, 
-                    help="prefix for condor installation")
+parser.add_argument('-p', '--packages-dir', metavar='packages', type=str, 
+                    help="packages directory where condor was installed")
 args = parser.parse_args()
 
 
 if __name__ == "__main__":
    
     # Check existence of installation directory
-    if args.prefix:
-        plib = get_python_lib(prefix=args.prefix)
+    if args.packages_dir:
+        plibs = [get_python_lib(prefix=args.prefix)]
     else:
-        plib = get_python_lib()
-    dirs = [(plib + "/" + d) for d in os.listdir(plib) if d.startswith("condor")]
+        plibs = [get_python_lib()] + [subprocess.check_output(["python", "-m", "site", "--user-site"])[:-1]]
+    dirs = []
+    for plib in plibs:
+        if os.path.exists(plib):
+            dirs += [(plib + "/" + d) for d in os.listdir(plib) if d.startswith("condor")]
         
     if len(dirs) == 0:
         try:
             import condor
             dirs = [os.path.dirname(os.path.realpath(condor.__file__))]
         except:
-            print "WARNING:\tCannot find or access Condor installation"
-            print "\t\tUse the --prefix argument if your installation is not in the standard installation directory."
-            time.sleep(2)
+            print "WARNING:\tCannot find or cannot access condor installation directory"
+            print "\t\tUse the --packages-dir argument if your installation is not in a standard location."
 
     # Build directory
     d = os.path.dirname(os.path.realpath(__file__)) + "/build"
