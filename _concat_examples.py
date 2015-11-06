@@ -23,7 +23,7 @@ if __name__ == "__main__":
     src = here + "/examples/configfile/source.conf"
     det = here + "/examples/configfile/detector.conf"
 
-    for m in ["particle_sphere","particle_spheroid","particle_map","particle_molecule"]:
+    for m in ["particle_sphere","particle_spheroid","particle_map","particle_atoms"]:
         par = here + ("/examples/configfile/%s.conf" % m)
         infilenames = [src, par, det]
         d = here + ("/examples/configfile/%s" % m)

@@ -30,7 +30,7 @@ def _post_install(dir):
     )   
 
     
-def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_include_dirs=[], nfft_rpath=""):
+def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_include_dirs=[], nfft_rpath=None):
 
     ext_icosahedron = Extension(
         "condor.utils.icosahedron",
@@ -53,8 +53,8 @@ def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_in
         libraries=_nfft_libraries[mode],
         include_dirs=[numpy.get_include()] + nfft_include_dirs,
         define_macros=_nfft_macros[mode],
-        runtime_library_dirs = [nfft_rpath],
-        extra_link_args = ['-Wl,-R'+nfft_rpath],
+        runtime_library_dirs = [] if nfft_rpath is None else [nfft_rpath],
+        extra_link_args = [] if nfft_rpath is None else ['-Wl,-R'+nfft_rpath],
     )
 
     return [ext_icosahedron, ext_nfft]
@@ -80,7 +80,7 @@ class InstallCommand(setuptools.command.install.install):
             "enable_threads" if self.enable_threads else "disable_threads",
             nfft_library_dirs = [self.nfft_library_dir] if self.nfft_library_dir is not None else [],
             nfft_include_dirs = [self.nfft_include_dir] if self.nfft_include_dir is not None else [],
-            nfft_rpath        = self.nfft_rpath if self.nfft_rpath is not None else "",
+            nfft_rpath        = self.nfft_rpath
         )
         setuptools.command.install.install.run(self)
         self.execute(_post_install, (self.install_lib,),
