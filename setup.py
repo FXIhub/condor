@@ -8,8 +8,7 @@
 
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages, Extension
-#from setuptools.command.install import install
-from setuptools.command.build_ext import build_ext
+import setuptools.command.install
 # To use a consistent encoding
 from codecs import open
 # Other stuff
@@ -18,56 +17,6 @@ from textwrap import dedent
 import numpy
 
 here = os.path.dirname(os.path.realpath(__file__))
-
-def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_include_dirs=[]):
-
-    ext_icosahedron = Extension(
-        "condor.utils.icosahedron",
-        sources=["src/utils/icosahedron/icosahedronmodule.c"],
-        include_dirs=[numpy.get_include()],
-    )
-
-    _nfft_libraries = {
-        "disable_threads": ["nfft3"],
-        "enable_threads": ["nfft3_threads" ,"fftw3_threads" ,"fftw3"]
-    }
-    _nfft_macros = {
-        "disable_threads" : [],
-        "enable_threads" : [("ENABLE_THREADS", None)],
-    }    
-    ext_nfft = Extension(
-        "condor.utils.nfft",
-        sources=["src/utils/nfft/nfftmodule.c"],
-        library_dirs=nfft_library_dirs,
-        libraries=_nfft_libraries[mode],
-        include_dirs=[numpy.get_include()] + nfft_include_dirs,
-        define_macros=_nfft_macros[mode],
-    )
-
-    return [ext_icosahedron, ext_nfft]
-
-#class InstallCommand(install):
-class BuildExtCommand(build_ext):
-    user_options = install.user_options + [
-        ('nfft-include-dir=', None, 'Specify the include directory of the NFFT library.'),
-        ('nfft-library-dir=', None, 'Specify the library directory of the NFFT library.'),
-        ('enable-threads=', None, 'Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf).'),
-    ]
-    
-    def initialize_options(self):
-        self.nfft_include_dir = None
-        self.nfft_library_dir = None
-        self.enable_threads   = False
-        install.initialize_options(self)
-        
-    def run(self):
-        self.distribution.ext_modules = make_extension_modules(
-            "enable_threads" if self.enable_threads else "disable_threads",
-            nfft_library_dirs = [self.nfft_library_dir] if self.nfft_library_dir is not None else [],
-            nfft_include_dirs = [self.nfft_include_dir] if self.nfft_include_dir is not None else [],
-        )
-        install.run(self)
-
 
 def _post_install(dir):
     from subprocess import call
@@ -81,7 +30,7 @@ def _post_install(dir):
     )   
 
     
-def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_include_dirs=[]):
+def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_include_dirs=[], nfft_rpath=""):
 
     ext_icosahedron = Extension(
         "condor.utils.icosahedron",
@@ -104,30 +53,36 @@ def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_in
         libraries=_nfft_libraries[mode],
         include_dirs=[numpy.get_include()] + nfft_include_dirs,
         define_macros=_nfft_macros[mode],
+        runtime_library_dirs = [nfft_rpath],
+        extra_link_args = ['-Wl,-R'+nfft_rpath],
     )
 
     return [ext_icosahedron, ext_nfft]
 
-class InstallCommand(install):
-    user_options = install.user_options + [
+
+class InstallCommand(setuptools.command.install.install):
+    user_options = setuptools.command.install.install.user_options + [
+        ('enable-threads=', None, 'Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf).'),
         ('nfft-include-dir=', None, 'Specify the include directory of the NFFT library.'),
         ('nfft-library-dir=', None, 'Specify the library directory of the NFFT library.'),
-        ('enable-threads=', None, 'Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf).'),
+        ('nfft-rpath=', None, 'Specify a library directoy that the dynamic linker for the NFFT extension shall be directed to.'),
     ]
     
     def initialize_options(self):
+        self.enable_threads   = False
         self.nfft_include_dir = None
         self.nfft_library_dir = None
-        self.enable_threads   = False
-        install.initialize_options(self)
+        self.nfft_rpath       = None
+        setuptools.command.install.install.initialize_options(self)
         
     def run(self):
         self.distribution.ext_modules = make_extension_modules(
             "enable_threads" if self.enable_threads else "disable_threads",
             nfft_library_dirs = [self.nfft_library_dir] if self.nfft_library_dir is not None else [],
             nfft_include_dirs = [self.nfft_include_dir] if self.nfft_include_dir is not None else [],
+            nfft_rpath        = self.nfft_rpath if self.nfft_rpath is not None else "",
         )
-        install.run(self)
+        setuptools.command.install.install.run(self)
         self.execute(_post_install, (self.install_lib,),
                      msg="Running post install tasks")
 
@@ -137,7 +92,7 @@ with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
     
 setup(
     cmdclass={
-        'install': InstallCommand,
+        'install'  : InstallCommand,
     },
     
     name='condor',

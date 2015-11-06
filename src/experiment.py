@@ -151,8 +151,11 @@ class Experiment:
                 for i_n in range(n):
                     D_particles["particle_%02i" % i] = p.get_next()
                     i += 1
-            if len(D_particles) == 0:
+            N = len(D_particles) 
+            if N == 0:
                 log_info(logger, "Miss - no particles in the interaction volume. Shooting again...")
+            else:
+                log_debug(logger, "%i particles" % N)
         return D_particles
 
     @log_execution_time(logger)
@@ -189,6 +192,9 @@ class Experiment:
             D_particle["F0"] = F0
             # 3D Orientation
             extrinsic_rotation = Rotation(values=D_particle["extrinsic_quaternion"], formalism="quaternion")
+            # Resolution
+            dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)
+            dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)
             
             # UNIFORM SPHERE
             if isinstance(p, condor.particle.ParticleSphere):
@@ -240,9 +246,6 @@ class Experiment:
                 # Geometrical factor
                 Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 # Generate map
-                # We multiply by 0.99 to prevent numerical issues
-                dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)# * 0.99
-                dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)# * 0.99
                 map3d_dn, dx = p.get_new_dn_map(D_particle, dx_required, dx_suggested, wavelength)
                 log_debug(logger, "Sampling of map: dx_required = %e m, dx_suggested = %e m, dx = %e m" % (dx_required, dx_suggested, dx))
                 if save_map3d:
@@ -340,6 +343,7 @@ class Experiment:
         data_1["data_fourier"] = F_tot
         data_1["data"]         = I_tot
         data_1["mask"]         = M_tot
+        data_1["full_period_resolution"] = 2 * self.detector.get_max_resolution(wavelength)
 
         O["entry_1"]["data_1"] = data_1
         

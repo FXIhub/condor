@@ -22,13 +22,16 @@ logger = logging.getLogger(__name__)
 import log
 
 class CXIWriter:
-    def __init__(self, filename, chunksize=2):
+    def __init__(self, filename, chunksize=2, gzip_compression=False):
         self._filename = os.path.expandvars(filename)
         if os.path.exists(filename):
             log.log_warning(logger, "File %s exists and is being overwritten" % filename)
         self._f = h5py.File(filename, "w")
         self._i = 0
         self._chunksize = chunksize
+        self._create_dataset_kwargs = {}
+        if gzip_compression:
+            self._create_dataset_kwargs["compression"] = "gzip"
 
     def write(self, D):
         self._write_without_iterate(D)
@@ -70,7 +73,7 @@ class CXIWriter:
                         elif ndim == 2: axes = axes + ":y:x"
                         elif ndim == 3: axes = axes + ":z:y:x"
                     log.log_debug(logger, "Create dataset %s [shape=%s, dtype=%s]" % (name,str(shape),str(dtype)))
-                    self._f.create_dataset(name, shape, maxshape=maxshape, dtype=dtype)
+                    self._f.create_dataset(name, shape, maxshape=maxshape, dtype=dtype, **self._create_dataset_kwargs)
                     self._f[name].attrs.modify("axes",[axes])
                 if self._f[name].shape[0] <= self._i:
                     if numpy.isscalar(data):

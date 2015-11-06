@@ -65,7 +65,7 @@ class Profile:
         if model is None or model in ["top_hat","pseudo_lorentzian","gaussian"]:
             self._model = model
         else:
-            log_and_raise_error(logger, "Pulse profile model %s is not implemented. Change your configuration and try again.")
+            log_and_raise_error(logger, "Pulse profile model %s is not implemented. Change your configuration and try again." % model)
             sys.exit(0)
 
     def get_model(self):
