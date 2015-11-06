@@ -104,3 +104,39 @@ class CXIWriter:
         log.log_debug(logger, "Closing file %s" % self._filename)
         self._f.close()
 
+
+def read_map(filename):
+    # CCP4 map file format
+    # http://www.ccp4.ac.uk/html/maplib.html
+    with open(filename, "rb") as f:
+        # 1024 bytes header
+        header_buf = f.read(1024)
+        #1      NC              # of Columns    (fastest changing in map)
+        #2      NR              # of Rows
+        #3      NS              # of Sections   (slowest changing in map)
+        NCNRNS = tuple(numpy.frombuffer(header_buf, dtype="int32")[:3])
+        #4      MODE            Data type
+        #                  0 = envelope stored as signed bytes (from
+        #                      -128 lowest to 127 highest)
+        #                  1 = Image     stored as Integer*2
+        #                  2 = Image     stored as Reals
+        #                  3 = Transform stored as Complex Integer*2
+        #                  4 = Transform stored as Complex Reals
+        #                  5 == 0	
+        #
+        #                  Note: Mode 2 is the normal mode used in
+        #                        the CCP4 programs. Other modes than 2 and 0
+        #                        may NOT WORK
+        MODE = numpy.frombuffer(header_buf, dtype="int32")[3]
+        dtype = ["i8", "int32", "float32", "cint32", "complex64", "i8"][MODE]
+        if dtype_mode not in [0,2]:
+            log.log_warning(logger, "WARNING: Map file data type \"MODE=%i\" may not work." % MODE)
+        #24      NSYMBT          Number of bytes used for storing symmetry operators
+        NSYMBT = numpy.frombuffer(header_buf, dtype="int32")[23]
+        if NSYMBT > 0:
+            log.log_warning(logger, "WARNING: Omitting symmetry operations in map file.")
+            f.read(NSYMBT)
+        # The remaining bytes are data
+        data = f.read()
+        data = numpy.frombuffer(data, dtype=dtype).reshape(NCNRNS)
+    return data, dx

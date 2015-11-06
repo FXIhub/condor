@@ -82,8 +82,8 @@ def experiment_from_configdict(configdict):
             particles[k] = condor.ParticleSpheroid(**configdict[k])
         elif k.startswith("particle_map"):
             particles[k] = condor.ParticleMap(**configdict[k])
-        elif k.startswith("particle_molecule"):
-            particles[k] = condor.ParticleMolecule(**configdict[k])
+        elif k.startswith("particle_atoms"):
+            particles[k] = condor.ParticleAtoms(**configdict[k])
         else:
             log_and_raise_error(logger,"Particle model for %s is not implemented." % k)
     # Detector
@@ -117,11 +117,11 @@ class Experiment:
             elif n.startswith("particle_map"):
                 if not isinstance(p, condor.particle.ParticleMap):
                     log_and_raise_error(logger, "Particle %s is not a condor.particle.ParticleMap instance." % n)
-            elif n.startswith("particle_molecule"):
-                if not isinstance(p, condor.particle.ParticleMolecule):
-                    log_and_raise_error(logger, "Particle %s is not a condor.particle.ParticleMolecule instance." % n)
+            elif n.startswith("particle_atoms"):
+                if not isinstance(p, condor.particle.ParticleAtoms):
+                    log_and_raise_error(logger, "Particle %s is not a condor.particle.ParticleAtoms instance." % n)
             else:
-                log_and_raise_error(logger, "The particle model name %s is invalid. The name has to start with either particle_sphere, particle_spheroid, particle_map or particle_molecule.")
+                log_and_raise_error(logger, "The particle model name %s is invalid. The name has to start with either particle_sphere, particle_spheroid, particle_map or particle_atoms.")
         self.particles = particles
         self.detector  = detector
         self._qmap_cache = {}
@@ -193,7 +193,7 @@ class Experiment:
             # UNIFORM SPHERE
             if isinstance(p, condor.particle.ParticleSphere):
                 # Refractive index
-                dn = p.material.get_dn(wavelength)
+                dn = p.get_dn(wavelength)
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, extrinsic_rotation=None)
                 q = numpy.sqrt(qmap[:,:,0]**2+qmap[:,:,1]**2)
@@ -209,7 +209,7 @@ class Experiment:
             # UNIFORM SPHEROID
             elif isinstance(p, condor.particle.ParticleSpheroid):
                 # Refractive index
-                dn = p.material.get_dn(wavelength)
+                dn = p.get_dn(wavelength)
                 # Scattering vectors
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, extrinsic_rotation=None, order="xyz")
                 qx = qmap[:,:,0]
@@ -232,8 +232,6 @@ class Experiment:
 
             # MAP
             elif isinstance(p, condor.particle.ParticleMap):
-                # Refractive index
-                dn = p.material.get_dn(wavelength)
                 # Scattering vectors (the nfft requires order z,y,x)
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, extrinsic_rotation=extrinsic_rotation, order="zyx")
                 # Intensity scaling factor
@@ -245,9 +243,8 @@ class Experiment:
                 # We multiply by 0.99 to prevent numerical issues
                 dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)# * 0.99
                 dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)# * 0.99
-                map3d, dx = p.get_new_map(D_particle, dx_required, dx_suggested)
+                map3d_dn, dx = p.get_new_dn_map(D_particle, dx_required, dx_suggested, wavelength)
                 log_debug(logger, "Sampling of map: dx_required = %e m, dx_suggested = %e m, dx = %e m" % (dx_required, dx_suggested, dx))
-                map3d_dn = numpy.array(map3d, dtype=numpy.complex128) * dn
                 if save_map3d:
                     D_particle["map3d_dn"] = map3d_dn
                     D_particle["dx"] = dx
@@ -278,8 +275,8 @@ class Experiment:
                 #F = F0 * fourier_pattern * dx_required**3 * numpy.sqrt(Omega_p)
                 F = F0 * fourier_pattern * dx**3 * numpy.sqrt(Omega_p)
 
-            # MOLECULE
-            elif isinstance(p, condor.particle.ParticleMolecule):
+            # ATOMS
+            elif isinstance(p, condor.particle.ParticleAtoms):
                 # Import only here (otherwise errors if spsim library not installed)
                 import spsim
                 # Create options struct
@@ -287,6 +284,8 @@ class Experiment:
                 spsim.write_options_file("./spsim.confout",opts)
                 # Create molecule struct
                 mol = spsim.get_molecule_from_atoms(D_particle["atomic_numbers"], D_particle["atomic_positions"])
+                # Always recenter molecule
+                spsim.origin_to_center_of_mass(mol)
                 spsim.write_pdb_from_mol("./mol.pdbout", mol)
                 # Calculate diffraction pattern
                 pat = spsim.simulate_shot(mol, opts)

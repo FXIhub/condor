@@ -122,42 +122,11 @@ class MaterialType:
     """
     Dictionary of mass densities (available keys are the tabulated ``material_types``)
     """
-    
-class Material:
-    r"""
-    Class for material model
-    
-    Args:
-      :material_type (str): The material type can be either ``custom`` or one of the standard types, i.e. tabulated combinations of massdensity and atomic composition, listed here :class:`condor.utils.material.MaterialType`
 
-    Kwargs:
-      :massdensity (float): Mass density in unit kilogram per cubic meter (default ``None``)
-    
-      :atomic_composition (dict): Dictionary of key-value pairs for atom species (e.g. ``'H'`` for hydrogen) and concentration (default ``None``)    
-    """
-    def __init__(self, material_type, massdensity = None, atomic_composition = None):
+class AbstractMaterial:
+    def __init__(self):
+        pass
 
-        self.clear_atomic_composition()
-        
-        if atomic_composition is not None and massdensity is not None and (material_type is None or material_type == "custom"):
-            for element,concentration in atomic_composition.items():
-                self.set_atomic_concentration(element, concentration)
-            self.massdensity = massdensity
-
-        elif material_type is not None and atomic_composition is None and massdensity is None:
-            for element, concentration in MaterialType.atomic_compositions[material_type].items():
-                self.set_atomic_concentration(element, concentration)
-            self.massdensity = MaterialType.mass_densities[material_type]
-
-        else:
-            log_and_raise_error(logger, "Invalid arguments in Material initialization.")
-
-    def clear_atomic_composition(self):
-        """
-        Empty atomic composition dictionary
-        """
-        self._atomic_composition = {}
-            
     def get_n(self,photon_wavelength):
         r"""
         Return complex refractive index at a given wavelength (Henke, 1994)
@@ -176,13 +145,39 @@ class Material:
           :photon_wavelength (float): Photon wavelength in unit meter
         """
         f = self.get_f(photon_wavelength)
-        atom_density = self.get_atom_density()
+        scatterer_density = self.get_scatterer_density()
         
         r_0 = constants.value("classical electron radius")
 
-        n = 1 - r_0/2/numpy.pi * photon_wavelength**2 * f * atom_density
+        n = 1 - r_0/2/numpy.pi * photon_wavelength**2 * f * scatterer_density
 
         return n
+
+    def get_transmission(self,thickness,photon_wavelength):
+        r"""
+        Return transmission coefficient :math:`T` for given material thickness :math:`t` and wavelength :math:`\lambda` [Henke1993]_
+
+        .. math::
+
+          T = e^{-\rho\,\mu_a(\lambda)\,t}
+
+        :math:`\rho`: Average atom density
+
+        :math:`\mu_a(\lambda)`: Photoabsorption cross section at photon energy :math:`\lambda`
+        
+        Args:
+          :thickness (float): Material thickness in unit meter
+        
+          :photon_wavelength (float): Photon wavelength in unit meter
+
+        .. [Henke1993] B.L. Henke, E.M. Gullikson, and J.C. Davis. X-ray interactions: photoabsorption, scattering, transmission, and reflection at E=50-30000 eV, Z=1-92, Atomic Data and Nuclear Data Tables Vol. 54 (no.2), 181-342 (July 1993).
+          
+          See also `http://henke.lbl.gov/ <http://henke.lbl.gov/>`_.
+        """
+        mu = self.get_photoabsorption_cross_section(photon_wavelength=photon_wavelength)
+        rho = self.get_scatterer_density()
+
+        return numpy.exp(-rho*mu*thickness)
 
     def get_dn(self, photon_wavelength):
         r"""
@@ -263,37 +258,108 @@ class Material:
 
         return mu
 
-    def get_transmission(self,thickness,photon_wavelength):
-        r"""
-        Return transmission coefficient :math:`T` for given material thickness :math:`t` and wavelength :math:`\lambda` [Henke1993]_
 
-        .. math::
+class ElectronDensityMaterial(AbstractMaterial):
+    r"""
+    Class for electron density material model
+    
+    Thomson scattering with the given value for the electron density is used to determine the material's scattering properties.
 
-          T = e^{-\rho\,\mu_a(\lambda)\,t}
+    Args:
+      :electron_density: (float): Electron density in unit inverse cubic meter
+    """
+    def __init__(self, electron_density):
+        AbstractMaterial.__init__(self)
+        self.electron_density = electron_density
 
-        :math:`\rho`: Average atom density
-
-        :math:`\mu_a(\lambda)`: Photoabsorption cross section at photon energy :math:`\lambda`
+    def get_conf(self):
+        conf = {}
+        conf["electron_density"] = self.electron_density
+        return conf
         
-        Args:
-          :thickness (float): Material thickness in unit meter
-        
-          :photon_wavelength (float): Photon wavelength in unit meter
+    def get_f(self, photon_energy):
+        return complex(1., 0.)
 
-        .. [Henke1993] B.L. Henke, E.M. Gullikson, and J.C. Davis. X-ray interactions: photoabsorption, scattering, transmission, and reflection at E=50-30000 eV, Z=1-92, Atomic Data and Nuclear Data Tables Vol. 54 (no.2), 181-342 (July 1993).
-          
-          See also `http://henke.lbl.gov/ <http://henke.lbl.gov/>`_.
+    def get_scatterer_density(self):
+        return self.electron_density
+    
+    
+class AtomDensityMaterial(AbstractMaterial):
+    r"""
+    Class for material model
+    
+    Args:
+      :material_type (str): The material type can be either ``custom`` or one of the standard types, i.e. tabulated combinations of massdensity and atomic composition, listed here :class:`condor.utils.material.MaterialType`.
+
+    Kwargs:
+      :massdensity (float): Mass density in unit kilogram per cubic meter (default ``None``)
+    
+      :atomic_composition (dict): Dictionary of key-value pairs for atom species (e.g. ``'H'`` for hydrogen) and concentration (default ``None``)    
+    """
+    def __init__(self, material_type, massdensity = None, atomic_composition = None):
+        AbstractMaterial.__init__(self)
+        
+        self.clear_atomic_composition()
+        
+        if atomic_composition is not None and massdensity is not None and (material_type is None or material_type == "custom"):
+            for element,concentration in atomic_composition.items():
+                self.set_atomic_concentration(element, concentration)
+            self.massdensity = massdensity
+
+        elif material_type is not None and atomic_composition is None and massdensity is None:
+            for element, concentration in MaterialType.atomic_compositions[material_type].items():
+                self.set_atomic_concentration(element, concentration)
+            self.massdensity = MaterialType.mass_densities[material_type]
+
+        else:
+            log_and_raise_error(logger, "Invalid arguments in Material initialization.")
+
+    def get_conf(self):
+        conf = {}
+        conf["material_type"]      = "custom"
+        conf["atomic_composition"] = self.get_atomic_composition()
+        conf["massdensity"]        = self.massdensity
+        return conf
+
+    def clear_atomic_composition(self):
         """
+        Empty atomic composition dictionary
+        """
+        self._atomic_composition = {}
+    
+    def set_atomic_concentration(self, element, relative_concentration):
+        r"""
+        Set the concentration of a given atomic species
 
-        n = self.get_n(photon_wavelength)
-        mu = self.get_photoabsorption_cross_section(photon_wavelength=photon_wavelength)
-        rho = self.get_atom_density()
+        Args:
+          :element (str): Atomic species (e.g. ``'H'`` for hydrogen)
 
-        return numpy.exp(-rho*mu*thickness)
+          :relative_concentration (float): Relative quantity of atoms of the given atomic species with respect to the others (e.g. for water: hydrogen concentration ``2.``, oxygen concentration ``1.``)
+        """
+        if element not in atomic_names:
+            log_and_raise_error(logger, "Cannot add element \"%s\". Invalid name." % element)
+        self._atomic_composition[element] = relative_concentration
+    
+    def get_atomic_composition(self, normed=False):
+        r"""
+        Return dictionary of atomic concentrations
 
+        Args:
+          :normed (bool): If ``True`` the concentrations are rescaled by a common factor such that their sum equals 1 (default ``False``)
+        """
+        
+        atomic_composition = self._atomic_composition.copy()
+
+        if normed:
+            s = numpy.array(atomic_composition.values(), dtype=numpy.float64).sum()
+            for element in atomic_composition.keys():
+                atomic_composition[element] /= s 
+
+        return atomic_composition
+        
     def get_f(self, photon_wavelength):
         r"""
-        Read complex scattering factor at a given photon wavlength from Henke tables
+        Get effective average complex scattering factor for forward scattering at a given photon wavlength from Henke tables
 
         Args:
               :photon_wavlength (float): Photon wavelength in unit meter
@@ -315,10 +381,9 @@ class Material:
         
         return f_sum
 
-
-    def get_atom_density(self):
+    def get_scatterer_density(self):
         r"""
-        Return average atom density :math:`\rho` weighted by standard atomic mass in unit inverse cubic meter
+        Return total atom density :math:`\rho` in unit inverse cubic meter
 
         .. math::
 
@@ -343,7 +408,6 @@ class Material:
         number_density = self.massdensity/M
         
         return number_density
-
 
     def get_electron_density(self):
         r"""
@@ -375,41 +439,7 @@ class Material:
         electron_density = Q*self.massdensity/M
         
         return electron_density
-        
 
-    def set_atomic_concentration(self, element, relative_concentration):
-        r"""
-        Set the concentration of a given atomic species
-
-        Args:
-          :element (str): Atomic species (e.g. ``'H'`` for hydrogen)
-
-          :relative_concentration (float): Relative quantity of atoms of the given atomic species with respect to the others (e.g. for water: hydrogen concentration ``2.``, oxygen concentration ``1.``)
-        """
-        if element not in atomic_names:
-            log_and_raise_error(logger, "Cannot add element \"%s\". Invalid name." % element)
-        self._atomic_composition[element] = relative_concentration
-    
-    def get_atomic_composition(self, normed=False):
-        r"""
-        Return dictionary of atomic concentrations
-
-        Args:
-          :normed (bool): If ``True`` the concentrations are rescaled by a common factor such that their sum equals 1 (default ``False``)
-        """
-        
-        atomic_composition = self._atomic_composition.copy()
-
-        if normed:
-            s = numpy.array(atomic_composition.values(), dtype=numpy.float64).sum()
-            for element in atomic_composition.keys():
-                atomic_composition[element] /= s 
-
-        return atomic_composition
-
-
-
-    
 
 def get_f_element(element, photon_energy_eV):
     r"""
@@ -427,6 +457,57 @@ def get_f_element(element, photon_energy_eV):
 
     return complex(f1,f2)
 
+
+class MaterialMap:
+    def __init__(self, shape):
+        if len(shape) != 3:
+            log_and_raise_error(logger, "%s is an invald shape for initialisation of MaterialMap.", str(shape))
+        self._shape = tuple(shape)
+
+    def add_material(self, material, density_map):
+        if not isinstance(material, Material):
+            log_and_raise_error(logger, "Cannot add material %s. It is not an instance of Material." % str(material))
+        if density_map.shape != self._shape:
+            log_and_raise_error(logger, "Cannot add material. Density map has incompatible shape: %s. Should be %s." % (str(density_map.shape), str(self._shape)))
+        self.materials.append(material)
+        self.density_maps.append(density_map)
+
+    def get_n(self, photon_wavelength):
+        dn = self.get_dn(photon_wavelength)
+        n = 1 - dn
+        return n
+        
+    def get_dn(self, photon_wavelength):
+        dn = numpy.zeros(shape=self._shape, dtype=numpy.complex128)
+        for mat,dmap in zip(self.materials, self.density_maps):
+            dn += mat.get_dn(photon_wavelength) * dmap
+        return dn
+
+    def get_beta(self, photon_wavelength):
+        dn = self.get_dn(photon_wavelength)
+        return dn.imag
+
+    def get_delta(self, photon_wavelength):
+        dn = self.get_dn(photon_wavelength)
+        return dn.real
+    
+    def get_photoabsorption_cross_section(self, photon_wavelength):
+        pacs = numpy.zeros(shape=self._shape, dtype=numpy.float64)
+        for mat,dmap in zip(self.materials, self.density_maps):
+            pacs += mat.get_photoabsorption_cross_section(photon_wavelength) * dmap
+        return pacs
+                
+    def get_f(self, photon_wavelength):
+        f = numpy.zeros(shape=self._shape, dtype=numpy.complex128)
+        for mat,dmap in zip(self.materials, self.density_maps):
+            f += mat.get_f(photon_wavelength)*dmap
+        return trans
+        
+    def get_electron_density(self, photon_wavelength):
+        ed = numpy.zeros(shape=self._shape, dtype=numpy.float64)
+        for mat,dmap in zip(self.materials, self.density_maps):
+            ed += mat.get_electron_density(photon_wavelength) * dmap
+        return ed
 
 
 #class DensityMap:

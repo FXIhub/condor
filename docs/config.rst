@@ -42,7 +42,7 @@ A Condor configuration file is composed of at least three sections:
 
    `c) Refractive index map`_ ``[particle_map]``
 
-   `d) Atom positions`_ ``[particle_molecule]``
+   `d) Atom positions`_ ``[particle_atoms]``
 
 `3) Detector`_ ``[detector]``
 
@@ -90,11 +90,11 @@ This section configures a :class:`condor.particle.particle_map.ParticleMap` clas
 d) Atom positions
 """""""""""""""""
 
-This section configures a :class:`condor.particle.particle_molecule.ParticleMolecule` class instance.
+This section configures a :class:`condor.particle.particle_atoms.ParticleAtoms` class instance.
 
 **Example:**
 
-.. literalinclude:: ../examples/configfile/particle_molecule.conf
+.. literalinclude:: ../examples/configfile/particle_atoms.conf
 		 
 
 3) Detector
@@ -122,7 +122,7 @@ Simulations are carried out from an instance of the :class:`condor.experiment.Ex
 
      - Refractive index map - :class:`condor.particle.particle_map.ParticleMap` (the key has to start with ``'particle_map'``)
 
-     - Atom positions - :class:`condor.particle.particle_molecule.ParticleMolecule` (the key has to start with ``'particle_molecule'``)
+     - Atom positions - :class:`condor.particle.particle_atoms.ParticleAtoms` (the key has to start with ``'particle_atoms'``)
      
   3) A Detector instance - :class:`condor.detector.Detector`
 

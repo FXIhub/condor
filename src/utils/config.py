@@ -169,6 +169,7 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector):
     s += "verbosity_level = 0;\n"
     s += "number_of_dimensions = 2;\n"
     s += "number_of_patterns = 1;\n"
+    s += "origin_to_com = 1;\n"
     s += "input_type = \"pdb\";\n"
     #s += "pdb_filename = \"%s\";\n" % D_particle["pdb_filename"]
     s += "pdb_filename = \"%s\";\n" % tmpf_pdb_name

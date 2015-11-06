@@ -89,9 +89,9 @@ class ParticleMap(AbstractContinuousParticle):
 
       :flattening (float): (Mean) value of :math:`a/c`, takes only effect if ``geometry=\'spheroid\'`` (default ``0.75``)
     
-:number_density (float): Number density of this particle species in units of the interaction volume. (defaukt ``1.``)
+      :number (float): Expectation value for the number of particles in the interaction volume. (defaukt ``1.``)
 
-      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of the ``number_density``. If ``'random'`` the number of particles is Poissonian and the ``number_density`` is the expectation value. (default ``'synchronised'``)
+      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of ``number``. If ``'random'`` the number of particles is Poissonian and ``number`` is the expectation value. (default ``'synchronised'``)
 
       :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
 
@@ -106,6 +106,8 @@ class ParticleMap(AbstractContinuousParticle):
       :massdensity (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
 
       :atomic_composition (dict): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)          
+
+      :electron_density (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
     """
     def __init__(self,
                  geometry, diameter,
@@ -115,16 +117,16 @@ class ParticleMap(AbstractContinuousParticle):
                  map3d_filename = None, map3d_dataset = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
                  flattening = 0.75,
-                 number_density = 1., arrival = "synchronised",
+                 number = 1., arrival = "synchronised",
                  position = None, position_variation = None, position_spread = None, position_variation_n = None,
-                 material_type = None, massdensity = None, atomic_composition = None):
+                 material_type = None, massdensity = None, atomic_composition = None, electron_density = None):
         # Initialise base class
         AbstractContinuousParticle.__init__(self,
                                             diameter=diameter, diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n,
                                             rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode,                                            
-                                            number_density=number_density, arrival=arrival,
+                                            number=number, arrival=arrival,
                                             position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n,
-                                            material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
+                                            material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition, electron_density=electron_density)
         
         # Check for valid geometry
         if geometry not in ["icosahedron", "cube", "sphere", "spheroid", "custom"]:
@@ -191,18 +193,29 @@ class ParticleMap(AbstractContinuousParticle):
         Set map from numpy array
 
         Args:
-          :map3d (array): Numpy array with three equal dimensions of float values. If a material is defined (``material_type`` is not ``None``) the absolute values of the map will be rescaled by the complex refractive index of the material. If no material is defined (``material_type=None``) the map will be casted to complex values and used without any rescaling.
+          :map3d (array): 4D numpy array (material index, z, y, x) of float values. If a material is defined (material not ``None``) the values of the map scale the complex refractive index of the material. If no material is defined (material is ``None``) the map will be casted to complex values and used without any rescaling.
 
           :dx (float): Grid spacing in unit meter
         """
         s = numpy.array(map3d.shape)
-        if not numpy.all(s==s[0]):
-            log_and_raise_error(logger, "Condor only accepts maps with equal dimensions.")
+        if len(s) not in [3,4]:
+            log_and_raise_error(logger, "map3d has %i dimensions but it has to have either 3 or 4." % len(s))
+        if len(s) == 3:
+            n_mat = len(self.materials)
+            s = numpy.array([n_mat] + list(s))
+            _map3d = numpy.array(n_mat*[map3d], dtype=numpy.float64)
+        else:
+            _map3d = numpy.asarray(map3d, dtype=numpy.float64)
+        if s[0] != len(self.materials):
+            log_and_raise_error(logger, "The first dimension of the map (%i) does not equal the number of specified materials (%i)." % (s[0], len(self.materials)))
             return
-        self._map3d_orig = map3d
+        if numpy.any(s[1:]!=s[1]):
+            log_and_raise_error(logger, "Condor only accepts maps with equal spatial dimensions. Current shape is: %s" % str(s))
+            return
+        self._map3d_orig = _map3d
         self._dx_orig    = dx
-        self._map3d      = map3d
-        self._set_cache(map3d, dx, geometry="custom")
+        self._map3d      = _map3d
+        self._set_cache(_map3d, dx, geometry="custom")
 
     def set_custom_geometry_by_h5file(self, map3d_filename, map3d_dataset, dx):
         """
@@ -225,8 +238,34 @@ class ParticleMap(AbstractContinuousParticle):
                 ds = f.keys()[0]
             else:
                 log_and_raise_error(logger, "No dataset specified where to find the map.")
-            map3d = numpy.array(f[ds][:,:,:])
+            if len(f[ds].shape) == 4:
+                map3d = numpy.array(f[ds][:,:,:,:])
+            elif len(f[ds].shape) == 3:
+                map3d = numpy.array([f[ds][:,:,:]])
+            else:
+                log_and_raise_error(logger, "Dataset has %i dimensions but it has to have either 3 or 4." % len(f[ds].shape))
+                return 
         self.set_custom_geometry_by_array(map3d, dx)                
+
+    def get_new_dn_map(self, O, dx_required, dx_suggested, photon_wavelength):
+        """
+        Return the a new refractive index map
+
+        Args:
+
+          :O (dict): Parameter dictionary as returned from :meth:`condor.particle.particle_map.get_next`
+
+          :dx_required (float): Required resolution (grid spacing) of the map. An error is raised if the resolution of the map has too low resolution
+
+          :dx_suggested (float): Suggested resolution (grid spacing) of the map. If the map has a very high resolution it will be interpolated to a the suggested resolution value
+
+          :photon_wavelength (float): Photon wavelength in unit meter 
+        """
+        m,dx = self.get_new_map(O=O, dx_required=dx_required, dx_suggested=dx_suggested)
+        dn = numpy.ones(shape=(m.shape[1], m.shape[2], m.shape[3]), dtype=numpy.complex128)
+        for mat_i, m_i in zip(self.materials, m):
+            dn = m_i * mat_i.get_dn(photon_wavelength=photon_wavelength)
+        return dn,dx
 
     def get_current_map(self):
         """
@@ -295,25 +334,28 @@ class ParticleMap(AbstractContinuousParticle):
             if not self._is_map_in_cache(O, dx_required):
 
                 dx = dx_suggested
+                n_mat = len(self.materials)
                 
                 if O["geometry"] == "icosahedron":
-                    m = self._get_map_icosahedron(O["diameter"]/2., dx)
+                    m_tmp = self._get_map_icosahedron(O["diameter"]/2., dx)
 
                 elif O["geometry"] == "spheroid":
                     a = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_a(O["diameter"],O["flattening"])
                     c = condor.utils.spheroid_diffraction.to_spheroid_semi_diameter_c(O["diameter"],O["flattening"])
-                    m = self._get_map_spheroid(a, c, dx)
+                    m_tmp = self._get_map_spheroid(a, c, dx)
 
                 elif O["geometry"] == "sphere":
-                    m = self._put_sphere(O["diameter"]/2., dx)
+                    m_tmp = self._put_sphere(O["diameter"]/2., dx)
 
                 elif O["geometry"] == "cube":
-                    m = self._get_map_cube(O["diameter"]/2., dx)
+                    m_tmp = self._get_map_cube(O["diameter"]/2., dx)
 
                 else:
                     log_and_raise_error(logger, "Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
                     sys.exit(1)
 
+                m = numpy.array(n_mat * [m_tmp])
+                    
                 self._set_cache(map3d=m,
                                 dx=dx,
                                 geometry=O["geometry"],

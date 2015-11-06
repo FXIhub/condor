@@ -22,6 +22,8 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+import numpy
+
 from particle_abstract import AbstractContinuousParticle
 
 class ParticleSphere(AbstractContinuousParticle):
@@ -46,9 +48,10 @@ class ParticleSphere(AbstractContinuousParticle):
 
       :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
-:number_density (float): Number density of this particle species in units of the interaction volume. (defaukt ``1.``)
+      :number (float): Expectation value for the number of particles in the interaction volume. (defaukt ``1.``)
 
-      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of the ``number_density``. If ``'random'`` the number of particles is Poissonian and the ``number_density`` is the expectation value. (default ``'synchronised'``)
+      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of ``number``. If ``'random'`` the number of particles is Poissonian and ``number`` is the expectation value. (default ``'synchronised'``)
+
       :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
 
       :position_variation (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
@@ -62,21 +65,23 @@ class ParticleSphere(AbstractContinuousParticle):
       :massdensity (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
 
       :atomic_composition (dict): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
+
+      :electron_density (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
     """
 
     def __init__(self,
                  diameter, diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
-                 number_density = 1., arrival = "synchronised",
+                 number = 1., arrival = "synchronised",
                  position = None, position_variation = None, position_spread = None, position_variation_n = None,
-                 material_type = None, massdensity = None, atomic_composition = None): 
+                 material_type = None, massdensity = None, atomic_composition = None, electron_density = None): 
 
         # Initialise base class
         AbstractContinuousParticle.__init__(self,
                                             diameter=diameter, diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n,
                                             rotation_values=None, rotation_formalism=None, rotation_mode="extrinsic",
-                                            number_density=number_density, arrival=arrival,
+                                            number=number, arrival=arrival,
                                             position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n,
-                                            material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
+                                            material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition, electron_density=electron_density)
         
     def get_next(self):
         """
@@ -96,3 +101,7 @@ class ParticleSphere(AbstractContinuousParticle):
           P1 = condor.ParticleSpheroid(**conf) # P1: new ParticleSphere instance with the same configuration as P0  
         """
         return AbstractContinuousParticle.get_conf(self)
+
+    def get_dn(self, photon_wavelength):
+        dn = numpy.array([m.get_dn(photon_wavelength) for m in self.materials]).sum()
+        return dn

@@ -8,7 +8,8 @@
 
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages, Extension
-from setuptools.command.install import install
+#from setuptools.command.install import install
+from setuptools.command.build_ext import build_ext
 # To use a consistent encoding
 from codecs import open
 # Other stuff
@@ -45,7 +46,8 @@ def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_in
 
     return [ext_icosahedron, ext_nfft]
 
-class InstallCommand(install):
+#class InstallCommand(install):
+class BuildExtCommand(build_ext):
     user_options = install.user_options + [
         ('nfft-include-dir=', None, 'Specify the include directory of the NFFT library.'),
         ('nfft-library-dir=', None, 'Specify the library directory of the NFFT library.'),
@@ -143,7 +145,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.1',
+    version='1.0.2',
 
     description='Condor: Simulation of single particle X-ray diffraction patterns',
     long_description=long_description,

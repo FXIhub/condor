@@ -97,8 +97,8 @@ for angle_d in angles_d:
         pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
 
     if True:
-        # Molecule (box)
-        print "Simulating molecule"
+        # Atoms (box)
+        print "Simulating atoms"
         Z1,Y1,X1 = numpy.meshgrid(numpy.linspace(0, short_diameter, N_short),
                                   numpy.linspace(0, long_diameter,   N_long),
                                   numpy.linspace(0, short_diameter, N_short),
@@ -117,8 +117,8 @@ for angle_d in angles_d:
         pypl.imsave(out_dir + "/%s_proj.png" % (s),proj)
         atomic_positions = numpy.array([[x,y,z] for x,y,z in zip(X.ravel(),Y.ravel(),Z.ravel())])
         atomic_numbers   = numpy.ones(atomic_positions.size/3, dtype=numpy.int16)
-        par = condor.ParticleMolecule(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-        s = "particle_molecule"
+        par = condor.ParticleAtoms(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
+        s = "particle_atoms"
         E = condor.Experiment(src, {s : par}, det)
         res = E.propagate()
         real_space = numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(res["entry_1"]["data_1"]["data_fourier"])))

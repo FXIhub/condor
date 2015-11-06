@@ -46,10 +46,10 @@ real_space = numpy.fft.fftshift(numpy.fft.ifftn(res["entry_1"]["data_1"]["data_f
 pypl.imsave(this_dir + "/simple_test_%s.png" % s, numpy.log10(res["entry_1"]["data_1"]["data"]))
 pypl.imsave(this_dir + "/simple_test_%s_rs.png" % s, abs(real_space))
 
-# Molecule
-print "Simulating molecule"
-par = condor.ParticleMolecule(pdb_filename="../../DNA.pdb")
-s = "particle_molecule"
+# Atoms
+print "Simulating atoms"
+par = condor.ParticleAtoms(pdb_filename="../../DNA.pdb")
+s = "particle_atoms"
 E = condor.Experiment(src, {s : par}, det)
 res = E.propagate()
 real_space = numpy.fft.fftshift(numpy.fft.ifftn(res["entry_1"]["data_1"]["data_fourier"]))

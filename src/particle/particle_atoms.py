@@ -35,7 +35,7 @@ from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
 from particle_abstract import AbstractParticle
 
-class ParticleMolecule(AbstractParticle):
+class ParticleAtoms(AbstractParticle):
     """
     Class for a particle model
 
@@ -55,10 +55,10 @@ class ParticleMolecule(AbstractParticle):
       :rotation_formalism (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
       :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
-    
-:number_density (float): Number density of this particle species in units of the interaction volume. (defaukt ``1.``)
 
-      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of the ``number_density``. If ``'random'`` the number of particles is Poissonian and the ``number_density`` is the expectation value. (default ``'synchronised'``)
+      :number (float): Expectation value for the number of particles in the interaction volume. (defaukt ``1.``)
+
+      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of ``number``. If ``'random'`` the number of particles is Poissonian and ``number`` is the expectation value. (default ``'synchronised'``)
 
       :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
 
@@ -72,17 +72,17 @@ class ParticleMolecule(AbstractParticle):
                  pdb_filename = None,
                  atomic_numbers = None, atomic_positions = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
-                 number_density = 1., arrival = "synchronised",
+                 number = 1., arrival = "synchronised",
                  position = None,  position_variation = None, position_spread = None, position_variation_n = None):
         try:
             import spsim
         except:
-            log_and_raise_error(logger, "Cannot import spsim module. This module is necessary to simulate diffraction for particle model \"molecule\". Please install spsim from https://github.com/FilipeMaia/spsim abnd try again.")
+            log_and_raise_error(logger, "Cannot import spsim module. This module is necessary to simulate diffraction for particle model of discrete atoms. Please install spsim from https://github.com/FilipeMaia/spsim and try again.")
             return
         # Initialise base class
         AbstractParticle.__init__(self,
                                   rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode,                                            
-                                  number_density=number_density, arrival=arrival,
+                                  number=number, arrival=arrival,
                                   position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n)
         self._atomic_positions  = None
         self._atomic_numbers    = None
@@ -92,29 +92,42 @@ class ParticleMolecule(AbstractParticle):
             if os.path.isfile(pdb_filename):
                 self.set_atoms_from_pdb_file(pdb_filename)
             else:
-                log_and_raise_error(logger, "Cannot initialize particle model molecule. PDB file %s does not exist." % pdb_filename)
+                log_and_raise_error(logger, "Cannot initialize particle model. PDB file %s does not exist." % pdb_filename)
                 sys.exit(0)
 
         elif pdb_filename is None and (atomic_numbers is not None and atomic_positions is not None):
             self.set_atoms_from_arrays(atomic_numbers, atomic_positions)
         else:
-            log_and_raise_error(logger, "Cannot initialise particle model molecule. The atomic positions have to be specified either by a pdb_filename or by atomic_numbers and atomic_positions.")
+            log_and_raise_error(logger, "Cannot initialise particle model. The atomic positions have to be specified either by a pdb_filename or by atomic_numbers and atomic_positions.")
 
     def get_conf(self):
         """
-        Get configuration in form of a dictionary. Another identically configured ParticleMolecule instance can be initialised by:
+        Get configuration in form of a dictionary. Another identically configured ParticleAtoms instance can be initialised by:
 
         .. code-block:: python
 
-          conf = P0.get_conf()                 # P0: already existing ParticleMolecule instance
-          P1 = condor.ParticleMolecule(**conf) # P1: new ParticleMolcule instance with the same configuration as P0  
+          conf = P0.get_conf()                 # P0: already existing ParticleAtoms instance
+          P1 = condor.ParticleAtoms(**conf) # P1: new ParticleMolcule instance with the same configuration as P0  
         """
         conf = {}
         conf.update(AbstractParticle.get_conf())
         conf["atomic_numbers"]   = self.get_atomic_numbers()
         conf["atomic_positions"] = self.get_atomic_positions()
         return conf
-        
+
+    def set_atoms_from_pdb_code(self, pdb_code):
+        """
+        Fetch PDB file from the PDB database and specify atomic positions from the file
+
+        Args:
+
+          :pdb_code: Code of the PDB entry (4 digit long).
+        """
+        import spsim
+        filename = spsim.fetch_pdb(pdb_code)
+        self.set_atoms_from_pdb_file(filename)
+
+    
     def set_atoms_from_pdb_file(self, pdb_filename):
         """
         Specify atomic positions from a PDB file 
@@ -205,7 +218,7 @@ class ParticleMolecule(AbstractParticle):
         Iterate the parameters and return them as a dictionary
         """
         O = AbstractParticle.get_next(self)
-        O["particle_model"]   = "molecule"
+        O["particle_model"]   = "atoms"
         O["atomic_numbers"]   = self.get_atomic_numbers()
         O["atomic_positions"] = self.get_atomic_positions()
         return O

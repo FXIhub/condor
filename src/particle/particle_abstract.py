@@ -38,7 +38,7 @@ from scipy import constants
 
 # Condor modules
 import condor
-from condor.utils.material import Material
+from condor.utils.material import AtomDensityMaterial, ElectronDensityMaterial
 from condor.utils.variation import Variation
 
 import condor.utils.diffraction
@@ -54,9 +54,9 @@ class AbstractParticle:
 
       :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
-      :number_density (float): Number density of this particle species in units of the interaction volume. (defaukt ``1.``)
+      :number (float): Expectation value for the number of particles in the interaction volume. (defaukt ``1.``)
 
-      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of the ``number_density``. If ``'random'`` the number of particles is Poissonian and the ``number_density`` is the expectation value. (default ``'synchronised'``)
+      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of ``number``. If ``'random'`` the number of particles is Poissonian and ``number`` is the expectation value. (default ``'synchronised'``)
     
       :position: (Mean) position vector [*x*, *y*, *z*] of the particle. If set to ``None`` the particle is placed at the origin (default ``None``)
 
@@ -69,12 +69,12 @@ class AbstractParticle:
     """
     def __init__(self,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
-                 number_density = 1., arrival = "synchronised",
+                 number = 1., arrival = "synchronised",
                  position = None,  position_variation = None, position_spread = None, position_variation_n = None):
         self.set_alignment(rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
         self.set_position_variation(position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n)
         self.position_mean = position if position is not None else [0., 0., 0.]
-        self.number_density = number_density
+        self.number = number
         self.arrival = arrival
 
     def get_next_number_of_particles(self):
@@ -82,9 +82,9 @@ class AbstractParticle:
         Iterate the number of partices
         """
         if self.arrival == "random":
-            return int(numpy.random.poisson(self.number_density))
+            return int(numpy.random.poisson(self.number))
         elif self.arrival == "synchronised":
-            return int(numpy.round(self.number_density))
+            return int(numpy.round(self.number))
         else:
             log_and_raise_error(logger, "self.arrival=%s is invalid. Has to be either \'synchronised\' or \'random\'." % self.arrival)
         
@@ -165,7 +165,7 @@ class AbstractParticle:
         conf = {}
         conf.update(self._get_conf_rotation())
         conf.update(self._get_conf_position_variation())
-        conf["number_density"] = self.number_density
+        conf["number"] = self.number
         conf["arrival"]        = self.arrival
         return conf
 
@@ -207,9 +207,9 @@ class AbstractContinuousParticle(AbstractParticle):
 
       :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
-      :number_density (float): Number density of this particle species in units of the interaction volume. (defaukt ``1.``)
+      :number (float): Expectation value for the number of particles in the interaction volume. (defaukt ``1.``)
 
-      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of the ``number_density``. If ``'random'`` the number of particles is Poissonian and the ``number_density`` is the expectation value. (default ``'synchronised'``)
+      :arrival (str): Arrival of particles at the interaction volume can be either ``'random'`` or ``'synchronised'``. If ``sync`` at every event the number of particles in the interaction volume equals the rounded value of ``number``. If ``'random'`` the number of particles is Poissonian and ``number`` is the expectation value. (default ``'synchronised'``)
 
       :position (array): See :class:`condor.particle.particle_abstract.AbstractParticle` (default ``None``)
 
@@ -224,24 +224,26 @@ class AbstractContinuousParticle(AbstractParticle):
       :massdensity (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
 
       :atomic_composition (dict): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
+
+      :electron_density (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
     """
     def __init__(self,
                  diameter, diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
-                 number_density = 1., arrival = "synchronised",
+                 number = 1., arrival = "synchronised",
                  position = None,  position_variation = None, position_spread = None, position_variation_n = None,
-                 material_type = 'water', massdensity = None, atomic_composition = None):
+                 material_type = 'water', massdensity = None, atomic_composition = None, electron_density = None):
         
         # Initialise base class
         AbstractParticle.__init__(self,
                                   rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode,
-                                  number_density=number_density, arrival=arrival,
+                                  number=number, arrival=arrival,
                                   position=position, position_variation=position_variation, position_spread=position_spread, position_variation_n=position_variation_n)
         # Diameter
         self.set_diameter_variation(diameter_variation=diameter_variation, diameter_spread=diameter_spread, diameter_variation_n=diameter_variation_n)
         self.diameter_mean = diameter
         # Material
-        self.set_material(material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
+        self.set_material(material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition, electron_density=electron_density)
 
     def get_conf(self):
         """
@@ -254,6 +256,7 @@ class AbstractContinuousParticle(AbstractParticle):
         conf["diameter_variation"] = dvar["mode"]
         conf["diameter_spread"] = dvar["spread"]
         conf["diameter_variation_n"] = dvar["n"]
+        conf.update(self._get_material_conf())
         return conf
         
     def get_next(self):
@@ -306,17 +309,66 @@ class AbstractContinuousParticle(AbstractParticle):
             else:
                 return d
 
-    def set_material(self, material_type, massdensity, atomic_composition):
+    def set_material(self, material_type, massdensity, atomic_composition, electron_density):
         """
-        Initialise and set the Material class instance of the particle
+        Initialise and set the AtomDensityMaterial / ElectronDensityMaterial class instance of the particle
 
         Args:
-          :material_type (str): See :class:`condor.utils.material.Material`
+          :material_type (str): See :class:`condor.utils.material.AtomDensityMaterial`
 
-          :massdensity (float): See :class:`condor.utils.material.Material`
+          :massdensity (float): See :class:`condor.utils.material.AtomDensityMaterial`
 
-          :atomic_composition (dict): See :class:`condor.utils.material.Material`
+          :atomic_composition (dict): See :class:`condor.utils.material.AtomDensityMaterial`
+
+          :electron_density (float): See :class:`condor.utils.material.ElectronDensityMaterial`
         """
-        self.material = Material(material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition)
+        self.materials = []
+        if isinstance(material_type, list) or isinstance(massdensity, list) or isinstance(atomic_composition, list) or isinstance(electron_density, list):
+            L = max([len(v) for v in [material_type, massdensity, atomic_composition, electron_density] if isinstance(v, list)])
+            material_types      = material_type if material_type is not None else [None]*L
+            massdensities       = massdensity if massdensity is not None else [None]*L
+            atomic_compositions = atomic_composition if atomic_composition is not None else [None]*L
+            electron_densities  = electron_density if electron_density is not None else [None]*L
+            for material_type_i, massdensity_i, atomic_composition_i, electron_density_i in zip(material_types, massdensities, atomic_compositions, electron_densities):
+                self.add_material(material_type=material_type_i, massdensity=massdensity_i, atomic_composition=atomic_composition_i, electron_density=electron_density_i)
+        else:
+            self.add_material(material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition, electron_density=electron_density)
 
+    def add_material(self, material_type, massdensity, atomic_composition, electron_density):
+        """
+        Initialise and add the AtomDensityMaterial / ElectronDensityMaterial class instance to the particle
 
+        Args:
+          :material_type (str): See :class:`condor.utils.material.AtomDensityMaterial`
+
+          :massdensity (float): See :class:`condor.utils.material.AtomDensityMaterial`
+
+          :atomic_composition (dict): See :class:`condor.utils.material.AtomDensityMaterial`
+
+          :electron_density (float): See :class:`condor.utils.material.ElectronDensityMaterial`
+        """
+        if electron_density is None:
+            self.materials.append(AtomDensityMaterial(material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition))
+        else:
+            if material_type is not None or massdensity is not None or atomic_composition is not None:
+                log_and_raise_error(logger, r"An electron density is defined so material_type, massdensity and atomic_composition have to be all 'None'.")
+                return
+            self.materials.append(ElectronDensityMaterial(electron_density=electron_density))
+
+    def _get_material_conf(self):
+        conf = {}
+        for m_i in self.materials:
+            conf_i = m_i.get_conf()
+            if isinstance(m_i, AtomDensityMaterial):
+                conf_i["electron_density"] = None
+            elif isinstance(m_i, ElectronDensityMaterial):
+                conf_i["material_type"] = None
+                conf_i["massdensity"] = None
+                conf_i["atomic_composition"] = None
+            else:
+                log_and_raise_error(logger, "Material has the wrong class: %s" % str(m_i))
+            for k,v in conf_i.items():
+                if k not in conf:
+                    conf[k] = []
+                conf[k].append(conf_i[k])
+        return conf

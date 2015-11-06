@@ -295,7 +295,6 @@ class Rotations:
                 # No rotation (rotation matrix = identity matrix)
                 self._rotations = [Rotation()]
             else:
-                print values
                 self._rotations = [Rotation(values, formalism=formalism)]
         else:
             self._rotations = []

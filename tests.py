@@ -56,7 +56,7 @@ def test_compare_spheroid_with_map(tolerance = 0.15):
         print "\t=> Test failed (err = %e)" % err
         return True
 
-def test_compare_molecule_with_map(tolerance = 0.1):
+def test_compare_atoms_with_map(tolerance = 0.1):
     """
     Compare the output of two diffraction patterns, one simulated with descrete atoms (spsim) and the other one from a 3D refractive index map on a regular grid.
     """
@@ -85,7 +85,7 @@ def test_compare_molecule_with_map(tolerance = 0.1):
     E = condor.Experiment(src, {s : par}, det)
     res = E.propagate()
     F_map = res["entry_1"]["data_1"]["data_fourier"]
-    # Molecule
+    # Atoms
     Z1,Y1,X1 = numpy.meshgrid(numpy.linspace(0, short_diameter, N_short),
                               numpy.linspace(0, long_diameter,   N_long),
                               numpy.linspace(0, short_diameter, N_short),
@@ -99,19 +99,19 @@ def test_compare_molecule_with_map(tolerance = 0.1):
     X = numpy.concatenate((X1.ravel(),X2.ravel()))
     atomic_positions = numpy.array([[x,y,z] for x,y,z in zip(X.ravel(),Y.ravel(),Z.ravel())])
     atomic_numbers   = numpy.ones(atomic_positions.size/3, dtype=numpy.int16)
-    par = condor.ParticleMolecule(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
-    s = "particle_molecule"
+    par = condor.ParticleAtoms(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
+    s = "particle_atoms"
     E = condor.Experiment(src, {s : par}, det)
     res = E.propagate()
-    F_molecule = res["entry_1"]["data_1"]["data_fourier"]
+    F_atoms = res["entry_1"]["data_1"]["data_fourier"]
     # Compare
-    I_molecule = abs(F_molecule)**2
+    I_atoms = abs(F_atoms)**2
     I_map = abs(F_map)**2
-    diff = I_molecule-I_map
-    err = abs(diff).sum() / ( ( I_molecule.sum() + I_map.sum() ) / 2. )
+    diff = I_atoms-I_map
+    err = abs(diff).sum() / ( ( I_atoms.sum() + I_map.sum() ) / 2. )
     import matplotlib.pyplot as pypl
-    pypl.imsave("./Imolecule_mol.png", abs(I_molecule))
-    pypl.imsave("./Imolecule_map.png", abs(I_map))
+    pypl.imsave("./Iatoms_mol.png", abs(I_atoms))
+    pypl.imsave("./Iatoms_map.png", abs(I_map))
     if err < tolerance:
         print "\t=> Test successful (err = %e)" % err
         return False
@@ -162,8 +162,8 @@ if __name__ == "__main__":
     err = err or condor.utils.rotation._all_tests()
     print "2) Compare: Spheroid vs. map ..."
     err = err or test_compare_spheroid_with_map()
-    print "3) Compare: Molecule vs. map ..."
-    err = err or test_compare_molecule_with_map()
+    print "3) Compare: Atoms vs. map ..."
+    err = err or test_compare_atoms_with_map()
     #print "4) Compare: Map with and without interpolation ..."
     #err = err or test_map_interpolation()
     print "EXITING CONDOR TEST ROUTINE"
