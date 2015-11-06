@@ -15,7 +15,7 @@ import argparse, subprocess
 
 
 from distutils.core import setup, Extension
-
+from distutils.spawn import find_executable
 from distutils.sysconfig import get_python_lib
 
 parser = argparse.ArgumentParser(description='Deinstallation script for Condor')
@@ -30,7 +30,8 @@ if __name__ == "__main__":
     if args.packages_dir:
         plibs = [get_python_lib(prefix=args.prefix)]
     else:
-        plibs = [get_python_lib()] + [subprocess.check_output(["python", "-m", "site", "--user-site"])[:-1]]
+        python_executable = find_executable("python")
+        plibs = [get_python_lib()] + [subprocess.check_output([python_executable,"-m","site","--user-site"])[:-1]]
     dirs = []
     for plib in plibs:
         if os.path.exists(plib):

@@ -194,13 +194,13 @@ class Variation:
         if self._mode is None:
             v1 = v0
         elif self._mode == "normal":
-            v1 = numpy.random.normal(v0,self._spread[dim])
+            v1 = numpy.random.normal(v0,self._spread[dim]) if (self._spread[dim] > 0) else v0
         elif self._mode == "normal_poisson":
             v1 = numpy.random.normal(numpy.random.poisson(v0),self._spread[dim])
         elif self._mode == "poisson":
             v1 = numpy.random.poisson(v0)
         elif self._mode == "uniform":
-            v1 = numpy.random.uniform(v0-self._spread[dim]/2.,v0+self._spread[dim]/2.)
+            v1 = numpy.random.uniform(v0-self._spread[dim]/2.,v0+self._spread[dim]/2.) if (self._spread[dim] > 0) else v0
         elif self._mode == "range":
             v1 = v0 + self._get_grid()[dim,self._i % self._n]
         return v1
