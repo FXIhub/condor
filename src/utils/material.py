@@ -258,7 +258,7 @@ class AbstractMaterial:
 
         return mu
 
-
+    
 class ElectronDensityMaterial(AbstractMaterial):
     r"""
     Class for electron density material model
@@ -300,7 +300,7 @@ class AtomDensityMaterial(AbstractMaterial):
         AbstractMaterial.__init__(self)
         
         self.clear_atomic_composition()
-        
+
         if atomic_composition is not None and massdensity is not None and (material_type is None or material_type == "custom"):
             for element,concentration in atomic_composition.items():
                 self.set_atomic_concentration(element, concentration)

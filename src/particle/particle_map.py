@@ -39,6 +39,8 @@ import condor.utils.spheroid_diffraction
 import condor.utils.diffraction
 import condor.utils.bodies
 
+import condor.utils.emdio
+
 from particle_abstract import AbstractContinuousParticle
 
 ENABLE_MAP_INTERPOLATION = False
@@ -81,6 +83,8 @@ class ParticleMap(AbstractContinuousParticle):
 
       :map3d_dataset: See :meth:`set_custom_geometry_by_h5file` (default ``None``)
 
+      :emd_id: See :meth:`set_custom_geometry_by_emd_id` (default ``None``)
+
       :rotation_values (array): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
       :rotation_formalism (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
@@ -115,6 +119,7 @@ class ParticleMap(AbstractContinuousParticle):
                  dx = None,
                  map3d = None, 
                  map3d_filename = None, map3d_dataset = None,
+                 emd_id = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
                  flattening = 0.75,
                  number = 1., arrival = "synchronised",
@@ -143,19 +148,32 @@ class ParticleMap(AbstractContinuousParticle):
         self._map3d_orig             = None
 
         if geometry == "custom":
-            if (map3d_filename is not None or map3d_dataset is not None) and map3d is not None:
-                log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword arguments \'map3d_filename\' or \'map3d_dataset\' and \'map3d\' are not None.")
-                sys.exit(1)
-            elif (map3d_filename is None or map3d_dataset is None) and map3d is None:
-                log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword arguments for either (\'map3d_filename\' or \'map3d_dataset\') or \'map3d\' are None.")
-                sys.exit(1)
-            elif dx is None:
-                log_and_raise_error(logger, "Cannot initialize custom geometry because the keyword argument \'dx\' is None.")
-                sys.exit(1)                
-            elif map3d is not None:
+            if map3d is not None and dx is not None:
+                log_debug(logger, "Attempting to initialise custom geometry with \'map3d\'.")
+                if map3d_filename is not None or map3d_dataset is not None or emd_id is not None:
+                    log_and_raise_error(logger, "Cannot initialize custom geometry because of ambiguous keyword arguments.")
+                    sys.exit(1)
                 self.set_custom_geometry_by_array(map3d, dx)
-            elif (map3d_filename is not None and map3d_dataset is not None):
+            elif map3d_filename is not None and map3d_dataset is not None and dx is not None:
+                log_debug(logger, "Attempting to initialise custom geometry with \'map3d_filename\', \'map3d_dataset\' and \'dx\'.")
+                if not map3d_filename.endswith(".h5"):
+                    log_and_raise_error(logger, "Map file is not an HDF5 file!")
+                    sys.exit(1)
+                if map3d is not None or emd_id is not None: 
+                    log_and_raise_error(logger, "Cannot initialize custom geometry because of ambiguous keyword arguments.")
+                    sys.exit(1)
                 self.set_custom_geometry_by_h5file(map3d_filename, map3d_dataset, dx)
+            elif map3d_filename is not None:
+                if not map3d_filename.endswith(".map") and not map3d_filename.endswith(".mrc"):
+                    log_and_raise_error(logger, "Map file is not an MRC/MAP file!")
+                    sys.exit(1)
+                set_custom_geometry_by_mrcfile(map3d_filename)
+            elif emd_id is not None:
+                log_debug(logger, "Attempting to initialise custom geometry with \'emd_id\'.")
+                if map3d_filename is not None or map3d_dataset is not None or map3d is not None or dx is not None:
+                    log_and_raise_error(logger, "Cannot initialize custom geometry because of ambiguous keyword arguments.")
+                    sys.exit(1)
+                self.set_custom_geometry_by_emd_id(emd_id)
             
     def get_conf(self):
         """
@@ -193,25 +211,38 @@ class ParticleMap(AbstractContinuousParticle):
         Set map from numpy array
 
         Args:
-          :map3d (array): 4D numpy array (material index, z, y, x) of float values. If a material is defined (material not ``None``) the values of the map scale the complex refractive index of the material. If no material is defined (material is ``None``) the map will be casted to complex values and used without any rescaling.
+          :map3d (array): 4D numpy array (material index, z, y, x) of float values. If a material is defined (material not ``None``) the values of the map scale the complex refractive index of the material. If no material is defined (materials is ``None``) the map will be casted to complex values and used without any rescaling.
 
           :dx (float): Grid spacing in unit meter
         """
+        # Check shape
         s = numpy.array(map3d.shape)
-        if len(s) not in [3,4]:
-            log_and_raise_error(logger, "map3d has %i dimensions but it has to have either 3 or 4." % len(s))
-        if len(s) == 3:
-            n_mat = len(self.materials)
-            s = numpy.array([n_mat] + list(s))
-            _map3d = numpy.array(n_mat*[map3d], dtype=numpy.float64)
+        if numpy.any(s[-3:]!=s[-1]):
+            log_and_raise_error(logger, "Condor only accepts maps with equal spatial dimensions. Current shape is: %s" % str(s[-3:]))
+        if self.materials is None:
+            # Complex map(s) = refractive index map
+            # Check input
+            if len(s) != 3:
+                log_and_raise_error(logger, "map3d has %i dimensions but should have 3." % len(s))
+                return
+            # Load map(s)
+            _map3d = numpy.asarray(map3d)
         else:
-            _map3d = numpy.asarray(map3d, dtype=numpy.float64)
-        if s[0] != len(self.materials):
-            log_and_raise_error(logger, "The first dimension of the map (%i) does not equal the number of specified materials (%i)." % (s[0], len(self.materials)))
-            return
-        if numpy.any(s[1:]!=s[1]):
-            log_and_raise_error(logger, "Condor only accepts maps with equal spatial dimensions. Current shape is: %s" % str(s))
-            return
+            # Real map(s) to be scaled by material's complext refractive index
+            # Check input
+            if len(s) not in [3,4]:
+                log_and_raise_error(logger, "map3d has %i dimensions but it has to have either 3 or 4." % len(s))
+                return
+            # Load map(s)
+            if len(s) == 3:
+                n_mat = len(self.materials)
+                s = numpy.array([n_mat] + list(s))
+                _map3d = numpy.array(n_mat*[map3d], dtype=numpy.float64)
+            else:
+                if s[0] != len(self.materials):
+                    log_and_raise_error(logger, "The first dimension of the map (%i) does not equal the number of specified materials (%i)." % (s[0], len(self.materials)))
+                    return
+                _map3d = numpy.asarray(map3d, dtype=numpy.float64)
         self._map3d_orig = _map3d
         self._dx_orig    = dx
         self._map3d      = _map3d
@@ -246,7 +277,44 @@ class ParticleMap(AbstractContinuousParticle):
                 log_and_raise_error(logger, "Dataset has %i dimensions but it has to have either 3 or 4." % len(f[ds].shape))
                 return 
         self.set_custom_geometry_by_array(map3d, dx)                
+        
+    def set_custom_geometry_by_emd_id(self, emd_id, offset=None, factor=None):
+        """
+        Fetch map from the EMD by id code.
 
+        The map will be preprocessed by applying an offset and rescaling and by padding the water background with zeros.
+
+        Finally, the avereage value of the map will be rescaled by the refractive index of the associated material.
+
+        Args:
+          :emd_id (str): EMD ID code.
+
+          :offset (float): Offset value of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
+
+          :factor (float): Rescale factor of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
+        """
+        map3d, dx = condor.utils.emdio.fetch_map(emd_id)
+        self.set_custom_geometry_by_array(map3d, dx)                
+        
+    def set_custom_geometry_by_mrcfile(self, filename, offset=None, factor=None):
+        """
+        Read map from the MRC file (CCP4 file format, see http://www.ccp4.ac.uk/html/maplib.html).
+
+        The map will be preprocessed by applying an offset and rescaling and by padding the water background with zeros.
+
+        Finally, the avereage value of the map will be rescaled by the refractive index of the associated material.
+
+        Args:
+          :filename (str): Filename of MRC file.
+
+          :offset (float): Offset value of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
+
+          :factor (float): Rescale factor of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
+        """
+        map3d, dx = condor.utils.emdio.read_map(filename)
+        self.set_custom_geometry_by_array(map3d, dx)                
+
+        
     def get_new_dn_map(self, O, dx_required, dx_suggested, photon_wavelength):
         """
         Return the a new refractive index map
@@ -263,8 +331,9 @@ class ParticleMap(AbstractContinuousParticle):
         """
         m,dx = self.get_new_map(O=O, dx_required=dx_required, dx_suggested=dx_suggested)
         dn = numpy.ones(shape=(m.shape[1], m.shape[2], m.shape[3]), dtype=numpy.complex128)
-        for mat_i, m_i in zip(self.materials, m):
-            dn = m_i * mat_i.get_dn(photon_wavelength=photon_wavelength)
+        if self.materials is not None:
+            for mat_i, m_i in zip(self.materials, m):
+                dn = m_i * mat_i.get_dn(photon_wavelength=photon_wavelength)
         return dn,dx
 
     def get_current_map(self):

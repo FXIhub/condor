@@ -44,6 +44,8 @@ class ParticleAtoms(AbstractParticle):
     Kwargs:
       :pdb_filename (str): See :meth:`set_atoms_from_pdb_file` (default ``None``)
 
+      :pdb_id (str): See :meth:`set_atoms_from_pdb_id` (default ``None``)
+
       :atomic_numbers (array): See :meth:`set_atoms_from_arrays` (default ``None``)
     
       :atomic_positions (array): See :meth:`set_atoms_from_arrays` (default ``None``)
@@ -69,7 +71,7 @@ class ParticleAtoms(AbstractParticle):
       :position_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
     """
     def __init__(self,
-                 pdb_filename = None,
+                 pdb_filename = None, pdb_id = None,
                  atomic_numbers = None, atomic_positions = None,
                  rotation_values = None, rotation_formalism = None, rotation_mode = "extrinsic",
                  number = 1., arrival = "synchronised",
@@ -88,17 +90,28 @@ class ParticleAtoms(AbstractParticle):
         self._atomic_numbers    = None
         self._pdb_filename      = None
         self._diameter_mean    = None
-        if pdb_filename is not None and (atomic_numbers is None and atomic_positions is None):
-            if os.path.isfile(pdb_filename):
-                self.set_atoms_from_pdb_file(pdb_filename)
-            else:
+        if pdb_filename is not None:
+            log_debug(logger, "Attempt reading atoms from PDB file %s." % pdb_filename)
+            if (pdb_id is not None or atomic_numbers is not None or atomic_positions is not None):
+                log_and_raise_error(logger, "Atom configuration is ambiguous. pdb_filename is specified but also at least one of the following arguments: atomic_numbers, atomic_positions, pdb_id.")
+                sys.exit(1)
+            elif not os.path.isfile(pdb_filename):
                 log_and_raise_error(logger, "Cannot initialize particle model. PDB file %s does not exist." % pdb_filename)
-                sys.exit(0)
-
-        elif pdb_filename is None and (atomic_numbers is not None and atomic_positions is not None):
+                sys.exit(1)
+            else:
+                self.set_atoms_from_pdb_file(pdb_filename)
+        elif pdb_id is not None:
+            log_debug(logger, "Attempt fetching PDB entry of ID=%s" % pdb_id)
+            if (atomic_numbers is not None or atomic_positions is not None):
+                log_and_raise_error(logger, "Atom configuration is ambiguous. pdb_id is specified but also at least one of the following arguments: atomic_numbers, atomic_positions.")
+                sys.exit(1)
+            else:
+                self.set_atoms_from_pdb_id(pdb_id)
+        elif atomic_numbers is not None and atomic_positions is not None:
+            log_debug(logger, "Attempt reading atoms from lists/attays.")
             self.set_atoms_from_arrays(atomic_numbers, atomic_positions)
         else:
-            log_and_raise_error(logger, "Cannot initialise particle model. The atomic positions have to be specified either by a pdb_filename or by atomic_numbers and atomic_positions.")
+            log_and_raise_error(logger, "Cannot initialise particle model. The atomic positions have to be specified either by a pdb_filename, pdb_id or by atomic_numbers and atomic_positions.")
 
     def get_conf(self):
         """
@@ -115,16 +128,16 @@ class ParticleAtoms(AbstractParticle):
         conf["atomic_positions"] = self.get_atomic_positions()
         return conf
 
-    def set_atoms_from_pdb_code(self, pdb_code):
+    def set_atoms_from_pdb_id(self, pdb_id):
         """
         Fetch PDB file from the PDB database and specify atomic positions from the file
 
         Args:
 
-          :pdb_code: Code of the PDB entry (4 digit long).
+          :pdb_id: ID code of the PDB entry (4 digit long).
         """
         import spsim
-        filename = spsim.fetch_pdb(pdb_code)
+        filename = spsim.fetch_pdb(pdb_id)
         self.set_atoms_from_pdb_file(filename)
 
     

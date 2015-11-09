@@ -322,17 +322,20 @@ class AbstractContinuousParticle(AbstractParticle):
 
           :electron_density (float): See :class:`condor.utils.material.ElectronDensityMaterial`
         """
-        self.materials = []
-        if isinstance(material_type, list) or isinstance(massdensity, list) or isinstance(atomic_composition, list) or isinstance(electron_density, list):
-            L = max([len(v) for v in [material_type, massdensity, atomic_composition, electron_density] if isinstance(v, list)])
-            material_types      = material_type if material_type is not None else [None]*L
-            massdensities       = massdensity if massdensity is not None else [None]*L
-            atomic_compositions = atomic_composition if atomic_composition is not None else [None]*L
-            electron_densities  = electron_density if electron_density is not None else [None]*L
-            for material_type_i, massdensity_i, atomic_composition_i, electron_density_i in zip(material_types, massdensities, atomic_compositions, electron_densities):
-                self.add_material(material_type=material_type_i, massdensity=massdensity_i, atomic_composition=atomic_composition_i, electron_density=electron_density_i)
+        if material_type is None:
+            self.materials = None
         else:
-            self.add_material(material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition, electron_density=electron_density)
+            self.materials = []
+            if isinstance(material_type, list) or isinstance(massdensity, list) or isinstance(atomic_composition, list) or isinstance(electron_density, list):
+                L = max([len(v) for v in [material_type, massdensity, atomic_composition, electron_density] if isinstance(v, list)])
+                material_types      = material_type if material_type is not None else [None]*L
+                massdensities       = massdensity if massdensity is not None else [None]*L
+                atomic_compositions = atomic_composition if atomic_composition is not None else [None]*L
+                electron_densities  = electron_density if electron_density is not None else [None]*L
+                for material_type_i, massdensity_i, atomic_composition_i, electron_density_i in zip(material_types, massdensities, atomic_compositions, electron_densities):
+                    self.add_material(material_type=material_type_i, massdensity=massdensity_i, atomic_composition=atomic_composition_i, electron_density=electron_density_i)
+            else:
+                self.add_material(material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition, electron_density=electron_density)
 
     def add_material(self, material_type, massdensity, atomic_composition, electron_density):
         """

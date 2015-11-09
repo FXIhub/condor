@@ -103,5 +103,8 @@ class ParticleSphere(AbstractContinuousParticle):
         return AbstractContinuousParticle.get_conf(self)
 
     def get_dn(self, photon_wavelength):
-        dn = numpy.array([m.get_dn(photon_wavelength) for m in self.materials]).sum()
+        if self.materials is None:
+            dn = 0.
+        else:
+            dn = numpy.array([m.get_dn(photon_wavelength) for m in self.materials]).sum()
         return dn
