@@ -174,6 +174,9 @@ class ParticleMap(AbstractContinuousParticle):
                     log_and_raise_error(logger, "Cannot initialize custom geometry because of ambiguous keyword arguments.")
                     sys.exit(1)
                 self.set_custom_geometry_by_emd_id(emd_id)
+
+        if diameter is None:
+            self.diameter_mean = self._dx_orig * self._map3d_orig.shape[-1]
             
     def get_conf(self):
         """

@@ -240,9 +240,6 @@ class Experiment:
             elif isinstance(p, condor.particle.ParticleMap):
                 # Scattering vectors (the nfft requires order z,y,x)
                 qmap = self.get_qmap(nx=nx, ny=ny, cx=cx, cy=cy, pixel_size=pixel_size, detector_distance=detector_distance, wavelength=wavelength, extrinsic_rotation=extrinsic_rotation, order="zyx")
-                # Intensity scaling factor
-                R = D_particle["diameter"]/2.
-                V = 4/3.*numpy.pi*R**3
                 # Geometrical factor
                 Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 # Generate map
