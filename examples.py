@@ -16,7 +16,7 @@ examples = [
         "cmd": "condor",
     },
     {
-        "dir": this_dir + "/examples/configfile/particle_molecule",
+        "dir": this_dir + "/examples/configfile/particle_atoms",
         "cmd": "condor",
     },
     {
@@ -25,6 +25,10 @@ examples = [
     },
     {
         "dir": this_dir + "/examples/scripts/custom_map",
+        "cmd": "python example.py",
+    },
+    {
+        "dir": this_dir + "/examples/scripts/emd_fetch",
         "cmd": "python example.py",
     },
     {
@@ -39,6 +43,11 @@ examples = [
         "dir": this_dir + "/examples/scripts/simple",
         "cmd": "python example.py",
     },
+    {
+        "dir": this_dir + "/examples/scripts/pdb_fetch",
+        "cmd": "python example.py",
+    },
+
 ]
 
     
