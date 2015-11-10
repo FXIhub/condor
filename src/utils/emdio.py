@@ -72,9 +72,9 @@ def read_map(filename):
         #11      X length        Cell Dimensions (Angstroms)
         #12      Y length                     "
         #13      Z length                     "
-        dX = temp_float32[10]*1E-9
-        dY = temp_float32[11]*1E-9
-        dZ = temp_float32[12]*1E-9
+        dX = temp_float32[10]*1E-10
+        dY = temp_float32[11]*1E-10
+        dZ = temp_float32[12]*1E-10
         if dX != dY or dY != dZ:
             log.log_and_raise_error(logger, "Cannot read a map with unequal voxel dimensions")
         #17      MAPC            Which axis corresponds to Cols.  (1,2,3 for X,Y,Z)

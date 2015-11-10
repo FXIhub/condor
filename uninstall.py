@@ -30,8 +30,7 @@ if __name__ == "__main__":
     if args.packages_dir:
         plibs = [get_python_lib(prefix=args.prefix)]
     else:
-        python_executable = find_executable("python")
-        plibs = [get_python_lib()] + [subprocess.check_output([python_executable,"-m","site","--user-site"])[:-1]]
+        plibs = [get_python_lib()]
     dirs = []
     for plib in plibs:
         if os.path.exists(plib):
