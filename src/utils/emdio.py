@@ -51,6 +51,9 @@ def read_map(filename):
         NC = temp_int32[0]
         NR = temp_int32[1]
         NS = temp_int32[2]
+        if NC != NR or NR != NS:
+            log.log_and_raise_error(logger, "Cannot read a map with unequal dimensions")
+        N = NC
         #4      MODE            Data type
         #                  0 = envelope stored as signed bytes (from
         #                      -128 lowest to 127 highest)
@@ -72,9 +75,9 @@ def read_map(filename):
         #11      X length        Cell Dimensions (Angstroms)
         #12      Y length                     "
         #13      Z length                     "
-        dX = temp_float32[10]*1E-10
-        dY = temp_float32[11]*1E-10
-        dZ = temp_float32[12]*1E-10
+        dX = temp_float32[10]/float(N)*1E-10
+        dY = temp_float32[11]/float(N)*1E-10
+        dZ = temp_float32[12]/float(N)*1E-10
         if dX != dY or dY != dZ:
             log.log_and_raise_error(logger, "Cannot read a map with unequal voxel dimensions")
         #17      MAPC            Which axis corresponds to Cols.  (1,2,3 for X,Y,Z)
