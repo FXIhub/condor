@@ -179,6 +179,31 @@ class AbstractMaterial:
 
         return numpy.exp(-rho*mu*thickness)
 
+    def get_attenuation_length(self, photon_wavelength):
+        r"""
+        Return the absorption length in unit meter for the given wavelength :math:`\lambda`
+
+        .. math::
+        
+          \mu = \frac{1}{\rho\,\mu_a(\lambda)}
+        
+        :math:`\rho`: Average atom density
+
+        :math:`\mu_a(\lambda)`: Photoabsorption cross section at photon energy :math:`\lambda`
+        
+        Args:
+          :photon_wavelength (float): Photon wavelength in unit meter
+
+        .. [Henke1993] B.L. Henke, E.M. Gullikson, and J.C. Davis. X-ray interactions: photoabsorption, scattering, transmission, and reflection at E=50-30000 eV, Z=1-92, Atomic Data and Nuclear Data Tables Vol. 54 (no.2), 181-342 (July 1993).
+          
+          See also `http://henke.lbl.gov/ <http://henke.lbl.gov/>`_.
+        """
+        mu = self.get_photoabsorption_cross_section(photon_wavelength=photon_wavelength)
+        rho = self.get_scatterer_density()
+
+        return (1./(mu*rho))
+
+
     def get_dn(self, photon_wavelength):
         r"""
         Return :math:`\delta n` at a given wavelength
@@ -402,7 +427,7 @@ class AtomDensityMaterial(AbstractMaterial):
 
         M = 0
         for element in atomic_composition.keys():
-            # sum up mass
+            # sum up average mass
             M += atomic_composition[element]*get_atomic_mass(element)*u
 
         number_density = self.massdensity/M
