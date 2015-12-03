@@ -263,12 +263,12 @@ class Detector:
         self._nx = self._mask.shape[1]
         self._ny = self._mask.shape[0]
         # Mask out pixels in gaps
-        if x_gap_size_in_pixel > 0:
-            cy = numpy.ceil((self._ny-1)/2.)
-            self._mask[cy-x_gap_size_in_pixel/2:cy-x_gap_size_in_pixel/2+x_gap_size_in_pixel,:] |= PixelMask.PIXEL_IS_MISSING
         if y_gap_size_in_pixel > 0:
+            cy = numpy.ceil((self._ny-1)/2.)
+            self._mask[cy-y_gap_size_in_pixel/2:cy-y_gap_size_in_pixel/2+y_gap_size_in_pixel,:] |= PixelMask.PIXEL_IS_MISSING
+        if x_gap_size_in_pixel > 0:
             cx = numpy.ceil((self._nx-1)/2.)
-            self._mask[:,cx-y_gap_size_in_pixel/2:cx-y_gap_size_in_pixel/2+y_gap_size_in_pixel] |= PixelMask.PIXEL_IS_MISSING
+            self._mask[:,cx-x_gap_size_in_pixel/2:cx-x_gap_size_in_pixel/2+x_gap_size_in_pixel] |= PixelMask.PIXEL_IS_MISSING
         # Mask out pixels in hole    
         if hole_diameter_in_pixel > 0:
             if cx_hole is None:

@@ -20,6 +20,11 @@ import gzip
 
 import numpy
 
+import scipy.ndimage
+import scipy.stats
+import scipy.ndimage.measurements
+
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -67,7 +72,7 @@ def read_map(filename):
         #                        the CCP4 programs. Other modes than 2 and 0
         #                        may NOT WORK        
         MODE = temp_int32[3]
-        dtype = ["int8", "uint16", "float32", None, "complex64", "int8"][MODE]
+        dtype = ["int8", "int16", "float32", None, "complex64", "int8"][MODE]
         if MODE == 3:
             log.log_and_raise_error(logger, "Map file data type \"MODE=%i\" is not implemented yet." % MODE)
         if MODE not in [0,2,5]:
@@ -134,3 +139,38 @@ def read_map(filename):
     return data, dX
 
 
+def preproc_map_auto(map3d_raw, ed_water, ed_particle, water_layer=0.1):
+    N = map3d_raw.shape[0]
+    Nr = (N-1)/2.
+    Nw = int(numpy.round(Nr*water_layer))
+    Nw = 1 if Nw==0 else Nw
+    Z,Y,X = numpy.meshgrid(numpy.arange(N)-Nr,
+                           numpy.arange(N)-Nr,
+                           numpy.arange(N)-Nr, indexing="ij")
+    R = numpy.sqrt(X**2+Y**2+Z**2)
+    mask = R < Nr
+    water_shell = (abs(R-(R*mask).max()) <= Nw)*mask
+    S0 = numpy.sort(map3d_raw[mask])
+    c = S0.min() + (S0.max()-S0.min())/2.
+    S1 = S0[S0<c]
+    S2 = S0[S0>=c]
+    v_water = scipy.stats.mode(S1)[0][0]
+    v_particle_min = scipy.stats.mode(S2)[0][0]
+    threshold = v_water + (v_particle_min - v_water)*0.1
+    map3d_bin = mask * map3d_raw > threshold
+    labeled_array, num_features = scipy.ndimage.measurements.label(map3d_bin)
+    map3d_bin2 = labeled_array == labeled_array[N/2,N/2,N/2]
+    map3d_bin_filled = scipy.ndimage.morphology.binary_fill_holes(map3d_bin2)
+    v_particle = numpy.mean(map3d_raw[map3d_bin_filled])
+    ed_map3d = (ed_water + (map3d_raw-v_water)/(v_particle-v_water)*(ed_particle-ed_water))/ed_particle * map3d_bin_filled
+
+    import h5py
+    with h5py.File("/Users/hantke/test.h5","w") as f:
+        f["mask"] = mask
+        f["ed_map3d"] = ed_map3d
+        f["map3d_raw"] = map3d_raw
+        f["map3d_bin_filled"] = map3d_bin_filled
+    return ed_map3d
+
+def preproc_map_manual(map3d_raw, offset, factor):
+    map3d = (map3d_raw + offset) * factor

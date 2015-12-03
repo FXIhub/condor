@@ -114,7 +114,7 @@ class ParticleMap(AbstractContinuousParticle):
       :electron_density (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
     """
     def __init__(self,
-                 geometry, diameter,
+                 geometry, diameter = None,
                  diameter_variation = None, diameter_spread = None, diameter_variation_n = None,
                  dx = None,
                  map3d = None, 
@@ -297,6 +297,15 @@ class ParticleMap(AbstractContinuousParticle):
           :factor (float): Rescale factor of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
         """
         map3d, dx = condor.utils.emdio.fetch_map(emd_id)
+        if offset is None and factor is None:
+            ed_water = condor.utils.material.AtomDensityMaterial(material_type="water").get_electron_density()
+            if len(self.materials) > 1:
+                log_and_raise_error(logger, "More than one material defined. This is incompatible with automatic scaling of an EMD map.")
+                sys.exit(1)
+            ed_particle = self.materials[0].get_electron_density()
+            map3d = condor.utils.emdio.preproc_map_auto(map3d, ed_water=ed_water, ed_particle=ed_particle)
+        else:
+            map3d = condor.utils.emdio.perproc_map_manual(map3d, offset=offset, factor=factor)           
         self.set_custom_geometry_by_array(map3d, dx)                
         
     def set_custom_geometry_by_mrcfile(self, filename, offset=None, factor=None):
@@ -315,6 +324,15 @@ class ParticleMap(AbstractContinuousParticle):
           :factor (float): Rescale factor of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
         """
         map3d, dx = condor.utils.emdio.read_map(filename)
+        if offset is None and factor is None:
+            ed_water = condor.utils.material.AtomDensityMaterial(material_type="water").get_electron_density()
+            if len(self.materials) > 1:
+                log_and_raise_error(logger, "More than one material defined. This is incompatible with automatic scaling of an EMD map.")
+                sys.exit(1)
+            ed_particle = self.materials[0].get_electron_density()
+            map3d = condor.utils.emdio.preproc_map_auto(map3d, ed_water=ed_water, ed_particle=ed_particle)
+        else:
+            map3d = condor.utils.emdio.perproc_map_manual(map3d, offset=offset, factor=factor) 
         self.set_custom_geometry_by_array(map3d, dx)                
 
         

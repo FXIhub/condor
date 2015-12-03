@@ -11,18 +11,18 @@ logger = logging.getLogger("condor")
 #logger.setLevel("WARNING")
 logger.setLevel("INFO")
 
-N = 2
+N = 1
 rotation_formalism="random"
 rotation_values = None
 
 # Source
-src = condor.Source(wavelength=1.0E-9, pulse_energy=1E-3, focus_diameter=1E-6)
+src = condor.Source(wavelength=0.147E-9, pulse_energy=1E-3, focus_diameter=1E-6)
 # Detector
-det = condor.Detector(distance=1.0, pixel_size=300E-6, nx=256, ny=256)
+det = condor.Detector(distance=0.9, pixel_size=400E-6, nx=250, ny=250)
 # Map
 print "Simulating map"
-par = condor.ParticleMap(diameter=600E-9, material_type="cell", geometry="custom",
-                         emd_id="5745",
+par = condor.ParticleMap(diameter=None, material_type="poliovirus", geometry="custom",
+                         emd_id="1144",
                          rotation_formalism=rotation_formalism, rotation_values=rotation_values)
 s = "particle_map"
 E = condor.Experiment(src, {s : par}, det)
@@ -37,3 +37,5 @@ for i in range(N):
     pypl.imsave(this_dir + "/simple_test_%s_%i_rs.png" % (s,i), abs(real_space))
     W.write(res)
 W.close()
+
+print res

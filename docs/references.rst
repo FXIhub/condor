@@ -5,6 +5,8 @@ Literature
 ----------
 
 .. [Bergh2008] Bergh, M. et al. Feasibility of imaging living cells at subnanometer resolutions by ultrafast X-ray diffraction. Q. Rev. Biophys. 41, 181–204 (2008).
+
+.. [Dans1966] Dans, P. E. et al. Density of Infectious Virus and Complement-Fixing Antigens of Two Rhinovirus Strains. J Bacteriol. 91(4), 1605–1611 (1966).
 			     
 .. [Feigin1987] Feigin, L. A. and Svergun, D. I. Structure analysis by small-angle X-ray and neutron scattering. New York/London: Plenum Press 1987.
 

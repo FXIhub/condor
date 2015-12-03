@@ -195,6 +195,8 @@ class Experiment:
             # Resolution
             dx_required  = self.detector.get_resolution_element_r(wavelength, cx=cx, cy=cy, center_variation=False)
             dx_suggested = self.detector.get_resolution_element_r(wavelength, center_variation=True)
+
+            print dx_required, dx_suggested
             
             # UNIFORM SPHERE
             if isinstance(p, condor.particle.ParticleSphere):
