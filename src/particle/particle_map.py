@@ -24,8 +24,7 @@
 
 import sys
 import numpy
-import scipy.stats
-from scipy.interpolate import RegularGridInterpolator
+#from scipy.interpolate import RegularGridInterpolator
 
 import logging
 logger = logging.getLogger(__name__)
