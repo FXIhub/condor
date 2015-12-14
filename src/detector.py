@@ -228,9 +228,9 @@ class Detector:
             ``'range'``           Equispaced grid around mean center position
             ===================== ==============================================
 
-          :center_spread_x (float): Width of the distribution of center position in *x* (default ``None``)
+          :center_spread_x (float): Width of the distribution of center position in *x* [pixel] (default ``None``)
     
-          :center_spread_y (float): Width of the distribution of center position in *y* (default ``None``)
+          :center_spread_y (float): Width of the distribution of center position in *y* [pixel] (default ``None``)
     
             .. note:: The arguments ``center_spread_y`` and ``center_spread_x`` take effect only in combination with ``center_variation='normal'``, ``'uniform'`` or ``'range'``
 
@@ -323,7 +323,7 @@ class Detector:
             return (self._ny-1) / 2.
         else:
             return self.cy_mean
-
+        
     def get_next(self):
         """
         Iterate the parameters of the Detector instance and return them as a dictionary
