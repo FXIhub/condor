@@ -87,12 +87,10 @@ def _estimate_class(var):
             v = v[1:-1].split(",")
             v = [w for w in v if len(w) > 0]
             d = {}
-            print v
             for w in v:
                 key,value = w.split(":")
                 value = _estimate_type(value)
                 d[key] = value
-                print key,value
             v = d
         else:
             if v.startswith("$"):
