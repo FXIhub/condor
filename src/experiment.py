@@ -177,8 +177,8 @@ class Experiment:
         detector_distance   = D_detector["distance"]
         wavelength          = D_source["wavelength"]
 
-        F_singles    = {}
         qmap_singles = {}
+        F_tot        = None
         # Calculate patterns of all single particles individually
         for particle_key, D_particle in D_particles.items():
             p  = D_particle["_class_instance"]
@@ -299,13 +299,12 @@ class Experiment:
                 qmap_img = spsim.sp_image_alloc(3,D_detector["nx"], D_detector["ny"])
                 spsim.array_to_image(pat.HKL_list, qmap_img)
                 qmap = numpy.zeros(shape=(D_detector["ny"], D_detector["nx"], 3))
-                qmap[:,:,0] = qmap_img.image.real[:,:,0]
-                qmap[:,:,1] = qmap_img.image.real[:,:,1]
-                qmap[:,:,2] = qmap_img.image.real[:,:,2]
+                qmap[:,:,0] = 2*numpy.pi*qmap_img.image.real[:,:,0]
+                qmap[:,:,1] = 2*numpy.pi*qmap_img.image.real[:,:,1]
+                qmap[:,:,2] = 2*numpy.pi*qmap_img.image.real[:,:,2]
                 spsim.sp_image_free(qmap_img)
                 spsim.free_diffraction_pattern(pat)
-                spsim.free_output_in_options(opts)
-                
+                spsim.free_output_in_options(opts)                
             else:
                 log_and_raise_error(logger, "No valid particles initialized.")
                 sys.exit(0)
@@ -313,13 +312,14 @@ class Experiment:
             if save_qmap:
                 qmap_singles[particle_key] = qmap
 
-            F_singles[particle_key] = F
+            # Superimpose patterns
+            v = D_particle["position"]
+            extrinsic_rotation.invert()
+            v_rot = extrinsic_rotation.rotate_vector(v)
+            if F_tot is None:
+                F_tot = numpy.zeros_like(F)
+            F_tot = F_tot + F * numpy.exp(-1.j*(v_rot[0]*qmap[:,:,0]+v_rot[1]*qmap[:,:,1]+v_rot[2]*qmap[:,:,2])) 
 
-        F_tot = numpy.zeros_like(F)
-        # Superimpose patterns
-        for particle_key in D_particles.keys():
-            v = D_particles[particle_key]["position"]
-            F_tot = F_tot + F_singles[particle_key] * numpy.exp(-1.j*(v[0]*qmap[:,:,0]+v[1]*qmap[:,:,1]+v[2]*qmap[:,:,2])) 
         I_tot, M_tot = self.detector.detect_photons(abs(F_tot)**2)
         IXxX_tot, MXxX_tot = self.detector.bin_photons(I_tot, M_tot)
         if self.detector.binning is not None:
@@ -371,6 +371,7 @@ class Experiment:
             calculate = calculate or detector_distance != self._qmap_cache["detector_distance"]
             calculate = calculate or wavelength != self._qmap_cache["wavelength"]
             if extrinsic_rotation is not None:
+                print self._qmap_cache["extrinsic_rotation"]
                 calculate = calculate or not extrinsic_rotation.is_similar(self._qmap_cache["extrinsic_rotation"])
         if calculate:
             log_debug(logger,  "Calculating qmap")
