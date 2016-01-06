@@ -57,8 +57,8 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   }
 
   #if defined(ENABLE_THREADS)
-  //printf("%s\n",getenv("OMP_NUM_THREADS"));   
-  //printf("nthreads = %d\n", nfft_get_num_threads());
+  printf("OMP_NUM_THREADS=%s\n",getenv("OMP_NUM_THREADS"));   
+  printf("nthreads = %d\n", nfft_get_num_threads());
   fftw_init_threads();
   #endif
 

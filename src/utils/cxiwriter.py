@@ -14,12 +14,17 @@
 # but without any warranty; without even the implied warranty of
 # merchantability or fitness for a pariticular purpose. See the
 
-import numpy, h5py, os
-
+import numpy, os
+  
 import logging
 logger = logging.getLogger(__name__)
 
 import log
+
+try:
+    import h5py
+except ImportError:
+    log.log_warning(logger, "Could not import h5py. All functionalities that use this package will fail.")
 
 class CXIWriter:
     def __init__(self, filename, chunksize=2, gzip_compression=False):

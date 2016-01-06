@@ -166,7 +166,7 @@ class ParticleMap(AbstractContinuousParticle):
                 if not map3d_filename.endswith(".map") and not map3d_filename.endswith(".mrc"):
                     log_and_raise_error(logger, "Map file is not an MRC/MAP file!")
                     sys.exit(1)
-                set_custom_geometry_by_mrcfile(map3d_filename)
+                self.set_custom_geometry_by_mrcfile(map3d_filename)
             elif emd_id is not None:
                 log_debug(logger, "Attempting to initialise custom geometry with \'emd_id\'.")
                 if map3d_filename is not None or map3d_dataset is not None or map3d is not None or dx is not None:
