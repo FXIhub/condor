@@ -24,7 +24,6 @@
 
 import sys,os
 import collections
-import h5py
 sys.path.append("utils")
 import numpy
 
@@ -33,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 import condor.utils.log
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
+
 import utils.resample
 from condor.utils.variation import Variation
 from condor.utils.pixelmask import PixelMask
@@ -249,6 +249,7 @@ class Detector:
                 self._mask = numpy.array(mask, dtype=numpy.uint16)
             else:
                 # Read mask from file
+                import h5py
                 with h5py.File(mask_filename,"r") as f:
                     self._mask = numpy.array(f[mask_dataset][:,:], dtype=numpy.uint16)
             if not mask_is_cxi_bitmask:
@@ -527,6 +528,7 @@ class Detector:
         """
         I_det = self._noise.get(I)
         if self._noise_filename is not None:
+            import h5py
             with h5py.File(self._noise_filename,"r") as f:
                 ds = f[self._noise_dataset]
                 if len(list(ds.shape)) == 2:
