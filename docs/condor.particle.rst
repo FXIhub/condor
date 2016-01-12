@@ -20,10 +20,10 @@ condor.particle.particle_map module
     :undoc-members:
     :show-inheritance:
 
-condor.particle.particle_molecule module
-----------------------------------------
+condor.particle.particle_atoms module
+-------------------------------------
 
-.. automodule:: condor.particle.particle_molecule
+.. automodule:: condor.particle.particle_atoms
     :members:
     :undoc-members:
     :show-inheritance:
