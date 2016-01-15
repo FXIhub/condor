@@ -434,7 +434,7 @@ class ParticleMap(AbstractContinuousParticle):
                     m_tmp = self._get_map_spheroid(a, c, dx)
 
                 elif O["geometry"] == "sphere":
-                    m_tmp = self._put_sphere(O["diameter"]/2., dx)
+                    m_tmp = self._get_map_sphere(O["diameter"]/2., dx)
 
                 elif O["geometry"] == "cube":
                     m_tmp = self._get_map_cube(O["diameter"]/2., dx)
