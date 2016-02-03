@@ -371,7 +371,7 @@ class Experiment:
             calculate = calculate or detector_distance != self._qmap_cache["detector_distance"]
             calculate = calculate or wavelength != self._qmap_cache["wavelength"]
             if extrinsic_rotation is not None:
-                print self._qmap_cache["extrinsic_rotation"]
+                #print self._qmap_cache["extrinsic_rotation"]
                 calculate = calculate or not extrinsic_rotation.is_similar(self._qmap_cache["extrinsic_rotation"])
         if calculate:
             log_debug(logger,  "Calculating qmap")
