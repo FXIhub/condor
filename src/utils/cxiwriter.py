@@ -24,7 +24,7 @@ import log
 try:
     import h5py
 except ImportError:
-    log.log_warning(logger, "Could not import h5py. All functionalities that use this package.")
+    log.log_warning(logger, "Could not import h5py.")
 
 class CXIWriter:
     def __init__(self, filename, chunksize=2, gzip_compression=False):
