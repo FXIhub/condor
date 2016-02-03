@@ -8,16 +8,15 @@ import logging
 logger = logging.getLogger("condor")
 import time, numpy
 
-#if __name__ == "__main__":
+
 def main():
     parser = argparse.ArgumentParser(description='Condor - simulation of single particle X-ray diffraction patterns')
+    parser.add_argument('-n', '--number-of-patterns', metavar='number_of_patterns', type=int,
+                        help="number of patterns to be simulated", default=1)
     parser.add_argument('-v', '--verbose', dest='verbose',  action='store_true', help='verbose mode', default=False)
     parser.add_argument('-d', '--debug', dest='debug',  action='store_true', help='debugging mode (even more output than in verbose mode)', default=False)
     parser.add_argument('-t', '--measure-time', dest='measure_time',  action='store_true', help='Measure execution time', default=False)
-    parser.add_argument('-r', '--number-of-repetitions', metavar='number_of_repetitions', type=int,
-                        help="number of repetitions (for time measurements)", default=1)
-    parser.add_argument('-n', '--number-of-patterns', metavar='number_of_patterns', type=int,
-                        help="number of patterns to be simulated", default=1)
+    parser.add_argument('-r', '--number-of-repetitions', metavar='number_of_repetitions', type=int, help="number of repetitions (for time measurements)", default=1)
     args = parser.parse_args()
     if not os.path.exists("./condor.conf"):
         parser.error("Cannot find configuration file \"condor.conf\" in current directory.")
@@ -32,7 +31,7 @@ def main():
     t0 = time.time()
     
     for i in range(args.number_of_repetitions):
-        
+
         E = condor.experiment.experiment_from_configfile("./condor.conf")
     
         # FOR BENCHMARKING
@@ -69,5 +68,4 @@ def main():
         print "( Individual computation times: ", numpy.round(t_exec, 3), " )"
         print "Writing time per image: %.3f" % numpy.round(t_write.mean(), 3)
         print "( Individual writing times: ", numpy.round(t_write, 3), " )"
-        
         

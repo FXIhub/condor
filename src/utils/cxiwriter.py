@@ -40,6 +40,7 @@ class CXIWriter:
 
     def write(self, D):
         self._write_without_iterate(D)
+        self._f.flush()
         self._i += 1
         
     def _write_without_iterate(self, D, group_prefix="/"):

@@ -43,12 +43,12 @@ def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pix
         return
     factor = int(round(factor0))
     if factor == 1:
-        if mask2d0 == None:
+        if mask2d0 is None:
             return array2d0
         else:
             return [array2d0,mask2d0]
     array2d = numpy.array(array2d0,dtype=array2d0.dtype)
-    if mask2d0 == None:
+    if mask2d0 is None:
         mask2d = None
     else:
         mask2d = numpy.array(mask2d0,dtype="int16")
@@ -86,16 +86,16 @@ def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pix
         superp_order = superp.argsort()
         A = A[superp_order]
         A = A.reshape((Nx_new*Ny_new,factor*factor))
-        if mask2d == None:
+        if mask2d is None:
             B = A.sum(1)
             return B.reshape((Ny_new,Nx_new))
-        if mask2d != None:
+        if mask2d is not None:
             AM = numpy.zeros(shape=(Ny,Nx),dtype="int16")
             AM[:mask2d.shape[0],:mask2d.shape[1]] = mask2d[:,:]
             AM = AM.flatten()
             AM = AM[superp_order]
             AM = AM.reshape((Nx_new*Ny_new,factor*factor))
-            if bad_bits == None:
+            if bad_bits is None:
                 B = (A*AM).sum(1)
                 BN = AM.sum(1)
                 BM = BN != 0

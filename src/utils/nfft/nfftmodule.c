@@ -76,11 +76,16 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   PyObject *out_array = (PyObject *)PyArray_FromDims(1, out_dim, NPY_COMPLEX128);
   memcpy(PyArray_DATA(out_array), my_plan.f, number_of_points*sizeof(fftw_complex));
 
+  // Clean up memory
+  
   nfft_finalize(&my_plan);
 
   #if defined(ENABLE_THREADS)
   fftw_cleanup_threads();
   #endif
+
+  Py_XDECREF(coord_array);
+  Py_XDECREF(in_array);
   
   return out_array;
 }

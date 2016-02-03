@@ -224,8 +224,10 @@ class ParticleMap(AbstractContinuousParticle):
         if self.materials is None:
             # Complex map(s) = refractive index map
             # Check input
-            if len(s) != 3:
-                log_and_raise_error(logger, "map3d has %i dimensions but should have 3." % len(s))
+            if len(s) == 3:
+                map3d = [map3d]
+            if len(s) != 4:
+                log_and_raise_error(logger, "map3d has %i dimensions but should have 3 or 4." % len(s))
                 return
             # Load map(s)
             _map3d = numpy.asarray(map3d)
@@ -247,7 +249,6 @@ class ParticleMap(AbstractContinuousParticle):
                 _map3d = numpy.asarray(map3d, dtype=numpy.float64)
         self._map3d_orig = _map3d
         self._dx_orig    = dx
-        self._map3d      = _map3d
         self._set_cache(_map3d, dx, geometry="custom")
 
     def set_custom_geometry_by_h5file(self, map3d_filename, map3d_dataset, dx):
