@@ -26,6 +26,8 @@ import numpy
 
 import scipy.constants as constants
 
+import unittest
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -43,8 +45,10 @@ class Photon:
       :energy (float): Photon energy in unit Joule
 
       :energy_eV (float): Photon energy in unit electron volt
+
+      :frequency (float): Photon frequency in unit Hz
     """
-    def __init__(self, wavelength=None, energy=None, energy_eV=None):
+    def __init__(self, wavelength=None, energy=None, energy_eV=None, frequency=None):
         if (wavelength is not None and energy is not None) or (wavelength is not None and energy_eV is not None) or (energy is not None and energy_eV is not None):
             log_and_raise_error(logger, "Invalid arguments during initialisation of Photon instance. More than one of the arguments is not None.")
             return
@@ -54,9 +58,17 @@ class Photon:
             self.set_energy(energy)
         elif energy_eV is not None:
             self.set_energy_eV(energy_eV)
+        elif frequency is not None:
+            self.set_frequency(frequency)
         else:
-            log_and_raise_error(logger, "Photon could not be initialized. It needs to be initialized with either the wavelength, the photon energy in unit Joule or the photon energy in unit eV.")
-
+            log_and_raise_error(logger,
+                                "Photon could not be initialised."
+                                "It has to be initialized with exactly one of the following keyword arguments"
+                                "\t- wavelegth:\t photon wavelength in meters"
+                                "\t- energy:\t photon energy in Joules"
+                                "\t- energy_eV:\t photon energy in electron volts"
+                                "\t- frequency:\t photon frequency in Hertz")
+                            
     def set_energy(self, energy):
         """
         Set photon energy in unit Joule
@@ -85,6 +97,15 @@ class Photon:
         """
         self._energy = constants.c*constants.h/wavelength
 
+    def set_frequency(self, frequency):
+        """
+        Set photon frequency
+
+        Args:
+          :frequency (float): Photon frequency in unit Hertz
+        """
+        self._energy = constants.h*frequency
+                                
             
     def get_energy(self):
         """
@@ -105,4 +126,12 @@ class Photon:
         """
         return constants.c*constants.h/self._energy
 
+    def get_frequency(self):
+        """
+        Return frequency in unit Hertz
+        """
+        return self._energy/constants.h
+
+                
+        
         

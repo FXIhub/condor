@@ -98,7 +98,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.2',
+    version='1.0.3',
 
     description='Condor: Simulation of single particle X-ray diffraction patterns',
     long_description=long_description,
@@ -111,7 +111,7 @@ setup(
     author_email='hantke@xray.bmc.uu.se',
 
     # Choose your license
-    license='GPL',
+    license='BSD',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -126,7 +126,7 @@ setup(
         'Topic :: Scientific/Engineering :: Physics',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'License :: OSI Approved :: BSD License',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -144,7 +144,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages = ['condor', 'condor.utils', 'condor.particle', 'condor.scripts', 'condor.data'],
+    packages = ['condor', 'condor.utils', 'condor.particle', 'condor.scripts', 'condor.data', 'condor.tests'],
     package_dir = {'condor':'src'},
     
     # Alternatively, if you want to distribute just a my_module.py, uncomment 
@@ -191,6 +191,5 @@ setup(
         ],
     },
 
-    #ext_modules=make_extension_modules(),
-
+    test_suite = "condor.tests.test_all",
 )
