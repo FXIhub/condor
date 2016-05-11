@@ -20,6 +20,7 @@ here = os.path.dirname(os.path.realpath(__file__))
 
 def _post_install(dir):
     from subprocess import call
+    print dir,"!!!"
     call(
         [sys.executable, 'pickle_tables.py'],
         cwd=os.path.join(dir, 'condor/data'),

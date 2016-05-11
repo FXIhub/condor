@@ -40,7 +40,7 @@ for angle_d in angles_d:
     #rotation_formalism = None
     #rotation_mode = "extrinsic"
 
-    print "Angle = %.2f degrees" % angle_d
+    #print "Angle = %.2f degrees" % angle_d
 
     short_diameter = 25E-9*12/100.
     long_diameter = 2*short_diameter
@@ -52,7 +52,7 @@ for angle_d in angles_d:
     # Spheroid
     if True:
         # Ideal spheroid
-        print "Simulating spheroid"
+        #print "Simulating spheroid"
         par = condor.ParticleSpheroid(diameter=spheroid_diameter, material_type="water", flattening=spheroid_flattening, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
         s = "particle_spheroid"
         E = condor.Experiment(src, {s : par}, det)
@@ -64,7 +64,7 @@ for angle_d in angles_d:
     
     if True:
         # Map (spheroid)
-        print "Simulating map (spheroid)"
+        #print "Simulating map (spheroid)"
         par = condor.ParticleMap(diameter=spheroid_diameter, material_type="water", flattening=spheroid_flattening, geometry="spheroid", rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
         s = "particle_map_spheroid"
         E = condor.Experiment(src, {s : par}, det)
@@ -82,7 +82,7 @@ for angle_d in angles_d:
         map3d[:N_short,:,:N_short] = 1.
         map3d[N_short:N_short+N_short,:N_short,:N_short] = 1.
         # Map
-        print "Simulating map (custom)"
+        #print "Simulating map (custom)"
         par = condor.ParticleMap(diameter=long_diameter, material_type="water", geometry="custom", map3d=map3d, dx=dx, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
         s = "particle_map_custom"
         E = condor.Experiment(src, {s : par}, det)
@@ -98,7 +98,7 @@ for angle_d in angles_d:
 
     if True:
         # Atoms (box)
-        print "Simulating atoms"
+        #print "Simulating atoms"
         Z1,Y1,X1 = numpy.meshgrid(numpy.linspace(0, short_diameter, N_short),
                                   numpy.linspace(0, long_diameter,   N_long),
                                   numpy.linspace(0, short_diameter, N_short),

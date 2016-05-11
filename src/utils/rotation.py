@@ -635,3 +635,19 @@ def rotate_quat(v, q):
        :q (array): Length-4 array [:math:`w`, :math:`x`, :math:`y`, :math:`z`] that represents the quaternion
     """
     return quat_vec_mult(q, v)
+
+def rand_quat():
+    r""" 
+    Obtain a uniform random rotation in quaternion representation ([Shoemake1992]_ pages 129f)  
+    """
+    x0,x1,x2 = numpy.random.random(3)
+    theta1 = 2.*numpy.pi*x1
+    theta2 = 2.*numpy.pi*x2
+    s1 = numpy.sin(theta1)
+    s2 = numpy.sin(theta2)
+    c1 = numpy.cos(theta1)
+    c2 = numpy.cos(theta2)
+    r1 = numpy.sqrt(1-x0)
+    r2 = numpy.sqrt(x0)
+    q = numpy.array([s1*r1, c1*r1, s2*r2, c2*r2])
+    return q

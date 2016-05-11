@@ -40,10 +40,10 @@ _data_dir = os.path.dirname(os.path.realpath(__file__)) + "/../data"
 _atomic_scattering_factors = condor._load_data.load_atomic_scattering_factors(_data_dir)
 get_atomic_scattering_factors = lambda element: _atomic_scattering_factors[element]
 """
-Returns array of photon energy vs. real and imaginary part of the atomic scattering factor (forward scattering) for a given element.
+Returns 2-dim. array of photon energy [eV] vs. real and imaginary part of the atomic scattering factor (forward scattering) for a given element.
 
   Args:
-    :element (str): Element name (latin abbreviation).
+    :element (str): Element name (abbreviation of the latin name, for example \'He\' for helium).
 """
 
 _atomic_masses             = condor._load_data.load_atomic_masses(_data_dir)
@@ -52,7 +52,7 @@ get_atomic_mass = lambda element: _atomic_masses[element]
 Returns the atomic mass (standard atomic weight in unit Dalton) for a given element.
 
   Args:
-    :element (str): Element name (latin abbreviation).
+    :element (str): Element name (abbreviation of the latin name, for example \'He\' for helium).
 """
 
 _atomic_numbers             = condor._load_data.load_atomic_numbers(_data_dir)
@@ -61,7 +61,7 @@ get_atomic_number = lambda element: _atomic_numbers[element]
 Returns the atomic number for a given element.
 
   Args:
-    :element (str): Element name (latin abbreviation).
+    :element (str): Element name (abbreviation of the latin name, for example \'He\' for helium).
 """
 
 atomic_names = ['H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na''Mg', 'Al', 'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs', 'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm', 'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi', 'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U', 'Np', 'Pu', 'Am', 'Cm', 'Bk', 'Cf', 'Es', 'Fm', 'Md', 'No', 'Lr', 'Rf', 'Db', 'Sg', 'Bh', 'Hs', 'Mt', 'Ds', 'Rg', 'Cp', 'Uut', 'Uuq', 'Uup', 'Uuh', 'Uus', 'Uuo']

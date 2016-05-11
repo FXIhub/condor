@@ -30,7 +30,7 @@ def crystallographic_resolution(wavelength, pixel_center_distance, detector_dist
 
     .. math::
 
-      R_f = \frac{ \lambda }{ \sin\left( \arctan\left( \frac{X}{D} \right) \right) }
+      R_f = \frac{ \lambda }{ 2 \sin\left( \arctan\left( \frac{X}{D} \right) / 2 \right) }
 
     Args:
       :wavelength (float): Photon wavelength :math:`\lambda` in unit meter
@@ -39,7 +39,7 @@ def crystallographic_resolution(wavelength, pixel_center_distance, detector_dist
     
       :detector_distance: Distance :math:`D` between interaction point and detector plane in unit meter
     """
-    return wavelength / numpy.sin( numpy.arctan( pixel_center_distance / detector_distance ) )
+    return wavelength / 2. / numpy.arcsin( numpy.tan( pixel_center_distance / detector_distance ) / 2.)
 
 def resolution_element(wavelength, pixel_center_distance, detector_distance):
     r"""
@@ -47,7 +47,7 @@ def resolution_element(wavelength, pixel_center_distance, detector_distance):
 
     .. math::
 
-      R_h = \frac{ \lambda }{ 2 \, \sin\left( \arctan \left( \frac{X}{D} \right) \right) }
+      R_h = \frac{ \lambda }{ 4 \, \sin\left( \arctan \left( \frac{X}{D} \right) / 2 \right) }
 
     Args:
       :wavelength (float): Photon wavelength :math:`\lambda` in unit meter
