@@ -1,17 +1,52 @@
 language: python
+
 python:
   - "2.6"
   - "2.7"
-# command to install spimage / spsim dependencies
+
+sudo: false
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/libspimage
+    - $HOME/spsim
+    - $HOME/local
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - kubuntu-backports
+    packages:
+      - libpng-dev
+      - libtiff-dev
+      - zlib1g-dev
+      - libfftw3-dev
+      - libhdf5-serial-dev
+      - cmake
+      - gsl-bin
+      - libgsl0-dev
+
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install cmake
-  - sudo apt-get install libpng-dev
-  - sudo apt-get install libtiff-dev
-  - sudo apt-get install zlib1g-dev
-  - sudo apt-get install libhdf5-serial-dev
-  - sudo apt-get install libfftw3-dev 
-  - sudo apt-get install gsl-bin libgsl0-dev
+# Install libspimage
+  - cd $HOME
+  - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
+  - mkdir -p libspimage/build && cd libspimage/build
+  - git pull
+  - cmake -DUSE_CUDA=OFF -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - make -j 2
+  - make install
+  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
+# Install spsim
+  - cd $HOME
+  - if [ ! -d "$HOME/spsim/.git" ]; then git clone https://github.com/FilipeMaia/spsim; else echo 'Using spsim from cached directory'; fi
+  - mkdir -p spsim/build && cd spsim/build
+  - git pull
+  - cmake -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - make -j 2
+  - make install
+  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
 # szip???
 # command to install dependencies
 #install: "pip install -r requirements.txt"
