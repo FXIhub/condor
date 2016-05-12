@@ -21,9 +21,8 @@ addons:
     packages:
       - libpng-dev
       - libtiff-dev
-      - zlib1g-dev
       - libfftw3-dev
-      - libhdf5-serial-dev
+      - libhdf5-dev
       - cmake
       - gsl-bin
       - libgsl0-dev
