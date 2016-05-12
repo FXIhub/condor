@@ -5,7 +5,14 @@ python:
 # command to install spimage / spsim dependencies
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install hdf5
+  - sudo apt-get install cmake
+  - sudo apt-get install libpng-dev
+  - sudo apt-get install libtiff-dev
+  - sudo apt-get install zlib1g-dev
+  - sudo apt-get install libhdf5-serial-dev
+  - sudo apt-get install libfftw3-dev 
+  - sudo apt-get install gsl-bin libgsl0-dev
+# szip???
 # command to install dependencies
 #install: "pip install -r requirements.txt"
 # command to run tests
