@@ -20,9 +20,9 @@ addons:
       - kubuntu-backports
     packages:
       - libpng-dev
-      - libtiff-dev
+      - libtiff5-dev
       - libfftw3-dev
-      - libhdf5-dev
+      - libhdf5-serial-dev
       - cmake
       - gsl-bin
       - libgsl0-dev
