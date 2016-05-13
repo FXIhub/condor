@@ -43,7 +43,7 @@ before_install:
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DCMAKE_C_FLAGS="-DH5_USE_18_API=1 -DH5_USE_16_API=0" -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DCMAKE_C_FLAGS="-DH5_USE_18_API=1 -DH5_USE_16_API=0" -DHDF5_INCLUDE_DIR=/home/travis/build/mhantke/condor/hdf5-1.8.17/hdf5/include -DHDF5_LIBRARY=/home/travis/build/mhantke/condor/hdf5-1.8.17/hdf5/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
