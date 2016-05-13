@@ -37,7 +37,7 @@ before_install:
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DCMAKE_C_FLAGS="-DH5_USE_18_API" -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DCMAKE_C_FLAGS="-DH5_NO_DEPRECATED_SYMBOLS" -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
