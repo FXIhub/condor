@@ -29,16 +29,16 @@ addons:
 
 before_install:
 # Install hdf5
-  - wget http://www.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz
-  - tar xvzf hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz
-  - cd hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared
+  - wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar
+  - tar xvzf hdf5-1.8.17.tar
+  - cd hdf5-1.8.17
   - ./configure
   - make
   - sudo make install
+#  - cat /usr/include/H5public.h
+#  - cat /usr/include/H5version.h
+#  - dpkg -l | grep hdf5
 # Install libspimage
-  - cat /usr/include/H5public.h
-  - cat /usr/include/H5version.h
-  - dpkg -l | grep hdf5
   - cd $HOME
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
