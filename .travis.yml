@@ -32,6 +32,7 @@ before_install:
   - echo $HOME
 # Install hdf5
   - HDF5DIR="$HOME/build/mhantke/condor/hdf5-1.8.17/hdf5"
+  - ls $HDF5DIR
   - if [ ! -d "$HDF5DIR" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz && tar xvzf hdf5-1.8.17.tar.gz; cd hdf5-1.8.17 && ./configure && make && sudo make install; else echo 'Using hdf5 from cached directory'; fi
 #  - cat /usr/include/H5public.h
 #  - cat /usr/include/H5version.h
