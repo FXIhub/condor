@@ -30,6 +30,7 @@ addons:
 before_install:
 # Install libspimage
   - cat /usr/include/H5public.h
+  - dpkg -l | grep hdf5
   - cd $HOME
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
