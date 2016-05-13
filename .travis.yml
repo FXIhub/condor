@@ -29,8 +29,8 @@ addons:
 
 before_install:
 # Install hdf5
-  - wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar
-  - tar xvzf hdf5-1.8.17.tar
+  - wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz
+  - tar xvzf hdf5-1.8.17.tar.gz
   - cd hdf5-1.8.17
   - ./configure
   - make
