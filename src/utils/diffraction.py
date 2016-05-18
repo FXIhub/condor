@@ -39,7 +39,7 @@ def crystallographic_resolution(wavelength, pixel_center_distance, detector_dist
     
       :detector_distance: Distance :math:`D` between interaction point and detector plane in unit meter
     """
-    return wavelength / 2. / numpy.arcsin( numpy.tan( pixel_center_distance / detector_distance ) / 2.)
+    return wavelength / 2. / numpy.sin( numpy.arctan( pixel_center_distance / detector_distance ) / 2.)
 
 def resolution_element(wavelength, pixel_center_distance, detector_distance):
     r"""

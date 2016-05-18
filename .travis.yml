@@ -32,8 +32,8 @@ before_install:
   - echo $HOME
 # Install hdf5
   - HDF5DIR="$HOME/build/mhantke/condor/hdf5-1.8.17/hdf5"
-  - ls $HDF5DIR
-  - if [ ! -d "$HDF5DIR" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz && tar xvzf hdf5-1.8.17.tar.gz; cd hdf5-1.8.17 && ./configure && make && sudo make install; else echo 'Using hdf5 from cached directory'; fi
+  - if [ ! -d "$HDF5DIR/lib" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz && tar xvzf hdf5-1.8.17.tar.gz; cd hdf5-1.8.17 && ./configure && make && sudo make install; else echo 'Using hdf5 from cached directory'; fi
+  - ls $HDF5DIR/lib
 #  - cat /usr/include/H5public.h
 #  - cat /usr/include/H5version.h
 #  - dpkg -l | grep hdf5
@@ -42,7 +42,7 @@ before_install:
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DCMAKE_C_FLAGS="-DH5_USE_18_API" -DHDF5_INCLUDE_DIR=$HOME/build/mhantke/condor/hdf5-1.8.17/hdf5/include -DHDF5_LIBRARY=$HOME/build/mhantke/condor/hdf5-1.8.17/hdf5/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DCMAKE_C_FLAGS="-DH5_USE_18_API" -DHDF5_INCLUDE_DIR=$HDF5DIR/include -DHDF5_LIBRARY=$HDF5DIR/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
