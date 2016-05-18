@@ -30,12 +30,12 @@ addons:
       - gsl-bin
       - libgsl0-dev
 # For scipy (https://github.com/scipy/scipy/blob/master/.travis.yml)
-      - libatlas-dev
-      - libatlas-base-dev
-      - liblapack-dev
-      - gfortran
-      - libgmp-dev
-      - libmpfr-dev
+#      - libatlas-dev
+#      - libatlas-base-dev
+#      - liblapack-dev
+#      - gfortran
+#      - libgmp-dev
+#      - libmpfr-dev
 # Python stuff
       - python-scipy
       - python-numpy
