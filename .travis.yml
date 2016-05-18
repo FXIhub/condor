@@ -72,7 +72,7 @@ before_install:
 # command to install dependencies
 install:
 # Install h5py
-  - HDF5_DIR=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/
+  - export HDF5_DIR=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/
   - pip install h5py
 # Install condor
   - cd $HOME/build/mhantke/condor
