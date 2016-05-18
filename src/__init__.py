@@ -26,6 +26,7 @@ from .experiment import Experiment
 from .source import Source
 from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleAtoms
 from .detector import Detector
+from .tests import test_all
 
 def _init():    
     # Log to stdout
