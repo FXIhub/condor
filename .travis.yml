@@ -90,4 +90,4 @@ script:
   - which python
   - python -c "import condor; print condor.__file__"
   - python -c "import condor.tests.test_all"
-  - python -m unittest -v condor.test_all
+  - python -m unittest -v condor.tests.test_all
