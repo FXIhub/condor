@@ -10,6 +10,7 @@ cache:
   directories:
     - $HOME/.cache/pip
     - $HOME/hdf5-1.8.17
+    - $HOME/nfft-3.2.3
     - $HOME/libspimage
     - $HOME/spsim
     - $HOME/local
@@ -40,19 +41,22 @@ before_install:
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DCMAKE_C_FLAGS="-DH5_USE_18_API" -DHDF5_INCLUDE_DIR=$HDF5DIR/include -DHDF5_LIBRARY=$HDF5DIR/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HDF5DIR/include -DHDF5_LIBRARY=$HDF5DIR/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
+# Install NFFT
+  - cd $HOME
+  - if [ ! -d "$HOME/nfft-3.2.3/src" ]; then wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz && tar xvzf nfft-3.2.3.tar.gz; cd nfft-3.2.3 && ./configure --prefix=${HOME}/local && make && sudo make install; else echo 'Using NFFT from cached directory'; fi
 # Install spsim
   - cd $HOME
   - if [ ! -d "$HOME/spsim/.git" ]; then git clone https://github.com/FilipeMaia/spsim; else echo 'Using spsim from cached directory'; fi
   - mkdir -p spsim/build && cd spsim/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DHDF5_INCLUDE_DIR=$HDF5DIR/include -DHDF5_LIBRARY=$HDF5DIR/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HDF5DIR/include -DHDF5_LIBRARY=$HDF5DIR/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
 # szip???
 # command to install dependencies
-#install: "pip install -r requirements.txt"
+install: "pip install -r requirements.txt"
 # command to run tests
 script: python -m unittest -v condor.tests.test_all
