@@ -80,4 +80,4 @@ install:
 # command to run tests
 script:
   - python -m unittest -v condor.tests.test_all
-  - python example.py
+  - cd $HOME/build/mhantke/condor/; python example.py
