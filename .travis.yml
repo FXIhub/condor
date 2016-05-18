@@ -36,6 +36,10 @@ addons:
       - gfortran
       - libgmp-dev
       - libmpfr-dev
+# Python stuff
+      - python-scipy
+      - python-numpy
+      - python-h5py
 
 before_install:
   - ls $HOME/build/mhantke/condor
@@ -75,7 +79,7 @@ before_install:
 # szip???
 # command to install dependencies
 install:
-  - pip install -r $HOME/build/mhantke/condor/requirements.txt
+#  - pip install -r $HOME/build/mhantke/condor/requirements.txt
   - cd $HOME/build/mhantke/condor
   - python setup.py install
 # command to run tests
