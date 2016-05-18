@@ -45,19 +45,16 @@ addons:
       - python-h5py
 
 before_install:
-  - ls $HOME/build/mhantke/condor
   - echo $HOME
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
 # Install NFFT
   - cd $HOME
-  - ls $HOME/nfft-3.2.3
-  - if [ ! -d "$HOME/nfft-3.2.3/src" ]; then wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz && tar xvzf nfft-3.2.3.tar.gz; cd nfft-3.2.3 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using NFFT from cached directory'; fi
+  - if [ ! -d "$HOME/nfft-3.2.3/include" ]; then wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz && tar xvzf nfft-3.2.3.tar.gz; cd nfft-3.2.3 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using NFFT from cached directory'; fi
 # Install hdf5
   - cd $HOME
 #  - ls $HOME/hdf5-1.8.17
 #  - if [ ! -d "hdf5-1.8.17/src" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz && tar xvzf hdf5-1.8.17.tar.gz; cd hdf5-1.8.17 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using hdf5 from cached directory'; fi
-  - wget http://www.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz
-  - tar xvzf hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz
+  - if [ ! -d "$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/src" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
   - export LD_LIBRARY_PATH=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
 # Install libspimage
   - cd $HOME
