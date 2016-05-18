@@ -30,6 +30,7 @@ addons:
       - libgsl0-dev
 
 before_install:
+  - ls $HOME/mhantke/build/condor
   - echo $HOME
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
 # Install NFFT
@@ -61,8 +62,8 @@ before_install:
 # szip???
 # command to install dependencies
 install:
-  - pip install -r $HOME/mhantke/condor/requirements.txt
-  - cd $HOME/mhantke/condor
+  - pip install -r $HOME/mhantke/build/condor/requirements.txt
+  - cd $HOME/mhantke/build/condor
   - python setup.py install
 # command to run tests
 script: python -m unittest -v condor.tests.test_all
