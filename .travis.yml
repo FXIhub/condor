@@ -29,6 +29,13 @@ addons:
       - cmake
       - gsl-bin
       - libgsl0-dev
+# For scipy (https://github.com/scipy/scipy/blob/master/.travis.yml)
+      - libatlas-dev
+      - libatlas-base-dev
+      - liblapack-dev
+      - gfortran
+      - libgmp-dev
+      - libmpfr-dev
 
 before_install:
   - ls $HOME/build/mhantke/condor
