@@ -30,7 +30,7 @@ addons:
       - libgsl0-dev
 
 before_install:
-  - ls $HOME/mhantke/build/condor
+  - ls $HOME/build/mhantke/condor
   - echo $HOME
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
 # Install NFFT
@@ -41,6 +41,9 @@ before_install:
   - cd $HOME
   - ls $HOME/hdf5-1.8.17
   - if [ ! -d "hdf5-1.8.17/src" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz && tar xvzf hdf5-1.8.17.tar.gz; cd hdf5-1.8.17 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using hdf5 from cached directory'; fi
+  - wget http://www.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz
+  - tar xvzf hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz
+  - 
 # Install libspimage
   - cd $HOME
   - ls $HOME/libspimage
@@ -62,8 +65,8 @@ before_install:
 # szip???
 # command to install dependencies
 install:
-  - pip install -r $HOME/mhantke/build/condor/requirements.txt
-  - cd $HOME/mhantke/build/condor
+  - pip install -r $HOME/build/mhantke/condor/requirements.txt
+  - cd $HOME/build/mhantke/condor
   - python setup.py install
 # command to run tests
 script: python -m unittest -v condor.tests.test_all
