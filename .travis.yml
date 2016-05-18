@@ -88,4 +88,7 @@ install:
   - cd $HOME/build/mhantke/condor
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
 # command to run tests
-script: python -m unittest -v condor.tests.test_all
+script:
+  - which python
+  - python -c "import condor"
+  - python -m unittest -v condor.tests.test_all
