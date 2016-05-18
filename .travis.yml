@@ -60,6 +60,9 @@ before_install:
   - make install
 # szip???
 # command to install dependencies
-install: "pip install -r requirements.txt"
+install:
+  - pip install -r $HOME/mhantke/condor/requirements.txt
+  - cd $HOME/mhantke/condor
+  - python setup.py install
 # command to run tests
 script: python -m unittest -v condor.tests.test_all
