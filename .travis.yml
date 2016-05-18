@@ -9,7 +9,8 @@ sudo: false
 cache:
   directories:
     - $HOME/.cache/pip
-    - $HOME/hdf5-1.8.17
+#    - $HOME/hdf5-1.8.17
+    - $HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared
     - $HOME/nfft-3.2.3
     - $HOME/libspimage
     - $HOME/spsim
@@ -39,18 +40,19 @@ before_install:
   - if [ ! -d "$HOME/nfft-3.2.3/src" ]; then wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz && tar xvzf nfft-3.2.3.tar.gz; cd nfft-3.2.3 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using NFFT from cached directory'; fi
 # Install hdf5
   - cd $HOME
-  - ls $HOME/hdf5-1.8.17
-  - if [ ! -d "hdf5-1.8.17/src" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz && tar xvzf hdf5-1.8.17.tar.gz; cd hdf5-1.8.17 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using hdf5 from cached directory'; fi
+#  - ls $HOME/hdf5-1.8.17
+#  - if [ ! -d "hdf5-1.8.17/src" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz && tar xvzf hdf5-1.8.17.tar.gz; cd hdf5-1.8.17 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using hdf5 from cached directory'; fi
   - wget http://www.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz
   - tar xvzf hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz
-  - 
+  - export LD_LIBRARY_PATH=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
 # Install libspimage
   - cd $HOME
   - ls $HOME/libspimage
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/local/include -DHDF5_LIBRARY=$HOME/local/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+#  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/local/include -DHDF5_LIBRARY=$HOME/local/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
 # Install spsim
@@ -59,7 +61,8 @@ before_install:
   - if [ ! -d "$HOME/spsim/.git" ]; then git clone https://github.com/FilipeMaia/spsim; else echo 'Using spsim from cached directory'; fi
   - mkdir -p spsim/build && cd spsim/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/local/include -DHDF5_LIBRARY=$HOME/local/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+#  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/local/include -DHDF5_LIBRARY=$HOME/local/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
 # szip???
