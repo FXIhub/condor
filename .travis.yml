@@ -79,5 +79,5 @@ install:
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
 # command to run tests
 script:
-  - cd $HOME
   - python -m unittest -v condor.tests.test_all
+  - python example.py

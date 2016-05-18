@@ -48,11 +48,11 @@ examples = [
         "dir": this_dir + "/examples/scripts/simple",
         "cmd": "python example.py",
     },
-    {
-        "name": "PARTICLE ATOMS PDB FETCH (script)",
-        "dir": this_dir + "/examples/scripts/pdb_fetch",
-        "cmd": "python example.py",
-    },
+#    {
+#        "name": "PARTICLE ATOMS PDB FETCH (script)",
+#        "dir": this_dir + "/examples/scripts/pdb_fetch",
+#        "cmd": "python example.py",
+#   },
 
 ]
 
