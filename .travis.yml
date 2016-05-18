@@ -38,7 +38,7 @@ before_install:
   - if [ ! -d "hdf5-1.8.17/src" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.17.tar.gz && tar xvzf hdf5-1.8.17.tar.gz; cd hdf5-1.8.17 && ./configure --prefix=${HOME}/local && make && sudo make install; else echo 'Using hdf5 from cached directory'; fi
 # Install NFFT
   - cd $HOME
-  - $HOME/nfft-3.2.3
+  - ls $HOME/nfft-3.2.3
   - if [ ! -d "$HOME/nfft-3.2.3/src" ]; then wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz && tar xvzf nfft-3.2.3.tar.gz; cd nfft-3.2.3 && ./configure --prefix=${HOME}/local && make && sudo make install; else echo 'Using NFFT from cached directory'; fi
 # Install libspimage
   - cd $HOME
@@ -51,7 +51,7 @@ before_install:
   - make install
 # Install spsim
   - cd $HOME
-  - $HOME/spsim
+  - ls $HOME/spsim
   - if [ ! -d "$HOME/spsim/.git" ]; then git clone https://github.com/FilipeMaia/spsim; else echo 'Using spsim from cached directory'; fi
   - mkdir -p spsim/build && cd spsim/build
   - git pull
