@@ -32,17 +32,10 @@ addons:
       - cmake
       - gsl-bin
       - libgsl0-dev
-# For scipy (https://github.com/scipy/scipy/blob/master/.travis.yml)
-#      - libatlas-dev
-#      - libatlas-base-dev
-#      - liblapack-dev
-#      - gfortran
-#      - libgmp-dev
-#      - libmpfr-dev
 # Python stuff
       - python-scipy
       - python-numpy
-      - python-h5py
+#      - python-h5py
 
 before_install:
   - echo $HOME
@@ -76,18 +69,15 @@ before_install:
   - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
-# szip???
 # command to install dependencies
 install:
-#  - pip install -r $HOME/build/mhantke/condor/requirements.txt
-#  - HDF5_DIR=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/
-#  - pip install h5py
+# Install h5py
+  - HDF5_DIR=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/
+  - pip install h5py
+# Install condor
   - cd $HOME/build/mhantke/condor
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
 # command to run tests
 script:
   - cd $HOME
-  - which python
-  - python -c "import condor; print condor.__file__"
-  - python -c "import condor.tests.test_all"
   - python -m unittest -v condor.tests.test_all

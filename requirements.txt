@@ -1,4 +1,0 @@
-# Requirements for pip installation
-numpy
-h5py
-scipy
