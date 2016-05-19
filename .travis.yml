@@ -64,7 +64,6 @@ before_install:
   - make -j 2
   - make install
   - ls -alh $HOME/local/lib
-  - ls -alh $HOME/local/lib64
   - ls -alh /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
 # Command to install dependencies
 install:
