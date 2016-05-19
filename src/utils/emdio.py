@@ -164,12 +164,12 @@ def preproc_map_auto(map3d_raw, ed_water, ed_particle, water_layer=0.1):
     v_particle = numpy.mean(map3d_raw[map3d_bin_filled])
     ed_map3d = (ed_water + (map3d_raw-v_water)/(v_particle-v_water)*(ed_particle-ed_water))/ed_particle * map3d_bin_filled
 
-    import h5py
-    with h5py.File("/Users/hantke/test.h5","w") as f:
-        f["mask"] = mask
-        f["ed_map3d"] = ed_map3d
-        f["map3d_raw"] = map3d_raw
-        f["map3d_bin_filled"] = map3d_bin_filled
+    #import h5py
+    #with h5py.File("/Users/hantke/test.h5","w") as f:
+    #    f["mask"] = mask
+    #    f["ed_map3d"] = ed_map3d
+    #    f["map3d_raw"] = map3d_raw
+    #    f["map3d_bin_filled"] = map3d_bin_filled
     return ed_map3d
 
 def preproc_map_manual(map3d_raw, offset, factor):
