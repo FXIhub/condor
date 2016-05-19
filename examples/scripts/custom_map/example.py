@@ -5,7 +5,8 @@ this_dir = os.path.dirname(os.path.realpath(__file__))
 try:
     import matplotlib.pyplot as pypl
     plotting = True
-except:
+except Exception,e:
+    print str(e)
     plotting = False
 
 import condor
