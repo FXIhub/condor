@@ -14,6 +14,6 @@ E = condor.Experiment(src, {"particle_sphere" : par}, det)
 # Calculate diffraction pattern
 res = E.propagate()
 
-# Inspect output
+# Arrays for Fourier and real space
 data_fourier = res["entry_1"]["data_1"]["data_fourier"]
 real_space = numpy.fft.fftshift(numpy.fft.ifftn(data_fourier))

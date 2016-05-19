@@ -1,5 +1,11 @@
 import numpy
-import matplotlib.pyplot as pypl
+
+try:
+    import matplotlib.pyplot as pypl
+    plotting = True
+except:
+    plotting = False
+
 import os, shutil
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -59,8 +65,9 @@ for angle_d in angles_d:
         res = E.propagate()
         real_space = numpy.fft.fftshift(numpy.fft.ifftn(res["entry_1"]["data_1"]["data_fourier"]))
         vmin = numpy.log10(res["entry_1"]["data_1"]["data"].max()/10000.)
-        pypl.imsave(out_dir + "/%s_%2.2fdeg.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
-        pypl.imsave(out_dir + "/%s_rs_%2.2fdeg.png" % (s,angle_d), abs(real_space))
+        if plotting:
+            pypl.imsave(out_dir + "/%s_%2.2fdeg.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
+            pypl.imsave(out_dir + "/%s_rs_%2.2fdeg.png" % (s,angle_d), abs(real_space))
     
     if True:
         # Map (spheroid)
@@ -71,8 +78,9 @@ for angle_d in angles_d:
         res = E.propagate()
         real_space = numpy.fft.fftshift(numpy.fft.ifftn(res["entry_1"]["data_1"]["data_fourier"]))
         vmin = numpy.log10(res["entry_1"]["data_1"]["data"].max()/10000.)
-        pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
-        pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
+        if plotting:
+            pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
+            pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
 
     # Box
     if True:
@@ -87,14 +95,15 @@ for angle_d in angles_d:
         s = "particle_map_custom"
         E = condor.Experiment(src, {s : par}, det)
         res = E.propagate()
-        data_fourier = res["entry_1"]["data_1"]["data_fourier"]
-        #data_fourier = abs(data_fourier)*numpy.exp(-1.j*numpy.angle(data_fourier))
-        real_space = numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(data_fourier)))
-        vmin = numpy.log10(res["entry_1"]["data_1"]["data"].max()/10000.)
-        pypl.imsave(out_dir + "/%s_map.png" % (s),map3d.sum(0))
-        pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
-        pypl.imsave(out_dir + "/%s_%2.2f_phases.png" % (s,angle_d), numpy.angle(res["entry_1"]["data_1"]["data_fourier"])%(2*numpy.pi))
-        pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
+        if plotting:
+            data_fourier = res["entry_1"]["data_1"]["data_fourier"]
+            #data_fourier = abs(data_fourier)*numpy.exp(-1.j*numpy.angle(data_fourier))
+            real_space = numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(data_fourier)))
+            vmin = numpy.log10(res["entry_1"]["data_1"]["data"].max()/10000.)
+            pypl.imsave(out_dir + "/%s_map.png" % (s),map3d.sum(0))
+            pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
+            pypl.imsave(out_dir + "/%s_%2.2f_phases.png" % (s,angle_d), numpy.angle(res["entry_1"]["data_1"]["data_fourier"])%(2*numpy.pi))
+            pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
 
     if True:
         # Atoms (box)
@@ -114,17 +123,19 @@ for angle_d in angles_d:
         dx = long_diameter/(N_long-1)
         for (x,y,z) in zip(X.ravel(),Y.ravel(),Z.ravel()):
             proj[int(round(y/dx)),int(round(x/dx))] += 1
-        pypl.imsave(out_dir + "/%s_proj.png" % (s),proj)
+        if plotting:
+            pypl.imsave(out_dir + "/%s_proj.png" % (s),proj)
         atomic_positions = numpy.array([[x,y,z] for x,y,z in zip(X.ravel(),Y.ravel(),Z.ravel())])
         atomic_numbers   = numpy.ones(atomic_positions.size/3, dtype=numpy.int16)
         par = condor.ParticleAtoms(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
         s = "particle_atoms"
         E = condor.Experiment(src, {s : par}, det)
         res = E.propagate()
-        real_space = numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(res["entry_1"]["data_1"]["data_fourier"])))
-        fourier_space = res["entry_1"]["data_1"]["data_fourier"]
-        vmin = numpy.log10(res["entry_1"]["data_1"]["data"].max()/10000.)
-        pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
-        pypl.imsave(out_dir + "/%s_%2.2f_phases.png" % (s,angle_d), numpy.angle(fourier_space)%(2*numpy.pi))
-        pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
+        if plotting:
+            real_space = numpy.fft.fftshift(numpy.fft.ifftn(numpy.fft.fftshift(res["entry_1"]["data_1"]["data_fourier"])))
+            fourier_space = res["entry_1"]["data_1"]["data_fourier"]
+            vmin = numpy.log10(res["entry_1"]["data_1"]["data"].max()/10000.)
+            pypl.imsave(out_dir + "/%s_%2.2f.png" % (s,angle_d), numpy.log10(res["entry_1"]["data_1"]["data"]), vmin=vmin)
+            pypl.imsave(out_dir + "/%s_%2.2f_phases.png" % (s,angle_d), numpy.angle(fourier_space)%(2*numpy.pi))
+            pypl.imsave(out_dir + "/%s_rs_%2.2f.png" % (s,angle_d), abs(real_space))
     
