@@ -43,6 +43,7 @@ def fetch_map(emd_id):
     return read_map(filename)
     
 def read_map(filename):
+    log.log_warning(logger, "Automatic scaling of EM maps may not be reliable. Please make sure to check your map after using this functionality.")
     # CCP4 map file format
     # http://www.ccp4.ac.uk/html/maplib.html
     with open(filename, "rb") as f:
@@ -76,7 +77,7 @@ def read_map(filename):
         if MODE == 3:
             log.log_and_raise_error(logger, "Map file data type \"MODE=%i\" is not implemented yet." % MODE)
         if MODE not in [0,2,5]:
-            log.log_warning(logger, "Map file data type \"MODE=%i\" not supported yet and may not work." % MODE)
+            log.log_warning(logger, "Map file data type \"MODE=%i\" not supported yet and may not work reliably." % MODE)
         #11      X length        Cell Dimensions (Angstroms)
         #12      Y length                     "
         #13      Z length                     "
