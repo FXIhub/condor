@@ -63,10 +63,12 @@ before_install:
   - git pull
   #- cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - cmake -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
+  - cat CMakeCache.txt
   - make -j 2
   - make install
   - ls -alh $HOME/local/lib
   - ls -alh /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
+  - ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/lib/python2.7/site-packages
 # Command to install dependencies
 install:
 # Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
@@ -77,7 +79,7 @@ install:
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
 # command to run tests
 script:
-  - export PYTHONPATH=${PYTHONPATH}:/home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
+  - export PYTHONPATH=${PYTHONPATH}:/home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages:/home/travis/virtualenv/python2.7_with_system_site_packages/lib/python2.7/site-packages
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64
   - python -m unittest -v condor.tests.test_all
   - cd $HOME/build/mhantke/condor/; python examples.py
