@@ -28,11 +28,11 @@ examples = [
 #        "dir": this_dir + "/examples/scripts/custom_map",
 #        "cmd": "python example.py",
 #    },
-    {
-        "name": "PARTICLE MAP EMD FETCH (script)",
-        "dir": this_dir + "/examples/scripts/emd_fetch",
-        "cmd": "python example.py",
-    },
+#    {
+#        "name": "PARTICLE MAP EMD FETCH (script)",
+#        "dir": this_dir + "/examples/scripts/emd_fetch",
+#        "cmd": "python example.py",
+#    },
     {
         "name": "PARTICLE MAP MODELS (script)",
         "dir": this_dir + "/examples/scripts/particle_models",
