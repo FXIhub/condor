@@ -78,7 +78,8 @@ class ParticleAtoms(AbstractParticle):
                  position = None,  position_variation = None, position_spread = None, position_variation_n = None):
         try:
             import spsim
-        except:
+        except Exception,e:
+            print str(e)
             log_and_raise_error(logger, "Cannot import spsim module. This module is necessary to simulate diffraction for particle model of discrete atoms. Please install spsim from https://github.com/FilipeMaia/spsim and try again.")
             return
         # Initialise base class
