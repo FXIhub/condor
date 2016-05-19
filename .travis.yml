@@ -34,6 +34,7 @@ addons:
 # Python stuff (for discovering these packages set in virtualenv: system_site_packages: true)
       - python-scipy
       - python-numpy
+      - python-h5py
 
 before_install:
   - echo $HOME
@@ -72,8 +73,8 @@ before_install:
 # Command to install dependencies
 install:
 # Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
-  - export HDF5_DIR=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/
-  - pip install h5py
+#  - export HDF5_DIR=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/
+#  - pip install h5py
 # Install condor
   - cd $HOME/build/mhantke/condor
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
