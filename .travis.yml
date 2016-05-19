@@ -63,6 +63,8 @@ before_install:
   - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
+  - ls -alh $HOME/local/lib
+  - ls -alh /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
 # Command to install dependencies
 install:
 # Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
