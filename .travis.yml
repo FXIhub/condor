@@ -55,7 +55,8 @@ before_install:
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
   - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy ..
-  - make -j 2
+  - cat CMakeCache.txt
+  - make -j 2 VERBOSE=1
   - make install
 # Install spsim
   - cd $HOME
@@ -65,9 +66,9 @@ before_install:
   - mkdir -p spsim/build && cd spsim/build
   - git pull
   #- cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
-  - cmake -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy ..
   - cat CMakeCache.txt
-  - make -j 2
+  - make -j 2 VERBOSE=1
   - make install
   - ls -alh $HOME/local/lib
   - ls -alh /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
