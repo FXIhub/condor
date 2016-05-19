@@ -61,6 +61,7 @@ examples = [
 
 ]
 
+nerrors = 0
 
 print "-"*100
 print ""
@@ -73,8 +74,14 @@ for i,e in enumerate(examples):
     print ""
     if error != 0:
         raise Exception(">>> Example %i (%s) failed. Abort." % (i+1,e["name"]))
+        nerrors += 1
     else:
         print ">>> Success!"
     print ""
     print "-"*100
     print ""
+
+if nerrors == 0:
+    print "SUCCESS: All examples finished successfully."
+else:
+    print "ERROR: %i/%i example(s) failed." % (nerrors, len(examples))
