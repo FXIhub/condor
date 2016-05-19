@@ -49,6 +49,7 @@ before_install:
   - if [ ! -d "$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
   - export LD_LIBRARY_PATH=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
 # Install libspimage
+  - ls /usr/include/
   - cd $HOME
   - ls $HOME/libspimage
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
