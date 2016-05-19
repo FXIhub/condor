@@ -88,4 +88,4 @@ script:
   # UNITTESTS
   - python -m unittest -v condor.tests.test_all
   # EXAMPLES
-  - cd $HOME/build/mhantke/condor/; python examples.py
+  - cd $HOME/build/mhantke/condor/; python .travis_examples.py
