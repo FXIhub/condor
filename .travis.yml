@@ -56,7 +56,7 @@ before_install:
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_LIBRARY=/usr/lib/libpython2.7.so ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 -DPYTHON_LIBRARY=/usr/lib/libpython2.7.so ..
   - cat CMakeCache.txt
   - make -j 2 VERBOSE=1
   - make install
@@ -68,7 +68,7 @@ before_install:
   - mkdir -p spsim/build && cd spsim/build
   - git pull
   #- cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_LIBRARY=/usr/lib/libpython2.7.so ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_LIBRARY=/usr/lib/libpython2.7.so -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 ..
   - cat CMakeCache.txt
   - make -j 2 VERBOSE=1
   - make install
