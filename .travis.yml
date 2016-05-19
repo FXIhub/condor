@@ -4,7 +4,6 @@ python:
   - "2.7"
 
 sudo: false
-#sudo: true
 
 virtualenv:
   system_site_packages: true
@@ -31,7 +30,7 @@ addons:
       - cmake
       - gsl-bin
       - libgsl0-dev
-# Python stuff
+# Python stuff (for discovering these packages set in virtualenv: system_site_packages: true)
       - python-scipy
       - python-numpy
 
@@ -63,7 +62,7 @@ before_install:
   - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include -DHDF5_LIBRARY=$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local ..
   - make -j 2
   - make install
-# command to install dependencies
+# Command to install dependencies
 install:
 # Install h5py
   - export HDF5_DIR=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/
