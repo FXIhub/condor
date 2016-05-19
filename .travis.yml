@@ -37,7 +37,7 @@ addons:
 
 before_install:
   - echo $HOME
-  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
+  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64
 # Install NFFT
   - cd $HOME
   - if [ ! -d "$HOME/nfft-3.2.3/include" ]; then wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz && tar xvzf nfft-3.2.3.tar.gz; cd nfft-3.2.3 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using NFFT from cached directory'; fi
@@ -64,6 +64,7 @@ before_install:
   - make -j 2
   - make install
   - ls -alh $HOME/local/lib
+  - ls -alh $HOME/local/lib64
   - ls -alh /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
 # Command to install dependencies
 install:
@@ -76,6 +77,6 @@ install:
 # command to run tests
 script:
   - export PYTHONPATH=${PYTHONPATH}:/home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
-  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib
+  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64
   - python -m unittest -v condor.tests.test_all
   - cd $HOME/build/mhantke/condor/; python examples.py
