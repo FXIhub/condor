@@ -24,7 +24,7 @@ examples = [
         "cmd": "condor",
     },
     {
-        "name": "PARTICLE MAP (script)",
+        "name": "PARTICLE CUSTOM MAP (script)",
         "dir": this_dir + "/examples/scripts/custom_map",
         "cmd": "python example.py",
     },
@@ -53,13 +53,28 @@ examples = [
         "dir": this_dir + "/examples/scripts/pdb_fetch",
         "cmd": "python example.py",
    },
+    {
+        "name": "PARTICLE ATOMS PDB FILE (script)",
+        "dir": this_dir + "/examples/scripts/pdb",
+        "cmd": "python example.py",
+   },
 
 ]
 
-    
+
+print "-"*100
+print ""
 for i,e in enumerate(examples):
-    print "Starting example %i: %s" % (i, e["name"])
+    print ">>> Example %i/%i: %s" % (i+1, len(examples), e["name"])
     cmd = "cd %s; %s" % (e["dir"],e["cmd"])
     print cmd
-    os.system(cmd)
-    print "Exiting example %i" % i
+    print ""
+    error = os.system(cmd)
+    print ""
+    if error != 0:
+        raise Exception(">>> Example %i (%s) failed. Abort." % (i+1,e["name"]))
+    else:
+        print ">>> Success!"
+    print ""
+    print "-"*100
+    print ""
