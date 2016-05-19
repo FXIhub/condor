@@ -40,7 +40,7 @@ addons:
 before_install:
   - echo $HOME
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64
-  - export PYTHONPATH=${HOME}/local_py:${PYTHONPATH}
+  - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
 # Install NFFT
   - cd $HOME
   - if [ ! -d "$HOME/nfft-3.2.3/include" ]; then wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz && tar xvzf nfft-3.2.3.tar.gz; cd nfft-3.2.3 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using NFFT from cached directory'; fi
