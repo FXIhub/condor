@@ -31,6 +31,7 @@ addons:
       - gsl-bin
       - libgsl0-dev
       - swig
+      - gcc-4.9
 # Python stuff (for discovering these packages set in virtualenv: system_site_packages: true)
       - python-scipy
       - python-numpy
