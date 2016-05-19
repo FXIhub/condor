@@ -23,11 +23,11 @@ examples = [
         "dir": this_dir + "/examples/configfile/particle_atoms",
         "cmd": "condor",
     },
-    {
-        "name": "PARTICLE CUSTOM MAP (script)",
-        "dir": this_dir + "/examples/scripts/custom_map",
-        "cmd": "python example.py",
-    },
+#    {
+#        "name": "PARTICLE CUSTOM MAP (script)",
+#        "dir": this_dir + "/examples/scripts/custom_map",
+#        "cmd": "python example.py",
+#    },
     {
         "name": "PARTICLE MAP EMD FETCH (script)",
         "dir": this_dir + "/examples/scripts/emd_fetch",
