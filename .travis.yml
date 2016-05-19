@@ -80,7 +80,7 @@ install:
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
 # command to run tests
 script:
-  - export PYTHONPATH=/home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages:/home/travis/virtualenv/python2.7_with_system_site_packages/lib/python2.7/site-packages:${PYTHONPATH}
+  - export PYTHONPATH=/home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages:/home/travis/virtualenv/python2.7_with_system_site_packages/lib/python2.7/site-packages
   - echo $PYTHONPATH
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64:/home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages:/home/travis/virtualenv/python2.7_with_system_site_packages/lib/python2.7/site-packages
   - echo $LD_LIBRARY_PATH
