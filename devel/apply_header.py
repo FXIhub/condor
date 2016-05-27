@@ -1,29 +1,38 @@
 #!/usr/bin/env python
 import os
 
-HEADER = ["# -----------------------------------------------------------------------------------------------------\n",
-          "# CONDOR\n",
-          "# Simulator for diffractive single-particle imaging experiments with X-ray lasers\n",
-          "# http://xfel.icm.uu.se/condor/\n",
-          "# -----------------------------------------------------------------------------------------------------\n",
-          "# Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg\n",
-          "# Condor is distributed under the terms of the GNU General Public License\n",
-          "# -----------------------------------------------------------------------------------------------------\n",
-          "# This program is free software; you can redistribute it and/or modify\n",
-          "# it under the terms of the GNU General Public License as published by\n",
-          "# the Free Software Foundation; either version 2 of the License, or\n",
-          "# (at your option) any later version.\n",
-          "# This program is distributed in the hope that it will be useful,\n",
-          "# but without any warranty; without even the implied warranty of\n",
-          "# merchantability or fitness for a pariticular purpose. See the\n",
-          "# GNU General Public License for more details.\n",
-          "# You should have received a copy of the GNU General Public License\n",
-          "# along with this program; if not, write to the Free Software\n",
-          "# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA\n",
-          "# -----------------------------------------------------------------------------------------------------\n",
-          "# General note:\n",
-          "# All variables are in SI units by default. Exceptions explicit by variable name.\n",
-          "# -----------------------------------------------------------------------------------------------------\n"]
+HEADER = """# -----------------------------------------------------------------------------------------------------
+# CONDOR
+# Simulator for diffractive single-particle imaging experiments with X-ray lasers
+# http://xfel.icm.uu.se/condor/
+# -----------------------------------------------------------------------------------------------------
+# Copyright 2016 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
+# Condor is distributed under the terms of the BSD 2-Clause License
+# -----------------------------------------------------------------------------------------------------
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# -----------------------------------------------------------------------------------------------------
+# General note:
+# All variables are in SI units by default. Exceptions explicit by variable name.
+# -----------------------------------------------------------------------------------------------------
+""".splitlines(True)
 
 
 str_starts_with = lambda s,s_start: s[:len(s_start)] == s_start

@@ -5,4 +5,4 @@ http://lmb.icm.uu.se/condor/
 Documentation: http://lmb.icm.uu.se/condor/static/docs/index.html
 
 Copyright 2014 Max Hantke, Filipe R.N.C. Maia, Tomas Ekeberg
-Condor is distributed under the terms of the GNU General Public License
+Condor is distributed under the terms of the BSD 2-Clause License
