@@ -48,12 +48,14 @@ import log
 
 def fetch_map(emd_id):
     url = "ftp://ftp.ebi.ac.uk/pub/databases/emdb/structures/EMD-%s/map/emd_%s.map.gz" % (str(emd_id),str(emd_id))
+    logging.log_debug(logger, "Downloading file for EMDID %s from URL %s" % (emd_id, url))
     filename = "./emd_%s.map" % str(emd_id)
     response = urllib2.urlopen(url)
     compressedFile = StringIO.StringIO()
     compressedFile.write(response.read())
     compressedFile.seek(0)
     decompressedFile = gzip.GzipFile(fileobj=compressedFile, mode='rb')
+    logging.log_debug(logger, "Download of %s ended." % (filename))
     with open(filename, 'w') as outfile:
         outfile.write(decompressedFile.read())
     return read_map(filename)
