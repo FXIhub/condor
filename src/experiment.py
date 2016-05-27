@@ -185,6 +185,12 @@ class Experiment:
         detector_distance   = D_detector["distance"]
         wavelength          = D_source["wavelength"]
 
+        # Qmap without rotation
+        Y,X = numpy.meshgrid(numpy.float64(numpy.arange(ny))-cy,
+                             numpy.float64(numpy.arange(nx))-cx,
+                             indexing="ij")
+        qmap0 = condor.utils.scattering_vector.generate_qmap(X, Y, pixel_size, detector_distance, wavelength, extrinsic_rotation=None)
+        
         qmap_singles = {}
         F_tot        = None
         # Calculate patterns of all single particles individually
@@ -321,12 +327,10 @@ class Experiment:
                 qmap_singles[particle_key] = qmap
 
             # Superimpose patterns
-            v = D_particle["position"]
-            extrinsic_rotation.invert()
-            v_rot = extrinsic_rotation.rotate_vector(v)
             if F_tot is None:
                 F_tot = numpy.zeros_like(F)
-            F_tot = F_tot + F * numpy.exp(-1.j*(v_rot[0]*qmap[:,:,0]+v_rot[1]*qmap[:,:,1]+v_rot[2]*qmap[:,:,2])) 
+            v = D_particle["position"]
+            F_tot = F_tot + F * numpy.exp(-1.j*(v[0]*qmap0[:,:,0]+v[1]*qmap0[:,:,1]+v[2]*qmap0[:,:,2])) 
 
         I_tot, M_tot = self.detector.detect_photons(abs(F_tot)**2)
         IXxX_tot, MXxX_tot = self.detector.bin_photons(I_tot, M_tot)
