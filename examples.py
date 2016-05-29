@@ -71,6 +71,24 @@ def run_examples(on_travis=False):
             "cmd": "python example.py",
             "travis": True,
         },
+        {
+            "name": "PAPER EXAMPLE 1: PARTICLE ATOMS GROEL (configfile)",
+            "dir": this_dir + "/examples/configfile/paper_example_1",
+            "cmd": "condor",
+            "travis": True,
+        },
+        {
+            "name": "PAPER EXAMPLE 2: PARTICLE MAP EMD1144 (configfile)",
+            "dir": this_dir + "/examples/configfile/paper_example_2",
+            "cmd": "condor",
+            "travis": True,
+        },
+        {
+            "name": "PAPER EXAMPLE 2: PARTICLE MAP EMD1144 (script)",
+            "dir": this_dir + "/examples/scripts/paper_example_2",
+            "cmd": "python example.py",
+            "travis": True,
+        },        
     ]
     
     if on_travis:

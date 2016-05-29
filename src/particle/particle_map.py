@@ -155,13 +155,20 @@ class ParticleMap(AbstractContinuousParticle):
         self._map3d_orig             = None
 
         if geometry == "custom":
-            if map3d is not None and dx is not None:
-                log_debug(logger, "Attempting to initialise custom geometry with \'map3d\'.")
-                if map3d_filename is not None or map3d_dataset is not None or emd_id is not None:
-                    log_and_raise_error(logger, "Cannot initialize custom geometry because of ambiguous keyword arguments.")
+            if map3d is not None:
+                if dx is None:
+                    log_and_raise_error(logger, "Cannot initialize custom geometry with \'map3d\' but without grid spacing \'dx\'.")
                     sys.exit(1)
-                self.set_custom_geometry_by_array(map3d, dx)
-            elif map3d_filename is not None and map3d_dataset is not None and dx is not None:
+                else:
+                    log_debug(logger, "Attempting to initialise custom geometry with \'map3d\'.")
+                    if map3d_filename is not None or map3d_dataset is not None or emd_id is not None:
+                        log_and_raise_error(logger, "Cannot initialize custom geometry because of ambiguous keyword arguments.")
+                        sys.exit(1)
+                    self.set_custom_geometry_by_array(map3d, dx)
+            elif map3d_filename is not None and map3d_dataset is not None:
+                if dx is None:
+                    log_and_raise_error(logger, "You are trying to initialise the map with an HDF5 file. You also need to provide the grid spacing \'dx\'")
+                    sys.exit(1)
                 log_debug(logger, "Attempting to initialise custom geometry with \'map3d_filename\', \'map3d_dataset\' and \'dx\'.")
                 if not map3d_filename.endswith(".h5"):
                     log_and_raise_error(logger, "Map file is not an HDF5 file!")
@@ -234,7 +241,7 @@ class ParticleMap(AbstractContinuousParticle):
             # Check input
             if len(s) == 3:
                 map3d = [map3d]
-            if len(s) != 4:
+            if len(s) < 3 or len(s) > 4:
                 log_and_raise_error(logger, "map3d has %i dimensions but should have 3 or 4." % len(s))
                 return
             # Load map(s)
@@ -359,10 +366,12 @@ class ParticleMap(AbstractContinuousParticle):
           :photon_wavelength (float): Photon wavelength in unit meter 
         """
         m,dx = self.get_new_map(O=O, dx_required=dx_required, dx_suggested=dx_suggested)
-        dn = numpy.ones(shape=(m.shape[1], m.shape[2], m.shape[3]), dtype=numpy.complex128)
         if self.materials is not None:
+            dn = numpy.ones(shape=(m.shape[1], m.shape[2], m.shape[3]), dtype=numpy.complex128)
             for mat_i, m_i in zip(self.materials, m):
                 dn = m_i * mat_i.get_dn(photon_wavelength=photon_wavelength)
+        else:
+            dn = m[0]    
         return dn,dx
 
     def get_current_map(self):
