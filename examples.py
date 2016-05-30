@@ -8,86 +8,86 @@ def run_examples(on_travis=False):
         {
             "name": "PARTICLE IDEAL SPHERE (configfile)",
             "dir": this_dir + "/examples/configfile/particle_sphere",
-            "cmd": "condor",
+            "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PARTICLE IDEAL SPHEROID (configfile)",
             "dir": this_dir + "/examples/configfile/particle_spheroid",
-            "cmd": "condor",
+            "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PARTICLE MAP (configfile)",
             "dir": this_dir + "/examples/configfile/particle_map",
-            "cmd": "condor",
+            "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PARTICLE ATOMS (configfile)",
             "dir": this_dir + "/examples/configfile/particle_atoms",
-            "cmd": "condor",
+            "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PARTICLE CUSTOM MAP (script)",
             "dir": this_dir + "/examples/scripts/custom_map",
-            "cmd": "python example.py",
+            "cmd": "rm -f condor.cxi; python example.py",
             "travis": False,
         },
         {
             "name": "PARTICLE MAP EMD FETCH (script)",
             "dir": this_dir + "/examples/scripts/emd_fetch",
-            "cmd": "python example.py",
+            "cmd": "rm -f condor.cxi; python example.py",
             "travis": False,
         },
         {
             "name": "PARTICLE MAP MODELS (script)",
             "dir": this_dir + "/examples/scripts/particle_models",
-            "cmd": "python example.py",
+            "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE ROTATIONS (script)",
             "dir": this_dir + "/examples/scripts/rotations",
-            "cmd": "python example.py",
+            "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE SIMPLE (script)",
             "dir": this_dir + "/examples/scripts/simple",
-            "cmd": "python example.py",
+            "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE ATOMS PDB FETCH (script)",
             "dir": this_dir + "/examples/scripts/pdb_fetch",
-            "cmd": "python example.py",
+            "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE ATOMS PDB FILE (script)",
             "dir": this_dir + "/examples/scripts/pdb",
-            "cmd": "python example.py",
+            "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
-            "name": "PAPER EXAMPLE 1: PARTICLE ATOMS GROEL (configfile)",
-            "dir": this_dir + "/examples/configfile/paper_example_1",
-            "cmd": "condor",
+            "name": "PUBLICATION EXAMPLE A: PARTICLE ATOMS GROEL (configfile)",
+            "dir": this_dir + "/examples_publication/a",
+            "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
-            "name": "PAPER EXAMPLE 2: PARTICLE MAP EMD1144 (configfile)",
-            "dir": this_dir + "/examples/configfile/paper_example_2",
-            "cmd": "condor",
-            "travis": True,
+            "name": "PUBLICATION EXAMPLE B: PARTICLE MAP EMD1144 (configfile)",
+            "dir": this_dir + "/examples_publication/b",
+            "cmd": "rm -f condor.cxi; condor",
+            "travis": False,
         },
         {
-            "name": "PAPER EXAMPLE 2: PARTICLE MAP EMD1144 (script)",
-            "dir": this_dir + "/examples/scripts/paper_example_2",
-            "cmd": "python example.py",
-            "travis": True,
+            "name": "PUBLICATION EXAMPLE B: PARTICLE MAP EMD1144 (script)",
+            "dir": this_dir + "/examples/scripts/publication_example_b",
+            "cmd": "rm -f condor.cxi; python example.py",
+            "travis": False,
         },        
     ]
     
@@ -102,9 +102,9 @@ def run_examples(on_travis=False):
         print ">>> Example %i/%i: %s" % (i+1, len(examples), e["name"])
         cmd = "cd %s; %s" % (e["dir"],e["cmd"])
         print cmd
-        print ""
+        print "[start output]"
         error = os.system(cmd)
-        print ""
+        print "[end output]"
         if error != 0:
             nerrors += 1
             raise Exception(">>> Example %i (%s) failed. Abort." % (i+1,e["name"]))
