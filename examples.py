@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
