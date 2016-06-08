@@ -92,14 +92,11 @@ Make sure everything is set up correctly, then press the **G** key for generatio
    cd condor
    python setup.py install
 
-3) Run the tests (optional)
----------------------------
+3) Run the examples (optional)
+-----------------------------
 
 .. code:: bash
 
-   python tests.py
+   python examples.py
 
-If all tests were successful you will read:
-
-  ``=> SUCCESS: All tests passed successfully``
-   
+For getting started with your own Condor simulation have a look at individual example scrips and configuration files in the folder `examples/`.
