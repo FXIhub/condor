@@ -24,7 +24,7 @@ There are generally two ways of configuring and running simulations with Condor:
     intensity_pattern = res["entry_1"]["data_1"]["data"]
     fourier_pattern = res["entry_1"]["data_1"]["data_fourier"]
 
-  The simulation result is a dictionary that contains the simulated pattern and additional output.
+  The simulation result is provided as *Python* dictionary that contains besides the simulated pattern a lot of additional output.
 
 
 A) Simulation with a configuration files
@@ -126,7 +126,7 @@ Simulations are carried out from an instance of the :class:`condor.experiment.Ex
      
   3) A Detector instance - :class:`condor.detector.Detector`
 
-Calling the method :meth:`condor.experiment.propagate` starts the simulation of a single diffraction pattern. The method returns a dictionary that include the diffraction patterns and various other outputs.
+Calling the method :meth:`condor.experiment.propagate` starts the simulation of a single diffraction pattern. The method returns a dictionary that contains the diffraction pattern(s) and a lot of additional output.
 
 Example
 ^^^^^^^
