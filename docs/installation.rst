@@ -93,7 +93,7 @@ Make sure everything is set up correctly, then press the **G** key for generatio
    python setup.py install
 
 3) Run the examples (optional)
------------------------------
+------------------------------
 
 .. code:: bash
 
