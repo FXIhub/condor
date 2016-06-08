@@ -88,7 +88,7 @@ Make sure everything is set up correctly, then press the **G** key for generatio
 
 .. code:: bash
 
-   git clone --recursive https://github.com/mhantke/condor.git
+   git clone https://github.com/mhantke/condor.git
    cd condor
    python setup.py install
 
