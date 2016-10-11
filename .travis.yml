@@ -73,10 +73,7 @@ install:
   - export HDF5_DIR=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/
   - pip install h5py
 # Install condor
-  - ls $HOME/
-  - ls $HOME/build/
-  - ls $HOME/build/mhantke
-  - cd $HOME/build/mhantke/condor
+  - cd $HOME/build/FXIhub/condor
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
 # command to run tests
 script:
@@ -91,4 +88,4 @@ script:
   # UNITTESTS
   - python -m unittest -v condor.tests.test_all
   # EXAMPLES
-  - cd $HOME/build/mhantke/condor/; python .travis_examples.py
+  - cd $HOME/build/FXIhub/condor/; python .travis_examples.py
