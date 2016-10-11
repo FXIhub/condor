@@ -153,7 +153,13 @@ class Variation:
                 Y,X = numpy.meshgrid(numpy.linspace(-self._spread[0]/2.,self._spread[0]/2.,n),numpy.linspace(-self._spread[1]/2.,self._spread[1]/2.,n),indexing="ij")
                 return numpy.array([Y.flatten(),X.flatten()])
             elif self._number_of_dimensions == 3:
-                Z,Y,X = numpy.meshgrid(numpy.linspace(-self._spread[0]/2.,self._spread[0]/2.,n),numpy.linspace(-self._spread[1]/2.,self._spread[1]/2.,n),numpy.linspace(-self._spread[2]/2.,self._spread[2]/2.,n),indexing="ij")
+                if numpy.isscalar(self.n):
+                    n = [self.n]*3
+                else:
+                    n = self.n
+                Z,Y,X = numpy.meshgrid(numpy.linspace(-self._spread[0]/2.,self._spread[0]/2.,n[0]),
+                                       numpy.linspace(-self._spread[1]/2.,self._spread[1]/2.,n[1]),
+                                       numpy.linspace(-self._spread[2]/2.,self._spread[2]/2.,n[2]),indexing="ij")
                 return numpy.array([Z.flatten(),Y.flatten(),X.flatten()])                
         else:
             return None
@@ -210,5 +216,6 @@ class Variation:
         elif self._mode == "uniform":
             v1 = numpy.random.uniform(v0-self._spread[dim]/2.,v0+self._spread[dim]/2.) if (self._spread[dim] > 0) else v0
         elif self._mode == "range":
-            v1 = v0 + self._get_grid()[dim,self._i % self._n]
+            g = self._get_grid()
+            v1 = v0 + g[dim,self._i % g.shape[1]]
         return v1
