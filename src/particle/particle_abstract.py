@@ -361,8 +361,11 @@ class AbstractContinuousParticle(AbstractParticle):
         if electron_density is None:
             self.materials.append(AtomDensityMaterial(material_type=material_type, massdensity=massdensity, atomic_composition=atomic_composition))
         else:
-            if material_type is not None or massdensity is not None or atomic_composition is not None:
+            if massdensity is not None or atomic_composition is not None:
                 log_and_raise_error(logger, r"An electron density is defined so material_type, massdensity and atomic_composition have to be all 'None'.")
+                return
+            if material_type != "custom":
+                log_and_raise_error(logger, r"An electron density is defined, so material_type must be \'custom\' but is %s." % material_type)
                 return
             self.materials.append(ElectronDensityMaterial(electron_density=electron_density))
 
