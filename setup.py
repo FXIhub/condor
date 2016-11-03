@@ -129,7 +129,7 @@ setup(
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/mhantke/condor',
+    url='https://github.com/FXIhub/condor',
 
     # Author details
     author='Hantke, Max Felix',
