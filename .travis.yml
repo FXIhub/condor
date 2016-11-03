@@ -8,15 +8,15 @@ sudo: false
 virtualenv:
   system_site_packages: true
 
-#cache:
-#  directories:
-#    - $HOME/.cache/pip
-#    - $HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared
-#    - $HOME/nfft-3.2.3
-#    - $HOME/libspimage
-#    - $HOME/spsim
-#    - $HOME/local
-#    - $HOME/localpy
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared
+    - $HOME/nfft-3.2.3
+    - $HOME/libspimage
+    - $HOME/spsim
+    - $HOME/local
+    - $HOME/localpy
 
 addons:
   apt:
