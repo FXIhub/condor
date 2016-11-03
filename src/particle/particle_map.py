@@ -367,7 +367,7 @@ class ParticleMap(AbstractContinuousParticle):
         """
         m,dx = self.get_new_map(O=O, dx_required=dx_required, dx_suggested=dx_suggested)
         if self.materials is not None:
-            dn = numpy.ones(shape=(m.shape[1], m.shape[2], m.shape[3]), dtype=numpy.complex128)
+            dn = numpy.zeros(shape=(m.shape[1], m.shape[2], m.shape[3]), dtype=numpy.complex128)
             for mat_i, m_i in zip(self.materials, m):
                 dn_i = mat_i.get_dn(photon_wavelength=photon_wavelength)
                 dn += m_i * dn_i
