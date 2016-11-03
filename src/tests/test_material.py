@@ -1,5 +1,6 @@
 import unittest
 from condor.utils import material
+from condor import Source, ParticleSphere, Detector, Experiment
 import numpy
 import scipy.constants as constants
 
@@ -70,3 +71,17 @@ class TestCaseMaterial(unittest.TestCase):
         self.assertAlmostEqual(delta/1E-8 , delta_expected/1E-8, 2)
         self.assertAlmostEqual(mu , mu_expected, 1)
         
+    def test_electron_denstiy(self):
+        # check wheter diffraction pattern
+        S = Source(wavelength=0.1E-9, pulse_energy=1E-3, focus_diameter=1E-6)
+        D = Detector(pixel_size=75E-6, nx=1024, ny=1024, distance=1.)
+        P1 = {"particle_sphere" : ParticleSphere(diameter=100E-9, material_type="water")}
+        rho = material.AtomDensityMaterial(material_type="water").get_electron_density()
+        P2 = {"particle_sphere" : ParticleSphere(diameter=100E-9, material_type="custom", electron_density=rho)}
+        E1 = Experiment(source=S, particles=P1, detector=D)
+        res1 = E1.propagate()
+        img_intensities_1 = res1["entry_1"]["data_1"]["data"]
+        E2 = Experiment(source=S, particles=P2, detector=D)
+        res2 = E2.propagate()
+        img_intensities_2 = res2["entry_1"]["data_1"]["data"]        
+        self.assertAlmostEqual(abs(img_intensities_1-img_intensities_2).sum()/(img_intensities_1.sum()+img_intensities_2.sum()), 0., 2)
