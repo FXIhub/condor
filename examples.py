@@ -73,6 +73,12 @@ def run_examples(on_travis=False):
             "travis": True,
         },
         {
+            "name": "PARTICLE MAP MULTIPLE MATERIALS (script)",
+            "dir": this_dir + "/examples/scripts/multiple_materials",
+            "cmd": "python example.py",
+            "travis": True,
+        },
+        {
             "name": "PUBLICATION EXAMPLE A: PARTICLE ATOMS GROEL (configfile)",
             "dir": this_dir + "/examples_publication/a",
             "cmd": "rm -f condor.cxi; condor",

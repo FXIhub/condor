@@ -220,7 +220,7 @@ class Experiment:
                 # Intensity scaling factor
                 R = D_particle["diameter"]/2.
                 V = 4/3.*numpy.pi*R**3
-                K = (F0*V*abs(dn))**2
+                K = (F0*V*dn)**2
                 # Geometrical factor
                 Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 # Pattern
