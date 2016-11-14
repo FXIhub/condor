@@ -403,14 +403,23 @@ class Experiment:
             }            
         return self._qmap_cache["qmap"]          
 
+    def get_qmap_from_cache(self):
+        if self._qmap_cache == {} or not "qmap" in self._qmap_cache:
+            log_and_raise_error(logger, "Cache empty!")
+            return None
+        else:
+            return self._qmap_cache["qmap"]
+    
     def get_resolution(self, wavelength = None, cx = None, cy = None, pos="corner", convention="full_period"):
         if wavelength is None:
             wavelength = self.source.photon.get_wavelength()
-        dx = self.detector.get_resolution_element(wavelength, cx=cx, cy=cy, pos=pos)
+        dx = self.detector.get_resolution_element_x(wavelength, cx=cx, cy=cy)
+        dy = self.detector.get_resolution_element_y(wavelength, cx=cx, cy=cy)
+        dxdy = numpy.array([dx, dy])
         if convention == "full_period":
-            return dx*2
+            return dxdy*2
         elif convention == "half_period":
-            return dx
+            return dxdy
         else:
             log_and_raise_error(logger, "Invalid input: convention=%s. Must be either \"full_period\" or \"half_period\"." % convention)
             return
