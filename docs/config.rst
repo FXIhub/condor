@@ -3,7 +3,7 @@ Running Condor simulations
 
 There are generally two ways of configuring and running simulations with Condor:
 
-**A) Simulation with a configuration file** (`more info <#a-simulation-with-a-configuration-file>`_)
+**A) Simulation with a configuration file**
 
   Write a configuration file based on the examples below, name the file 'condor.conf' and run the Condor executable in the same folder::
 
@@ -15,7 +15,7 @@ There are generally two ways of configuring and running simulations with Condor:
 
      $ condor -h
    
-**B) Simulation in Python** (`more info <#b-simulation-directly-in-python>`_)
+**B) Simulation in Python**
 
   Create a :class:`condor.experiment.Experiment` instance and call :meth:`condor.experiment.Experiment.propagate` to obtaining the simulation result::
 
@@ -27,8 +27,8 @@ There are generally two ways of configuring and running simulations with Condor:
   The simulation result is provided as *Python* dictionary that contains besides the simulated pattern a lot of additional output.
 
 
-A) Simulation with a configuration files
-----------------------------------------
+A) Configuration files
+----------------------
 
 A Condor configuration file is composed of at least three sections:
 
@@ -96,11 +96,6 @@ This section configures a :class:`condor.particle.particle_atoms.ParticleAtoms` 
 
 .. literalinclude:: ../examples/configfile/particle_atoms.conf
 		 
-More examples
-^^^^^^^^^^^^^
-
-Many more examples for configuration files can be found `here <https://github.com/FXIhub/condor/tree/master/examples/configfile>`_.
-
 		    
 3) Detector
 ^^^^^^^^^^^
@@ -111,9 +106,14 @@ This section configures a :class:`condor.detector.Detector` class instance.
 
 .. literalinclude:: ../examples/configfile/detector.conf
 
+Examples
+^^^^^^^^
 
-B) Simulation directly in Python
---------------------------------
+Many more examples for configuration files can be found `here <https://github.com/FXIhub/condor/tree/master/examples/configfile>`_.
+		    
+
+B) Python scripts
+-----------------
 
 Simulations are carried out from an instance of the :class:`condor.experiment.Experiment` class. Its constructor requires three arguments
 
@@ -133,13 +133,12 @@ Simulations are carried out from an instance of the :class:`condor.experiment.Ex
 
 Calling the method :meth:`condor.experiment.propagate` starts the simulation of a single diffraction pattern. The method returns a dictionary that contains the diffraction pattern(s) and a lot of additional output.
 
-Simple example
-^^^^^^^^^^^^^^
+Examples
+^^^^^^^^
+
+Simple example:
 
 .. literalinclude:: ../examples/scripts/simple/example.py
    :language: python
-
-More examples
-^^^^^^^^^^^^^
 
 Many more examples for condor scripts can be found `here <https://github.com/FXIhub/condor/tree/master/examples/scripts>`_.
