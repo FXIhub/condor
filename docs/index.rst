@@ -9,9 +9,9 @@ Welcome to Condor's documentation!
 .. toctree::
    :maxdepth: 2
 
-   Installation <installation>
-   Running Condor <config>
-   Reading CXI files <cxi>
+   Install <installation>
+   Run <config>
+   Output <cxi>
    Conventions <conventions>
    References <references>
    Contact <contact>
