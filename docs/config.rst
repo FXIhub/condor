@@ -96,7 +96,12 @@ This section configures a :class:`condor.particle.particle_atoms.ParticleAtoms` 
 
 .. literalinclude:: ../examples/configfile/particle_atoms.conf
 		 
+More examples
+^^^^^^^^^^^^^
 
+Many more examples for configuration files can be found [here](https://github.com/FXIhub/condor/tree/master/examples/configfile).
+
+		    
 3) Detector
 ^^^^^^^^^^^
 
@@ -128,9 +133,13 @@ Simulations are carried out from an instance of the :class:`condor.experiment.Ex
 
 Calling the method :meth:`condor.experiment.propagate` starts the simulation of a single diffraction pattern. The method returns a dictionary that contains the diffraction pattern(s) and a lot of additional output.
 
-Example
-^^^^^^^
+Simple example
+^^^^^^^^^^^^^^
 
 .. literalinclude:: ../examples/scripts/simple/example.py
    :language: python
 
+More examples
+^^^^^^^^^^^^^
+
+Many more examples for condor scripts can be found [here](https://github.com/FXIhub/condor/tree/master/examples/scripts).
