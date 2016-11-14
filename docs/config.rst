@@ -99,7 +99,7 @@ This section configures a :class:`condor.particle.particle_atoms.ParticleAtoms` 
 More examples
 ^^^^^^^^^^^^^
 
-Many more examples for configuration files can be found [here](https://github.com/FXIhub/condor/tree/master/examples/configfile).
+Many more examples for configuration files can be found `here <https://github.com/FXIhub/condor/tree/master/examples/configfile>`_.
 
 		    
 3) Detector
@@ -142,4 +142,4 @@ Simple example
 More examples
 ^^^^^^^^^^^^^
 
-Many more examples for condor scripts can be found [here](https://github.com/FXIhub/condor/tree/master/examples/scripts).
+Many more examples for condor scripts can be found `here <https://github.com/FXIhub/condor/tree/master/examples/scripts>`_.
