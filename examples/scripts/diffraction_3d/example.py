@@ -5,9 +5,12 @@ import condor
 # Number of frames
 N = 100
 
+# Dimensions in diffraction space
+nx,ny,nz = (100,100,100)
+
 S = condor.Source(wavelength=1E-9, focus_diameter=1E-6, pulse_energy=1E-3)
 P = condor.ParticleMap(geometry="icosahedron", diameter=100E-9, material_type="cell", rotation_formalism="random")
-D = condor.Detector(pixel_size=1000E-6, distance=0.5, nx=100, ny=100)
+D = condor.Detector(pixel_size=1000E-6, distance=0.5, nx=nx, ny=ny)
 
 E = condor.Experiment(source=S, particles={"particle_map": P}, detector=D)
 
@@ -24,10 +27,10 @@ points = np.array(points)
 points = points.reshape((points.shape[0]*points.shape[1], 3))
 values = np.array(values).flatten()
 
-grid_x, grid_y, grid_z = np.mgrid[0:(100-1):100j, 0:(100-1):100j, 0:(100-1):100j]
-grid_x = (grid_x-(100-1)/2.) 
-grid_y = (grid_y-(100-1)/2.)
-grid_z = (grid_z-(100-1)/2.)
+grid_x, grid_y, grid_z = np.mgrid[0:(nx-1):nx*1j, 0:(ny-1):ny*1j, 0:(nz-1):nz*1j]
+grid_x = (grid_x-(nx-1)/2.) 
+grid_y = (grid_y-(ny-1)/2.)
+grid_z = (grid_z-(nz-1)/2.)
 grid = (grid_x, grid_y, grid_z)
 
 # Complex valued 3D diffraction space
