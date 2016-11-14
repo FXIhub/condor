@@ -3,7 +3,7 @@ Running Condor simulations
 
 There are generally two ways of configuring and running simulations with Condor:
 
-**A) Simulation with a configuration file**
+**A) Configuration files**
 
   Write a configuration file based on the examples below, name the file 'condor.conf' and run the Condor executable in the same folder::
 
@@ -15,7 +15,7 @@ There are generally two ways of configuring and running simulations with Condor:
 
      $ condor -h
    
-**B) Simulation in Python**
+**B) Python scripts**
 
   Create a :class:`condor.experiment.Experiment` instance and call :meth:`condor.experiment.Experiment.propagate` to obtaining the simulation result::
 
