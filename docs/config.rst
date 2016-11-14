@@ -9,7 +9,7 @@ There are generally two ways of configuring and running simulations with Condor:
 
      $ condor -n [number_of_patterns]
      
-  Condor will create an HDF5 file named 'condor.cxi', which contains the simulated pattern(s) and additional output (:any:`Reading CXI files`).
+  Condor will create an HDF5 file named 'condor.cxi', which contains the simulated pattern(s) and additional output (:any:`Output`).
 
   For help and more options run::
 
