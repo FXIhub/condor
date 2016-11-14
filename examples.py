@@ -76,7 +76,13 @@ def run_examples(on_travis=False):
             "name": "PARTICLE MAP MULTIPLE MATERIALS (script)",
             "dir": this_dir + "/examples/scripts/multiple_materials",
             "cmd": "python example.py",
-            "travis": True,
+            "travis": False,
+        },
+        {
+            "name": "PARTICLE MAP DIFFRACTION SPACE 3D INTERPOLATION (script)",
+            "dir": this_dir + "/examples/scripts/diffraction_3d",
+            "cmd": "python example.py",
+            "travis": False,
         },
         {
             "name": "PUBLICATION EXAMPLE A: PARTICLE ATOMS GROEL (configfile)",
