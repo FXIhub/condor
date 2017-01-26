@@ -13,8 +13,8 @@
   
 - Citation:
 
-  Hantke, Ekeberg and Maia, Condor: a simulation tool for flash X-ray imaging. *J. Appl. Cryst.* (2016). **49**, 1356-1362.
-
+  Hantke, Ekeberg and Maia, Condor: a simulation tool for flash X-ray imaging.
+  *J. Appl. Cryst.* (2016). **49**, 1356-1362.
   https://doi.org/10.1107/S1600576716009213
 
      
