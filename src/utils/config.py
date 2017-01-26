@@ -193,6 +193,12 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector):
     intrinsic_rotation = condor.utils.rotation.Rotation(values=D_particle["extrinsic_quaternion"],formalism="quaternion")
     intrinsic_rotation.invert()
     e0, e1, e2 = intrinsic_rotation.get_as_euler_angles("zxz")
+    if not numpy.isfinite(e0):
+        print "ERROR: phi is not finite"
+    if not numpy.isfinite(e1):
+        print "ERROR: theta is not finite"
+    if not numpy.isfinite(e2):
+        print "ERROR: psi is not finite"
     s += "phi = %.6e;\n" % e0
     s += "theta = %.6e;\n" % e1
     s += "psi = %.6e;\n" % e2

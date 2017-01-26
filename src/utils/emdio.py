@@ -158,17 +158,17 @@ def read_map(filename):
     return data, dX
 
 
-def preproc_map_auto(map3d_raw, ed_water, ed_particle, water_layer=0.1):
+def preproc_map_auto(map3d_raw, ed_water, ed_particle):#, water_layer=0.1):
     N = map3d_raw.shape[0]
     Nr = (N-1)/2.
-    Nw = int(numpy.round(Nr*water_layer))
-    Nw = 1 if Nw==0 else Nw
+    #Nw = int(numpy.round(Nr*water_layer))
+    #Nw = 1 if Nw==0 else Nw
     Z,Y,X = numpy.meshgrid(numpy.arange(N)-Nr,
                            numpy.arange(N)-Nr,
                            numpy.arange(N)-Nr, indexing="ij")
     R = numpy.sqrt(X**2+Y**2+Z**2)
     mask = R < Nr
-    water_shell = (abs(R-(R*mask).max()) <= Nw)*mask
+    #water_shell = (abs(R-(R*mask).max()) <= Nw)*mask
     S0 = numpy.sort(map3d_raw[mask])
     c = S0.min() + (S0.max()-S0.min())/2.
     S1 = S0[S0<c]
