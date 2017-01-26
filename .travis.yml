@@ -45,6 +45,7 @@ before_install:
   - cd $HOME
   - if [ ! -d "$HOME/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
   - export LD_LIBRARY_PATH=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
+  - ls ${HOME}/
   - ls ${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/
   - ls ${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib
   - ls ${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib
