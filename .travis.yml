@@ -46,7 +46,8 @@ before_install:
   - if [ ! -d "$HOME/nfft-3.2.3/include" ]; then wget https://www-user.tu-chemnitz.de/~potts/nfft/download/nfft-3.2.3.tar.gz && tar xvzf nfft-3.2.3.tar.gz; cd nfft-3.2.3 && ./configure --prefix=${HOME}/local && make && make install; else echo 'Using NFFT from cached directory'; fi
 # Install hdf5
   - cd $HOME
-  - if [ ! -d "$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
+#  - if [ ! -d "$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include" ]; then wget http://www.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
+  - if [ ! -d "$HOME/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
   - export LD_LIBRARY_PATH=${HOME}/hdf5-1.8.17-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
 # Install libspimage
   - cd $HOME
