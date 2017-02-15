@@ -42,5 +42,9 @@ def _init():
     h = logging.StreamHandler(sys.stdout)
     logging.getLogger('condor').addHandler(h)
 
+    import pkg_resources
+    global __version__
+    __version__ = pkg_resources.require("condor")[0].version
+
 _init()
 
