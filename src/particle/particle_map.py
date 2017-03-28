@@ -157,7 +157,7 @@ class ParticleMap(AbstractContinuousParticle):
         if geometry == "custom":
             if map3d is not None:
                 if dx is None:
-                    log_and_raise_error(logger, "Cannot initialize custom geometry with \'map3d\' but without grid spacing \'dx\'.")
+                    log_and_raise_error(logger, "Cannot initialize custom geometry with \'map3d\' without known grid spacing (\'dx\').")
                     sys.exit(1)
                 else:
                     log_debug(logger, "Attempting to initialise custom geometry with \'map3d\'.")
@@ -408,6 +408,9 @@ class ParticleMap(AbstractContinuousParticle):
         # Empty cache?
         if not self._cache:
             return False
+        # Custom map?
+        elif self.O["geometry"] == "custom":
+            return False
         # Correct geometry?
         elif self._cache["geometry"] != O["geometry"]:
             return False
@@ -477,24 +480,27 @@ class ParticleMap(AbstractContinuousParticle):
                 dx = self._cache["dx"]
 
         elif O["geometry"] == "custom":
+
+            rescale_factor = O["diameter"] / self.diameter_mean
+            dx_rescaled = self._cache["dx"] * rescale_factor
             
-            dx_needed = O["diameter"] / self.diameter_mean * self._cache["dx"]
-            
-            # Map fine enough?
-            if dx_needed/dx_required >= 1.:
-            
-                if self._dx_orig/dx_required >= 1.:
+            # Current map too coarsely sampled?
+            if dx_rescaled > dx_required:
+
+                # Cached map (original) also too coarsely sampled? 
+                if self._dx_orig > dx_required:
                     # Not fine enough -> exit
-                    log_and_raise_error(logger, "Resolution of given custom map is insufficient for simulation. required %e m vs. provided %e m." % (dx_required, self._dx_orig))
+                    log_and_raise_error(logger, "Resolution of given custom map is insufficient for simulation. Required is at most %e m vs. provided %e m." % (dx_required, self._dx_orig))
                     sys.exit(1)
-                    
-                # Change back to original fine map
-                self.set_cache(map3d=self._map3d_orig,
-                               dx=self._dx_orig,
-                               geometry="custom")
+                else:
+                    # Change back to original fine map
+                    self._set_cache(map3d=self._map3d_orig,
+                                    dx=self._dx_orig,
+                                    geometry="custom")
                     
             # Can we downsample current map?
-            #if (dx_suggested/dx_needed >= 2.) and (dx_suggested/self._dx_orig >= 2.) and ENABLE_MAP_INTERPOLATION:
+            # MAX: We would do this only for performance reasons but have not found a good way of downsampling without introducing artifacts
+            #if (dx_suggested/dx_rescaled >= 2.) and (dx_suggested/self._dx_orig >= 2.) and ENABLE_MAP_INTERPOLATION:
             #    print "ENABLE_MAP_INTERPOLATION=%i" % ENABLE_MAP_INTERPOLATION
             #    N1 = self._map3d_orig.shape[0]
             #    m1 = numpy.zeros(shape=(N1,N1,N1), dtype=numpy.float64)
@@ -513,7 +519,7 @@ class ParticleMap(AbstractContinuousParticle):
             #    self._map3d = m2 / m2.sum() * m1.sum()
 
             m  = self._cache["map3d"]
-            dx = O["diameter"] / self.diameter_mean * self._cache["dx"]
+            dx = rescale_factor * self._cache["dx"]
             
         return m,dx
                 
