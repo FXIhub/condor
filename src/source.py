@@ -142,7 +142,7 @@ class Source:
 
               - ``\'mJ/um2\'``
 
-              - ``\'ph/m2\'``
+              - ``\'ph/um2\'``
 
            :pulse_energy (float): Pulse energy of that particular pulse in unit Joule. If ``None`` the mean of the pulse energy will be used (default ``None``)
         """
@@ -159,6 +159,9 @@ class Source:
             I *= 1.E-12
         elif unit == "mJ/um2":
             I *= 1.E-9
+        elif unit == "ph/um2":
+            I /= self.photon.get_energy()
+            I *= 1.E-12
         else:
             log_and_raise_error(logger, "%s is not a valid unit." % unit)
             return
