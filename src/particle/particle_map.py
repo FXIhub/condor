@@ -485,10 +485,10 @@ class ParticleMap(AbstractContinuousParticle):
             dx_rescaled = self._cache["dx"] * rescale_factor
             
             # Current map too coarsely sampled?
-            if dx_rescaled/dx_required > 1.:
+            if (dx_rescaled/dx_required > 1.) and not numpy.isclose(dx_rescaled/dx_required, 1.):
 
                 # Cached map (original) also too coarsely sampled? 
-                if self._dx_orig/dx_required > 1.:
+                if self._dx_orig/dx_required > 1. and not numpy.isclose(self._dx_orig/dx_required, 1.):
                     # Not fine enough -> exit
                     log_and_raise_error(logger, "Resolution of given custom map is insufficient for simulation. Required is at most %e m vs. provided %e m." % (dx_required, self._dx_orig))
                     sys.exit(1)
