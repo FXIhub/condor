@@ -409,7 +409,7 @@ class ParticleMap(AbstractContinuousParticle):
         if not self._cache:
             return False
         # Custom map?
-        elif self.O["geometry"] == "custom":
+        elif O["geometry"] == "custom":
             return False
         # Correct geometry?
         elif self._cache["geometry"] != O["geometry"]:
