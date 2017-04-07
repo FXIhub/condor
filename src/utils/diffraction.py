@@ -82,3 +82,53 @@ def nyquist_pixel_size(wavelength, detector_distance, particle_size):
       :particle_size (float): Size or characteristic dimension :math:`d` of the particle in unit meter
     """
     return detector_distance * wavelength / particle_size
+
+def polarization_factor(x, y, detector_distance, polarization="ignore"):
+    """
+    Returns polarization factor for a given geometry and polarization
+    
+    Horizontally polarized:
+
+    .. math::
+
+      P = \cos^2\left(\arcsin\left(\frac{x}{\sqrt{x^2+y^2+D^2}}\right)\right)
+
+    Vertically polarized:
+
+    .. math::
+
+      P = \cos^2\left(\arcsin\left(\frac{y}{\sqrt{x^2+y^2+D^2}}\right)\right)
+
+    Unpolarized:
+    
+      P = \left(1 + \cos^2\left(\frac{\sqrt{x^2+y^2}}{\sqrt{x^2+y^2+D^2}}\right)^2\right)
+
+    Ignore polarization:
+
+    .. math::
+    
+      P = 1
+
+    Args:
+      :x (float): horizontal pixel coordinate :math:`x` with respect to beam center in unit meter
+
+      :y (float): vertical pixel coordinate :math:`y` with respect to beam center in unit meter
+
+      :detector_distance (float): detector distance :math:`D` in unit meter
+
+      :polarization (str): Type of polarization can be either *vertical*, *horizontal*, *unpolarized*, or *ignore* 
+    """
+    if polarization not in ["ignore", "vertical", "horizontal", "unpolarized"]:
+        log_and_raise_error(logger, "polarization=\"%s\" is an invalid argument for this function." % polarization)
+        return
+    if polarization == "ignore":
+        P = 1.
+    else:
+        r = numpy.sqrt(x**2 + y**2 + detector_distance**2)
+        if polarization == "vertical":
+            P = numpy.cos( numpy.arcsin(y/r) )**2
+        elif polarization == "horizontal":
+            P = numpy.cos( numpy.arcsin(x/r) )**2
+        elif polarization == "unpolarized":
+            P = ( 1. + numpy.cos( numpy.arcsin(numpy.sqrt(x**2+y**2)/r) )**2 )
+    return P

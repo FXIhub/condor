@@ -154,7 +154,14 @@ def _list_to_str(L):
     else:
         return str(L)
             
-def _conf_to_spsim_opts(D_source,D_particle,D_detector):
+def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None):
+    if ndim == 2:
+        if qn is not None or qmax is not None:
+            log_warning(logger, "As ndim=2 the passed values for qn and qmax take no effect.")
+    if ndim == 3:
+        if qn is None and qmax is None:
+            log_and_raise_error(logger, "As ndim=3 both qn and qmax must be not None.")
+            return
     import spsim
     # Create temporary file for pdb file
     tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
@@ -173,22 +180,40 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector):
     s += "# THIS FILE WAS CREATED AUTOMATICALLY BY CONDOR\n"
     s += "# Temporary configuration file for spsim\n"
     s += "verbosity_level = 0;\n"
-    s += "number_of_dimensions = 2;\n"
+    s += "number_of_dimensions = %i;\n" % ndim
     s += "number_of_patterns = 1;\n"
     s += "origin_to_com = 1;\n"
     s += "input_type = \"pdb\";\n"
     #s += "pdb_filename = \"%s\";\n" % D_particle["pdb_filename"]
     s += "pdb_filename = \"%s\";\n" % tmpf_pdb_name
-    s += "detector_distance = %.6e;\n" % D_detector["distance"]
-    s += "detector_width = %.6e;\n" % (D_detector["pixel_size"] * D_detector["nx"]) 
-    s += "detector_height = %.6e;\n" % (D_detector["pixel_size"] * D_detector["ny"])
-    s += "detector_pixel_width = %.6e;\n" % D_detector["pixel_size"]
-    s += "detector_pixel_height = %.6e;\n" % D_detector["pixel_size"]
-    s += "detector_center_x = %.6e;\n" % (D_detector["pixel_size"] * (D_detector["cx"] - (D_detector["nx"]-1)/2.))
-    s += "detector_center_y = %.6e;\n" % (D_detector["pixel_size"] * (D_detector["cy"] - (D_detector["ny"]-1)/2.))
+    if ndim == 2:
+        D = D_detector["distance"]
+        Lx = D_detector["pixel_size"] * D_detector["nx"]
+        Ly = D_detector["pixel_size"] * D_detector["ny"]
+    else:
+        k0 = 2. * numpy.pi / D_source["wavelength"]
+        D = qn / 2. * D_detector["pixel_size"] * k0 / qmax
+        Lx = Ly = Lz = D_detector["pixel_size"] * qn
+    s += "detector_distance = %.12e;\n" % D
+    s += "detector_width = %.12e;\n" % Lx 
+    s += "detector_height = %.12e;\n" % Ly
+    if ndim == 3:
+        s += "detector_depth = %.12e;\n" % Lz        
+    s += "detector_pixel_width = %.12e;\n" % D_detector["pixel_size"]
+    s += "detector_pixel_height = %.12e;\n" % D_detector["pixel_size"]
+    if ndim == 3:
+        s += "detector_pixel_depth = %.12e;\n" % D_detector["pixel_size"]
+    if ndim == 2:
+        s += "detector_center_x = %.12e;\n" % (D_detector["pixel_size"] * (D_detector["cx"] - (D_detector["nx"]-1)/2.))
+        s += "detector_center_y = %.12e;\n" % (D_detector["pixel_size"] * (D_detector["cy"] - (D_detector["ny"]-1)/2.))
+    else:
+        s += "detector_center_x = 0;\n"
+        s += "detector_center_y = 0;\n"
+        s += "detector_center_z = 0;\n"
     s += "detector_binning = 1;\n"
-    s += "experiment_wavelength = %.6e;\n" % D_source["wavelength"]
-    s += "experiment_beam_intensity = %.6e;\n" % D_particle["intensity"]
+    s += "experiment_wavelength = %.12e;\n" % D_source["wavelength"]
+    s += "experiment_beam_intensity = %.12e;\n" % D_particle["intensity"]
+    s += "experiment_polarization = \"ignore\";\n" # polarization correction will be done in Condor if needed (see experiment.py)
     #s += "use_cuda = 0;\n"
     intrinsic_rotation = condor.utils.rotation.Rotation(values=D_particle["extrinsic_quaternion"],formalism="quaternion")
     intrinsic_rotation.invert()
@@ -199,9 +224,9 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector):
         print "ERROR: theta is not finite"
     if not numpy.isfinite(e2):
         print "ERROR: psi is not finite"
-    s += "phi = %.6e;\n" % e0
-    s += "theta = %.6e;\n" % e1
-    s += "psi = %.6e;\n" % e2
+    s += "phi = %.12e;\n" % e0
+    s += "theta = %.12e;\n" % e1
+    s += "psi = %.12e;\n" % e2
     s += "random_orientation = 0;\n"
     # Write string sequence to file
     tmpf_conf.writelines(s)
@@ -214,5 +239,4 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector):
     os.unlink(tmpf_pdb_name)
     os.unlink(tmpf_conf_name)
     return opts
-
 

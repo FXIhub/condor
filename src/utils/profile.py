@@ -62,7 +62,7 @@ class Profile:
         
             *Choose one of the following options:*
 
-              - ``None`` - flat illuminatrion profile of infinite extent and the intensity at every point corresponds to the intensity of a top hat profile (see below)
+              - ``None`` - flat illumination profile of infinite extent and the intensity at every point corresponds to the intensity of a top hat profile (see below)
 
               - ``\'top_hat\'`` - Circular top hat profile
     
@@ -90,7 +90,7 @@ class Profile:
             # we always hit with full power
             p = lambda r: 1. / (numpy.pi * (self.focus_diameter / 2.)**2)
         elif self._model == "top_hat":
-            # focus diameter is diameter of top hat profile
+            # focus diameter is diameter of circular top hat profile
             def p(r):
                 if numpy.isscalar(r):
                     return (1.  / (numpy.pi * (self.focus_diameter / 2.)**2)) if r < (self.focus_diameter / 2.) else 0.

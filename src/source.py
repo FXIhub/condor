@@ -66,14 +66,20 @@ class Source:
       
       :pulse_energy_variation_n (int): Number of samples within the specified range (default ``None``)
 
+      :polarization (str): Type of polarization can be either *vertical*, *horizontal*, *unpolarized*, or *ignore*  (default ``ignore``)
+
       .. note:: The keyword arguments ``pulse_energy_variation``, ``pulse_energy_spread``, and ``pulse_energy_variation_n`` are passed on to :meth:`condor.source.Source.set_pulse_energy_variation` during initialisation. For more detailed information read the documentation of the method.
 
     """
-    def __init__(self, wavelength, focus_diameter, pulse_energy, profile_model=None, pulse_energy_variation=None, pulse_energy_spread=None, pulse_energy_variation_n=None):
+    def __init__(self, wavelength, focus_diameter, pulse_energy, profile_model=None, pulse_energy_variation=None, pulse_energy_spread=None, pulse_energy_variation_n=None, polarization="ignore"):
         self.photon = Photon(wavelength=wavelength)
         self.pulse_energy_mean = pulse_energy
         self.set_pulse_energy_variation(pulse_energy_variation, pulse_energy_spread, pulse_energy_variation_n)
         self.profile = Profile(model=profile_model, focus_diameter=focus_diameter)
+        if polarization not in ["vertical", "horizontal", "unpolarized", "ignore"]:
+            log_and_raise_error(logger, "polarization = \"%s\" is an invalid input for initialization of Source instance.")
+            return
+        self.polarization = polarization
         log_debug(logger, "Source configured")
 
     def get_conf(self):
@@ -95,6 +101,7 @@ class Source:
         conf["source"]["pulse_energy_variation"]   = pevar["mode"]
         conf["source"]["pulse_energy_spread"]      = pevar["spread"]
         conf["source"]["pulse_energy_variation_n"] = pevar["n"]
+        conf["source"]["polarization"]             = self.polarization
         return conf
         
     def set_pulse_energy_variation(self, pulse_energy_variation = None, pulse_energy_spread = None, pulse_energy_variation_n = None):
@@ -174,7 +181,8 @@ class Source:
         return {"pulse_energy":self._get_next_pulse_energy(),
                 "wavelength":self.photon.get_wavelength(),
                 "photon_energy":self.photon.get_energy(),
-                "photon_energy_eV":self.photon.get_energy_eV()}
+                "photon_energy_eV":self.photon.get_energy_eV(),
+                "polarization":self.polarization}
 
     def _get_next_pulse_energy(self):
         p = self._pulse_energy_variation.get(self.pulse_energy_mean)

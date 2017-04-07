@@ -388,11 +388,11 @@ class Detector:
 
           :cy (float): *y*-coordinate of the center position in unit pixel
         """
-        Y,X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-cy,
-                             numpy.float64(numpy.arange(self._nx))-cx,
-                             indexing="ij")
+        Y, X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-cy,
+                              numpy.float64(numpy.arange(self._nx))-cx,
+                              indexing="ij")
         return self.get_pixel_solid_angle(X, Y)
-
+    
     def _get_xy_max_dist(self, cx = None, cy = None, center_variation = False):
         dist_max = []
         for c,dc,n in [[(cx if cx is not None else self.get_cx_mean_value()),self._center_variation.get_spread()[0],self._nx],
@@ -528,8 +528,40 @@ class Detector:
         qmax = self.get_q_max(wavelength, cx=cx, cy=cy, pos="corner", center_variation=center_variation)
         res = numpy.pi / length(qmax)
         return res
+
+    def generate_xypix(self, cx=None, cy=None):
+        Y, X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-(0. if cx is None else cx),
+                              numpy.float64(numpy.arange(self._nx))-(0. if cy is None else cy),
+                              indexing="ij")
+        return X, Y
         
-    def detect_photons(self,I):
+    def generate_qmap(self, wavelength, cx=None, cy=None, extrinsic_rotation=None, order='xyz'):
+        X, Y = self.generate_xypix(cx, cy)
+        return condor.utils.scattering_vector.generate_qmap(X, Y, self.pixel_size, self.distance, wavelength, extrinsic_rotation=extrinsic_rotation, order=order)
+
+    def generate_qmap_3d(self, wavelength, qn=None, qmax=None, extrinsic_rotation=None, order='xyz'):
+        if qn is None and qmax is None:
+            qn = max([self._nx, self._ny])
+            qmax = self.get_q_max(wavelength, pos="edge")
+        elif qn is not None and qmax is not None:
+            pass
+        else:
+            log_and_raise_error(logger, "Either none or both optional arguments qn and qmax have to be passed to this function.")
+            return
+        return condor.utils.scattering_vector.generate_qmap_3d(qn=qn, qmax=qmax, extrinsic_rotation=extrinsic_rotation, order=order)
+
+    #def generate_rpix_3d(self, qmax, qn, wavelength):
+    #    return condor.utils.scattering_vector.generate_rpix_3d(qn, qmax, wavelength, self.distance, self.pixel_size):
+
+    def calculate_polarization_factors(self, cx=None, cy=None, polarization="ignore"):
+        if polarization == "ignore":
+            P = numpy.ones(shape=(self._ny, self._nx))
+        else:
+            X, Y = self.generate_xypix(cx=cx, cy=cy)
+            P = condor.utils.diffraction.polarization_factor(X, Y, self.distance, polarization=polarization)
+        return P
+    
+    def detect_photons(self, I):
         """
         Return measurement of intensities from an array of expectation values of intensities. This method also returns the mask of the pattern
 
@@ -548,7 +580,10 @@ class Detector:
             I_det = I_det + bg
         if self.saturation_level is not None:
             I_det = numpy.clip(I_det, -numpy.inf, self.saturation_level)
-        M_det = self.get_mask(I_det)
+        if I_det.ndim == 2:
+            M_det = self.get_mask(I_det)
+        else:
+            M_det = None
         return I_det, M_det
 
     def bin_photons(self, I_det, M_det):

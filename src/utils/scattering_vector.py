@@ -104,6 +104,35 @@ def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation
         qmap = intrinsic_rotation.rotate_vectors(qmap.ravel(), order=order).reshape(qmap.shape)
     return qmap
 
+def generate_qmap_3d(qn, qmax, extrinsic_rotation=None, order='xyz'):
+    q = numpy.linspace(-qmax, qmax, qn)
+    Qz, Qy, Qx = numpy.meshgrid(q, q, q, indexing='ij')
+    qmap = numpy.zeros(shape=(qn, qn, qn, 3), dtype='float')
+    if order == 'xyz':
+        qmap[:, :, :, 0] = Qx[:, :, :]
+        qmap[:, :, :, 1] = Qy[:, :, :]
+        qmap[:, :, :, 2] = Qz[:, :, :]
+    elif order == 'zyx':
+        qmap[:, :, :, 2] = Qx[:, :, :]
+        qmap[:, :, :, 1] = Qy[:, :, :]
+        qmap[:, :, :, 0] = Qz[:, :, :]
+    else:
+        log_and_raise_error(logger, "order=\'%s\' is not a recognised argument for this function." % str(order))
+        return
+    if extrinsic_rotation is not None:
+        log_debug(logger, "Applying qmap rotation.")
+        intrinsic_rotation = copy.deepcopy(extrinsic_rotation)
+        intrinsic_rotation.invert()
+        qmap = intrinsic_rotation.rotate_vectors(qmap.ravel(), order=order).reshape(qmap.shape)
+    return qmap
+
+def generate_rpix_3d(qn, qmax, wavelength, detector_distance, pixel_size):
+    R_Ewald = 2*numpy.pi/wavelength
+    qmap = generate_qmap_3d(qn, qmax)
+    q = (qmap**2).sum(axis=3)
+    rpix = detector_distance * numpy.tan(2.*numpy.arcsin(qmap/(2.*R_Ewald)))/pixel_size
+    return rpix
+
 # Convenience function
 def generate_absqmap(X,Y,pixel_size,detector_distance,wavelength):
     """
