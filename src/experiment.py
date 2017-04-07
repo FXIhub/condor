@@ -193,7 +193,6 @@ class Experiment:
         pixel_size          = D_detector["pixel_size"]
         detector_distance   = D_detector["distance"]
         wavelength          = D_source["wavelength"]
-        polarization        = D_source["polarization"]
 
         # Qmap without rotation
         if ndim == 2:
@@ -202,6 +201,9 @@ class Experiment:
             qmax = numpy.sqrt((self.detector.get_q_max(wavelength, pos="edge")**2).sum())
             qn = max([nx, ny])
             qmap0 = self.detector.generate_qmap_3d(wavelength, qn=qn, qmax=qmax, extrinsic_rotation=None, order='xyz')
+            if self.detector.solid_angle_correction:
+                log_and_raise_error(logger, "Carrying out solid angle correction for a simulation of a 3D Fourier volume does not make sense. Please set solid_angle_correction=False for your Detector and try again.")
+                return
             
         qmap_singles = {}
         F_tot        = 0.
@@ -221,7 +223,7 @@ class Experiment:
 
             if isinstance(p, condor.particle.ParticleSphere) or isinstance(p, condor.particle.ParticleSpheroid) or isinstance(p, condor.particle.ParticleMap):
                 # Solid angles
-                if ndim == 2:
+                if self.detector.solid_angle_correction:
                     Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 else:
                     Omega_p = pixel_size**2 / detector_distance**2
@@ -362,10 +364,10 @@ class Experiment:
 
         # Polarization correction
         if ndim == 2:
-            P = self.detector.calculate_polarization_factors(cx=cx, cy=cy, polarization=polarization)
+            P = self.detector.calculate_polarization_factors(cx=cx, cy=cy, polarization=self.source.polarization)
         else:
-            if polarization != "ignore":
-                log_and_raise_error(logger, "polarization=\"%s\" for a 3D propagation does not make sense. Set polarization=\"ignore\" in your Source configuration and try again." % polarization)
+            if self.source.polarization != "ignore":
+                log_and_raise_error(logger, "polarization=\"%s\" for a 3D propagation does not make sense. Set polarization=\"ignore\" in your Source configuration and try again." % self.source.polarization)
                 return
             P = 1.
         F_tot = numpy.sqrt(P) * F_tot

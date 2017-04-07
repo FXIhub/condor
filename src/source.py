@@ -181,8 +181,7 @@ class Source:
         return {"pulse_energy":self._get_next_pulse_energy(),
                 "wavelength":self.photon.get_wavelength(),
                 "photon_energy":self.photon.get_energy(),
-                "photon_energy_eV":self.photon.get_energy_eV(),
-                "polarization":self.polarization}
+                "photon_energy_eV":self.photon.get_energy_eV()}
 
     def _get_next_pulse_energy(self):
         p = self._pulse_energy_variation.get(self.pulse_energy_mean)

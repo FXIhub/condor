@@ -89,6 +89,8 @@ class Detector:
 
       :mask_CXI_bitmask (bool): If ``True`` the provided mask (``mask_dataset`` or ``mask``) is a CXI bitmask. For documentation on the implementation of CXI bitmasks see :class:`condor.utils.pixelmask.PixelMask` (default ``False``)
 
+      :solid_angle_correction (bool): Whether or not solid angle correction shall be applied (default ``True``)
+
         *Choose one of the following options:*
 
         ==================== =============================================================================
@@ -127,7 +129,7 @@ class Detector:
                  x_gap_size_in_pixel=0, y_gap_size_in_pixel=0, hole_diameter_in_pixel=0, cx_hole=None, cy_hole=None,
                  noise=None, noise_spread=None, noise_variation_n=None, noise_filename=None, noise_dataset=None,
                  cx=None, cy=None, center_variation=None, center_spread_x=None, center_spread_y=None, center_variation_n=None,
-                 saturation_level=None, mask=None, mask_filename=None, mask_dataset=None, mask_is_cxi_bitmask=False,
+                 saturation_level=None, mask=None, mask_filename=None, mask_dataset=None, mask_is_cxi_bitmask=False, solid_angle_correction=True,
                  nx=None, ny=None, binning=None):
 
         self.distance = distance
@@ -147,6 +149,7 @@ class Detector:
                        noise_dataset=noise_dataset)
         self.saturation_level = saturation_level
         self.binning = binning
+        self.solid_angle_correction = solid_angle_correction
 
     def get_conf(self):
         """
@@ -176,6 +179,7 @@ class Detector:
         conf["detector"]["saturation_level"]   = self.saturation_level
         conf["detector"]["mask"]               = self._mask.copy()
         conf["detector"]["mask_CXI_bitmask"]   = True
+        conf["detector"]["solid_angle_correction"] = self.solid_angle_correction
         return conf
         
     def set_noise(self, noise=None, noise_spread=None, noise_variation_n=None, noise_filename=None, noise_dataset=None):
