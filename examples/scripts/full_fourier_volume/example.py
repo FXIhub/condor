@@ -12,7 +12,7 @@ if do_plot:
 
 src = condor.Source(wavelength=0.1E-10, pulse_energy=1E-3, focus_diameter=1E-6)
 ds = 16
-det = condor.Detector(distance=2., pixel_size=110E-6*ds, nx=1024/ds+1, ny=1024/ds+1)
+det = condor.Detector(distance=2., pixel_size=110E-6*ds, nx=1024/ds+1, ny=1024/ds+1, solid_angle_correction=False)
 
 psphere = {"particle_sphere": condor.ParticleSphere(diameter=1E-9, material_type="water")}
 pmap = {"particle_map": condor.ParticleMap(diameter=1E-9, material_type="water", geometry="icosahedron")}
