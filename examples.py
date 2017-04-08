@@ -85,6 +85,12 @@ def run_examples(on_travis=False):
             "travis": False,
         },
         {
+            "name": "DIFFRACTION SPACE 3D SIMULATION (script)",
+            "dir": this_dir + "/examples/scripts/full_fourier_volume",
+            "cmd": "python example.py",
+            "travis": True,
+        },
+        {
             "name": "PUBLICATION EXAMPLE A: PARTICLE ATOMS GROEL (configfile)",
             "dir": this_dir + "/examples_publication/a",
             "cmd": "rm -f condor.cxi; condor",

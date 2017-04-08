@@ -446,7 +446,14 @@ class Experiment:
                 "extrinsic_rotation": copy.deepcopy(extrinsic_rotation),
                 "order"             : order,
             }            
-        return self._qmap_cache["qmap"]          
+        return self._qmap_cache["qmap"]
+
+    def get_qmap_from_cache(self):
+        if self._qmap_cache == {} or not "qmap" in self._qmap_cache:
+            log_and_raise_error(logger, "Cache empty!")
+            return None
+        else:
+            return self._qmap_cache["qmap"]
         
     def get_resolution(self, wavelength = None, cx = None, cy = None, pos="corner", convention="full_period"):
         if wavelength is None:
