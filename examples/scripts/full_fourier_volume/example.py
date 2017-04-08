@@ -2,7 +2,7 @@ import os
 import condor
 this_dir = os.path.dirname(os.path.realpath(__file__))
 
-do_plot = True
+do_plot = False
 
 if do_plot:
     import matplotlib
