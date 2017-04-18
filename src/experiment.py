@@ -316,6 +316,12 @@ class Experiment:
             elif isinstance(p, condor.particle.ParticleAtoms):
                 # Import here to make other functionalities of Condor independent of spsim
                 import spsim
+                # Check version
+                from distutils.version import StrictVersion
+                spsim_version_min = "0.1.0"
+                if not hasattr(spsim, "__version__") or StrictVersion(spsim.__version__) < StrictVersion(spsim_version_min):
+                    log_and_raise_error(logger, "Your spsim version is too old. Please install the newest spsim version and try again.")
+                    sys.exit(0)
                 # Create options struct
                 opts = condor.utils.config._conf_to_spsim_opts(D_source, D_particle, D_detector, ndim=ndim, qn=qn, qmax=qmax)
                 spsim.write_options_file("./spsim.confout",opts)
