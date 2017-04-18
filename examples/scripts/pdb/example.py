@@ -7,6 +7,7 @@ except:
     plotting = False
 
 import os,time
+this_dir = os.path.dirname(os.path.realpath(__file__))
 
 import condor
 
