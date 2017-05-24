@@ -24,6 +24,11 @@ R_z = lambda t: numpy.array([[numpy.cos(t), -numpy.sin(t), 0.],
                              [numpy.sin(t), numpy.cos(t), 0.],
                              [0., 0., 1.]])
 
+# Rotation of a given vector by a given angle with respect to one of the three principal axes
+rot_x = lambda v,t: R_x(t).dot(v)
+rot_y = lambda v,t: R_y(t).dot(v)
+rot_z = lambda v,t: R_z(t).dot(v)
+
 # CANONICAL QUATERNIONS
 # Quaternion from angle and rotation unit vector coordinates (right-hand rule)
 quat = lambda theta,ux,uy,uz: numpy.array([numpy.cos(theta/2.),

@@ -46,4 +46,3 @@ def length(v):
 
 def angle(v1, v2):
     return numpy.arccos(dotproduct(v1, v2) / (length(v1) * length(v2)))
-
