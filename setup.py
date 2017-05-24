@@ -80,7 +80,7 @@ def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_in
         include_dirs=[numpy.get_include()] + nfft_include_dirs,
         define_macros=_nfft_macros[mode],
         runtime_library_dirs = nfft_library_dirs,
-        extra_link_args = [] if (nfft_library_dirs == []) else ['-Wl,-R'+nfft_library_dirs[0]+' '+'-L'+nfft_library_dirs[0]],
+        extra_link_args = [] if (nfft_library_dirs == []) else ['-Wl,-rpath,'+nfft_library_dirs[0]+',-L'+nfft_library_dirs[0]],
     )
 
     return [ext_icosahedron, ext_nfft]
