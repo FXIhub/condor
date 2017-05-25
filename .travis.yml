@@ -50,9 +50,9 @@ before_install:
 #  - export LD_LIBRARY_PATH=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
   - export LD_LIBRARY_PATH=${HDF5_DIR}/lib:${LD_LIBRARY_PATH}
   - ls ${HOME}/
-#  - ls ${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/
-#  - ls ${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib
-#  - ls ${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib
+  - ls ${HDF5_DIR}
+  - ls ${HDF5_DIR}/include
+  - ls ${HDF5_DIR}/lib
 # Install libspimage
   - cd $HOME
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
