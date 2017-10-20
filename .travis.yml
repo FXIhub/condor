@@ -1,7 +1,7 @@
 language: python
 
 python:
-  - "2.7"
+  - 2.7
 
 sudo: false
 
@@ -43,7 +43,7 @@ before_install:
   - which python
   - ldd /home/travis/virtualenv/python2.7_with_system_site_packages/bin/python2.7
   - ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/bin/python2.7
-  - ls /usr/lib
+  - ls /usr/lib/libpython2.7.so 
   - ls /usr/local/lib
   - echo $HOME
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64
