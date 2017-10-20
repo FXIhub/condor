@@ -39,6 +39,7 @@ addons:
 #      - python-h5py
 
 before_install:
+  - which python
   - echo $HOME
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64
   - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
@@ -60,7 +61,7 @@ before_install:
   - git pull
   - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 -DPYTHON_LIBRARY=/usr/lib/libpython2.7.so ..
   - make
-  # -j 2 VERBOSE=1
+  #; -j 2 VERBOSE=1
   - make install
 # Install NFFT
   - cd $HOME
