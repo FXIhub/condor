@@ -18,5 +18,6 @@ examples/configfile/particle_sphere
 examples/configfile/particle_spheroid
 examples/configfile/particle_map
 examples/configfile/particle_molecule
+examples/configfile/particle_atoms
 condor.egg-info
 dist
