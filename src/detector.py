@@ -534,8 +534,8 @@ class Detector:
         return res
 
     def generate_xypix(self, cx=None, cy=None):
-        Y, X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-(0. if cx is None else cx),
-                              numpy.float64(numpy.arange(self._nx))-(0. if cy is None else cy),
+        Y, X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-(0. if cy is None else cy),
+                              numpy.float64(numpy.arange(self._nx))-(0. if cx is None else cx),
                               indexing="ij")
         return X, Y
         
