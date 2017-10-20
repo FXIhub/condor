@@ -41,7 +41,7 @@ addons:
 
 before_install:
   - which python
-  - ldd /home/travis/virtualenv/python2.7_with_system_site_packages/bin/python2.7
+  - ldd /usr/local/bin/python
   - ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/bin/python2.7
   - ls /usr/lib/libpython2.7.so 
   - ls /usr/local/lib
