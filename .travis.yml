@@ -34,7 +34,8 @@ addons:
       - libgsl0-dev
       - swig
 # Python stuff (for discovering these packages set in virtualenv: system_site_packages: true)
-      - python-scipy
+      - python-dev
+      - python-scipy      
       - python-numpy
 #      - python-h5py
 
