@@ -43,9 +43,7 @@ before_install:
   - ldd /home/travis/virtualenv/python2.7_with_system_site_packages/bin/python2.7
   - ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/bin/python2.7
   - ls /usr/lib
-  - ls /usr/lib64
   - ls /usr/local/lib
-  - ls /usr/local/lib64
   - echo $HOME
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64
   - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
