@@ -441,7 +441,7 @@ class Experiment:
         if calculate:
             log_debug(logger,  "Calculating qmap")
             self._qmap_cache = {
-                "qmap"              : self.detector.generate_qmap(wavelength, cx=cx, cy=cx, extrinsic_rotation=extrinsic_rotation, order=order),
+                "qmap"              : self.detector.generate_qmap(wavelength, cx=cx, cy=cy, extrinsic_rotation=extrinsic_rotation, order=order),
                 "nx"                : nx,
                 "ny"                : ny,
                 "cx"                : cx,
