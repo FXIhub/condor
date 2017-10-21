@@ -40,7 +40,8 @@ addons:
 
 before_install:
   - echo $HOME
-  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64:/opt/python/2.7/lib
+  - export PY27_PREFIX=/opt/python/2.7/
+  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64:${PY27_PREFIX}/lib
   - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
 # Install hdf5
   - cd $HOME
@@ -58,7 +59,7 @@ before_install:
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 -DPYTHON_LIBRARY=/opt/python/2.7/lib/libpython2.7.so ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 -DPYTHON_LIBRARY=${PY27_PREFIX}/lib/libpython2.7.so ..
   - make
   #; -j 2 VERBOSE=1
   - make install
@@ -70,12 +71,12 @@ before_install:
   - if [ ! -d "$HOME/spsim/.git" ]; then git clone https://github.com/FilipeMaia/spsim; else echo 'Using spsim from cached directory'; fi
   - mkdir -p spsim/build && cd spsim/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_LIBRARY=/opt/python/2.7/lib/libpython2.7.so -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_LIBRARY=${PY27_PREFIX}/lib/libpython2.7.so -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 ..
   - make -j 2 VERBOSE=1
   - make install
   - ls -alh $HOME/local/lib
-  - ls -alh /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
-  - ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/lib/python2.7/site-packages
+  #- ls -alh /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
+  #- ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/lib/python2.7/site-packages
 # Command to install dependencies
 install:
 # Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
