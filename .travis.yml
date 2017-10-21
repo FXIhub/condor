@@ -1,7 +1,7 @@
 language: python
 
 python:
-  - 2.7
+  - 2.7-dev
 
 sudo: false
 
@@ -34,7 +34,7 @@ addons:
       - libgsl0-dev
       - swig
 # Python stuff (for discovering these packages set in virtualenv: system_site_packages: true)
-      - python-dev --enable-shared
+      - python-dev
       - python-scipy      
       - python-numpy
 #      - python-h5py
