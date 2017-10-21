@@ -40,7 +40,7 @@ addons:
 
 before_install:
   - echo $HOME
-  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64:/opt/python/2.7/
+  - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64:/opt/python/2.7/lib
   - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
 # Install hdf5
   - cd $HOME
