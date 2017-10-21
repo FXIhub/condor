@@ -40,7 +40,8 @@ addons:
 
 before_install:
   - which python
-  - ls /opt/python/
+  - ls /opt/python/2.7/
+  - ls /opt/python/2.7/lib
   - ldd /usr/bin/python
   #  - ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/bin/python2.7
   #- ls /usr/lib/libpython2.7.so 
