@@ -34,7 +34,6 @@ addons:
       - libgsl0-dev
       - swig
 # Python stuff (for discovering these packages set in virtualenv: system_site_packages: true)
-      - python-dev
       - python-scipy      
       - python-numpy
 #      - python-h5py
@@ -45,7 +44,8 @@ before_install:
   #  - ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/bin/python2.7
   #- ls /usr/lib/libpython2.7.so 
   #- ls /usr/local/lib
-  - ls $HOME/local/lib
+  - ls $HOME/local/
+  - ls $HOME/localpy/
   - echo $HOME
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64
   - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
