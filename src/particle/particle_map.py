@@ -459,7 +459,7 @@ class ParticleMap(AbstractContinuousParticle):
                     m_tmp = self._get_map_sphere(O["diameter"]/2., dx)
 
                 elif O["geometry"] == "cube":
-                    m_tmp = self._get_map_cube(O["diameter"]/2., dx)
+                    m_tmp = self._get_map_cube(O["diameter"], dx)
 
                 else:
                     log_and_raise_error(logger, "Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
