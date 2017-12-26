@@ -66,6 +66,7 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   memcpy(my_plan.f_hat, PyArray_DATA(in_array), total_number_of_pixels*sizeof(fftw_complex));
   memcpy(my_plan.x, PyArray_DATA(coord_array), ndim*number_of_points*sizeof(double));
   
+  // As of NFFT 3.3, "nfft_flags" has been renamed to "flags"
   if (my_plan.nfft_flags &PRE_PSI) {
     nfft_precompute_one_psi(&my_plan);
   }
