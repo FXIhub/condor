@@ -45,3 +45,6 @@
 #import spheroid_diffraction
 #import variation
 #import cxiwriter
+
+# without this import statement, the cxiwriter submodule is not visible from the top of the package
+import condor.utils.cxiwriter 
