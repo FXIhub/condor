@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import os
 
 HEADER = """# -----------------------------------------------------------------------------------------------------
@@ -40,7 +41,7 @@ str_ends_with   = lambda s,s_end  : s[-len(s_end):]  == s_end
 
 def apply_header(p):
     if os.path.isdir(p):
-        print "Process directory: %s" % p
+        print("Process directory: %s" % p)
         for pp in os.listdir(p):
             apply_header(p+"/"+pp)
     elif str_ends_with(p,".py") and not str_starts_with(p.split("/")[-1],"."):
@@ -58,7 +59,7 @@ def apply_header(p):
                     ll_new.append(l)
         with open(p,"w") as f:
             f.writelines(ll_new)
-            print p
+            print(p)
 
 
 folder = "../src"
