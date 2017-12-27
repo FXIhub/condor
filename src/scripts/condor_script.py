@@ -3,7 +3,7 @@ from __future__ import print_function, absolute_import # Compatibility with pyth
 import argparse
 import os
 import condor
-import condor.utils
+import condor.utils.cxiwriter
 from condor.utils.log import log_info
 import logging
 logger = logging.getLogger("condor")

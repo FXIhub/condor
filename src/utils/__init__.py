@@ -45,4 +45,3 @@
 #import spheroid_diffraction
 #import variation
 #import cxiwriter
-import condor.utils.cxiwriter

@@ -50,6 +50,7 @@ import condor.utils.scattering_vector
 import condor.utils.resample
 from condor.utils.rotation import Rotation
 import condor.particle
+import condor.utils.nfft
 
 
 def experiment_from_configfile(configfile):
