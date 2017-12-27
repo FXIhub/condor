@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy, time, sys, inspect
 
 import logging
@@ -46,7 +47,7 @@ def log(logger, message, lvl, exception=None, rollback=1):
                 "DEBUG": logger.debug,
                 "INFO": logger.info}
     if lvl not in logcalls:
-        print "%s is an invalid logger level." % lvl
+        print("%s is an invalid logger level." % lvl)
         sys.exit(1)
     logcall = logcalls[lvl]
     # This should maybe go into a handler

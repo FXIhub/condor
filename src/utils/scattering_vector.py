@@ -30,14 +30,15 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy, copy
 
 import logging
 logger = logging.getLogger(__name__)
 
-from log import log_and_raise_error,log_warning,log_info,log_debug
-import rotation
-import linalg
+from .log import log_and_raise_error,log_warning,log_info,log_debug
+#import rotation
+import condor.utils.linalg
 
 
 def q_from_p(p, wavelength):
@@ -49,7 +50,7 @@ def q_from_p(p, wavelength):
 
       :wavelength (float): Photon wavelength in unit meter
     """
-    p0 = p / linalg.length(p)
+    p0 = p / condor.utils.linalg.length(p)
     R_Ewald = 2*numpy.pi / wavelength
     k0 = R_Ewald * numpy.array([0.,0.,1.])
     k1 = R_Ewald * p0

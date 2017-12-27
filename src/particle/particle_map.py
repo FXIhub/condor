@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import sys
 import numpy
 #from scipy.interpolate import RegularGridInterpolator
@@ -48,7 +49,7 @@ import condor.utils.bodies
 
 import condor.utils.emdio
 
-from particle_abstract import AbstractContinuousParticle
+from .particle_abstract import AbstractContinuousParticle
 
 ENABLE_MAP_INTERPOLATION = False
 

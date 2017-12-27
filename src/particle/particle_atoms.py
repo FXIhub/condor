@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import os,sys
 import numpy
 import tempfile
@@ -41,7 +42,7 @@ import condor
 import condor.utils.log
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
-from particle_abstract import AbstractParticle
+from .particle_abstract import AbstractParticle
 
 class ParticleAtoms(AbstractParticle):
     """
@@ -86,8 +87,8 @@ class ParticleAtoms(AbstractParticle):
                  position = None,  position_variation = None, position_spread = None, position_variation_n = None):
         try:
             import spsim
-        except Exception,e:
-            print str(e)
+        except Exception as e:
+            print(str(e))
             log_and_raise_error(logger, "Cannot import spsim module. This module is necessary to simulate diffraction for particle model of discrete atoms. Please install spsim from https://github.com/FilipeMaia/spsim and try again.")
             return
         # Initialise base class

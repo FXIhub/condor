@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import sys,os
 import collections
 sys.path.append("utils")
@@ -41,7 +42,7 @@ logger = logging.getLogger(__name__)
 import condor.utils.log
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
-import utils.resample
+import condor.utils.resample
 from condor.utils.variation import Variation
 from condor.utils.pixelmask import PixelMask
 from condor.utils.linalg import length
@@ -354,8 +355,8 @@ class Detector:
         O["pixel_size"] = self.pixel_size
         O["distance"] = self.distance
         if self.binning is not None:
-            O["cx_xxx"] = utils.resample.downsample_pos(cx, self._nx, self.binning)
-            O["cy_xxx"] = utils.resample.downsample_pos(cy, self._ny, self.binning)
+            O["cx_xxx"] = condor.utils.resample.downsample_pos(cx, self._nx, self.binning)
+            O["cy_xxx"] = condor.utils.resample.downsample_pos(cy, self._ny, self.binning)
         return O
 
     def get_pixel_solid_angle(self, x_off=0., y_off=0.):
@@ -600,8 +601,8 @@ class Detector:
           :M_det (array): CXI bitmask (before binning) represented by a 2D array (see also :class:`condor.utils.pixelmask.PixelMask`)
         """
         if self.binning is not None:
-            IXxX_det, MXxX_det = utils.resample.downsample(I_det,self.binning,mode="integrate",
-                                                           mask2d0=M_det,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
+            IXxX_det, MXxX_det = condor.utils.resample.downsample(I_det,self.binning,mode="integrate",
+                                                                  mask2d0=M_det,bad_bits=PixelMask.PIXEL_IS_IN_MASK,min_N_pixels=1)
         else:
             IXxX_det = None
             MXxX_det = None

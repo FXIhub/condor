@@ -34,6 +34,7 @@
 # TO DO:
 # Take into account illumination profile
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy, os, sys, copy
 
 import logging
@@ -555,7 +556,7 @@ class Experiment:
 
 
 def remove_from_dict(D, startswith="_"):
-    for k,v in D.items():
+    for k,v in list(D.items()):
         if k.startswith(startswith):
             del D[k]
         if isinstance(v, dict):

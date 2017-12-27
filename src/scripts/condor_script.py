@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import argparse
 import os
 import condor
@@ -62,10 +63,10 @@ def main():
     if args.measure_time:
         t_exec = numpy.array(t_exec)
         t_write = numpy.array(t_write)
-        print "TIME MEASUREMENT RESULTS IN SECONDS"
-        print "Total time: %.3f" % numpy.round(t4 - t0, 3)
-        print "Computation time per image: %.3f" % numpy.round(t_exec.mean(), 3)
-        print "( Individual computation times: ", numpy.round(t_exec, 3), " )"
-        print "Writing time per image: %.3f" % numpy.round(t_write.mean(), 3)
-        print "( Individual writing times: ", numpy.round(t_write, 3), " )"
+        print("TIME MEASUREMENT RESULTS IN SECONDS")
+        print("Total time: %.3f" % numpy.round(t4 - t0, 3))
+        print("Computation time per image: %.3f" % numpy.round(t_exec.mean(), 3))
+        print("( Individual computation times: ", numpy.round(t_exec, 3), " )")
+        print("Writing time per image: %.3f" % numpy.round(t_write.mean(), 3))
+        print("( Individual writing times: ", numpy.round(t_write, 3), " )")
         

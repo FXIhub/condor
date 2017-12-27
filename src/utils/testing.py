@@ -1,3 +1,4 @@
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy
 
 def same_shape(a0, a1):

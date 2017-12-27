@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import sys, numpy
 
 # Position conversion for a downsampled / upsampled array:
@@ -47,7 +48,7 @@ upsample_pos   = lambda pos,size,binning: pos*(size*binning-binning)/(1.*(size-1
 def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pixels=1):
     available_modes = ["pick","integrate"]#,"interpolate"]
     if not mode in available_modes:
-        print "ERROR: %s is not a valid mode." % mode
+        print("ERROR: %s is not a valid mode." % mode)
         return
     factor = int(round(factor0))
     if factor == 1:
@@ -65,7 +66,7 @@ def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pix
     if mode == "pick": 
         Y,X = numpy.indices(array2d0.shape)
         pick = ((Y%factor == 0)*(X%factor == 0))
-        print pick.shape
+        print(pick.shape)
         Ny_new = pick[:,0].sum()
         Nx_new = pick[0,:].sum()
         pick = pick.flatten()

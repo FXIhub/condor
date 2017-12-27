@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 # System packages
 import sys, os, numpy
 from scipy import constants
@@ -383,7 +384,7 @@ class AtomDensityMaterial(AbstractMaterial):
         atomic_composition = self._atomic_composition.copy()
 
         if normed:
-            s = numpy.array(atomic_composition.values(), dtype=numpy.float64).sum()
+            s = numpy.array(list(atomic_composition.values()), dtype=numpy.float64).sum()
             for element in atomic_composition.keys():
                 atomic_composition[element] /= s 
 

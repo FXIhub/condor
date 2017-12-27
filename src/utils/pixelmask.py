@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 class PixelMask:
     """
     CXI bitmasks follow the formalism described in Maia (2012) [#Maia2012]_ (see also `www.cxidb.org <http://www.cxidb.org>`_) and encode the status of detector pixels. In *Condor* these bitmasks are represented by arrays of unsigned 16 bit integer values. 
