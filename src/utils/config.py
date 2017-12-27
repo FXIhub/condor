@@ -34,7 +34,12 @@ Reading, writing and converting configuration in different representations
 """
 
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
-import os, numpy, configparser, tempfile, copy
+import os, numpy, tempfile, copy
+try:
+    import ConfigParser as configparser
+except ImportError:
+    # In Python 3, configparser needs to be installed with pip
+    import configparser
 
 import logging
 logger = logging.getLogger(__name__)
