@@ -75,7 +75,10 @@ class CXIWriter:
                     if numpy.isscalar(data):
                         maxshape = (None,)
                         shape = (self._chunksize,)
-                        dtype = numpy.dtype(type(data))
+                        if (isinstance(data, str)):
+                            dtype = numpy.dtype(type(data.encode('utf8')))
+                        else:
+                            dtype = numpy.dtype(type(data))
                         if dtype == "S":
                             dtype = h5py.new_vlen(str)
                         axes = "experiment_identifier:value"
@@ -96,7 +99,7 @@ class CXIWriter:
                         elif ndim == 3: axes = axes + ":z:y:x"
                     log_debug(logger, "Create dataset %s [shape=%s, dtype=%s]" % (name,str(shape),str(dtype)))
                     self._f.create_dataset(name, shape, maxshape=maxshape, dtype=dtype, **self._create_dataset_kwargs)
-                    self._f[name].attrs.modify("axes",[axes])
+                    self._f[name].attrs.modify("axes",[axes.encode('utf8')])
                 if self._f[name].shape[0] <= self._i:
                     if numpy.isscalar(data):
                         data_shape = []
