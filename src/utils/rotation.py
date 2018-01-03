@@ -246,7 +246,7 @@ class Rotation:
             return           
         n_ax = list(vectors.shape)[-1]
         N = vectors.size
-        Nv = N/3
+        Nv = int(N/3)
         if vectors.ndim == 2 and n_ax != 3:
             log_and_raise_error(logger, "Cannot rotate vectors. The given array has length %i in last dimension but should be 3." % (n_ax))
             return
