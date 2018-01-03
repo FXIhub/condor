@@ -170,7 +170,7 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None)
             return
     import spsim
     # Create temporary file for pdb file
-    tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
+    tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+', suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
     tmpf_pdb_name = tmpf_pdb.name
     tmpf_pdb.close()
     # Write pdb file
@@ -180,7 +180,7 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None)
     # Start with default spsim configuration
     opts = spsim.set_defaults()
     # Create temporary file for spsim configuration
-    tmpf_conf = tempfile.NamedTemporaryFile(mode='w+b', suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
+    tmpf_conf = tempfile.NamedTemporaryFile(mode='w+', suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
     # Write string sequence from configuration dicts
     s = []
     s += "# THIS FILE WAS CREATED AUTOMATICALLY BY CONDOR\n"
