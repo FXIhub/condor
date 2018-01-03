@@ -292,7 +292,7 @@ class Experiment:
                     D_particle["dx"] = dx
                 # Rescale and shape qmap for nfft
                 qmap_scaled = dx * qmap / (2. * numpy.pi)
-                qmap_shaped = qmap_scaled.reshape(qmap_scaled.size/3, 3)
+                qmap_shaped = qmap_scaled.reshape(int(qmap_scaled.size/3), 3)
                 # Check inputs
                 invalid_mask = ~((qmap_shaped>=-0.5) * (qmap_shaped<0.5))
                 if numpy.any(invalid_mask):
