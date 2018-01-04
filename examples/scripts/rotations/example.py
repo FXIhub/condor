@@ -126,7 +126,7 @@ for angle_d in angles_d:
         if plotting:
             pypl.imsave(out_dir + "/%s_proj.png" % (s),proj)
         atomic_positions = numpy.array([[x,y,z] for x,y,z in zip(X.ravel(),Y.ravel(),Z.ravel())])
-        atomic_numbers   = numpy.ones(atomic_positions.size/3, dtype=numpy.int16)
+        atomic_numbers   = numpy.ones(int(atomic_positions.size/3), dtype=numpy.int16)
         par = condor.ParticleAtoms(atomic_positions=atomic_positions, atomic_numbers=atomic_numbers, rotation_values=rotation_values, rotation_formalism=rotation_formalism, rotation_mode=rotation_mode)
         s = "particle_atoms"
         E = condor.Experiment(src, {s : par}, det)
