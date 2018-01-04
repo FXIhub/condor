@@ -270,7 +270,7 @@ class Detector:
                 self._mask = (self._mask == 0) * PixelMask.PIXEL_IS_MISSING
         elif nx is not None and ny is not None:
             # Initialise empty mask
-            self._mask = numpy.zeros(shape=(ny+y_gap_size_in_pixel, nx+x_gap_size_in_pixel),dtype=numpy.uint16)
+            self._mask = numpy.zeros(shape=(int(ny+y_gap_size_in_pixel), int(nx+x_gap_size_in_pixel)),dtype=numpy.uint16)
         else:
             log_and_raise_error(logger, r"Either 'mask' or 'nx' and 'ny' have to be specified.")
             sys.exit(1)
