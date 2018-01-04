@@ -102,11 +102,11 @@ script:
   - echo $LD_LIBRARY_PATH
   - echo $PYTHONPATH
   # TESTING IMPORTS
-  - python -c "import spimage; print spimage.__file__"
-  - python -c "import spsim; print spsim.__file__"
-  - python -c "import spimage_pybackend; print spimage_pybackend.__file__"
-  - python -c "import spsim_pybackend; print spsim_pybackend.__file__"
-  - python -c "import condor; print condor.__file__"
+  - python -c "import spimage; print(spimage.__file__)"
+  - python -c "import spsim; print(spsim.__file__)"
+  - python -c "import spimage_pybackend; print(spimage_pybackend.__file__)"
+  - python -c "import spsim_pybackend; print(spsim_pybackend.__file__)"
+  - python -c "import condor; print(condor.__file__)"
   # UNITTESTS
   - python -m unittest -v condor.tests.test_all
   # EXAMPLES
