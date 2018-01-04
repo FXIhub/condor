@@ -56,6 +56,15 @@ before_install:
   - ls ${HDF5_DIR}
   - ls ${HDF5_DIR}/include
   - ls ${HDF5_DIR}/lib
+# Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
+#  - export HDF5_DIR=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/
+#  - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
+  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
+  - pip install h5py
+  - pip install numpy
+  - pip install scipy
+# Install configparser with pip (this is to make condor compatible with Python 3, which no longer has the ConfigParser module)
+  - pip install configparser
 # Install libspimage
   - cd $HOME
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
@@ -79,15 +88,6 @@ before_install:
   - ls -alh $HOME/local/lib
 # Command to install dependencies
 install:
-# Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
-#  - export HDF5_DIR=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/
-#  - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
-  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
-  - pip install h5py
-  - pip install numpy
-  - pip install scipy
-# Install configparser with pip (this is to make condor compatible with Python 3, which no longer has the ConfigParser module)
-  - pip install configparser
 # Install condor
   - cd $HOME/build/FXIhub/condor
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
