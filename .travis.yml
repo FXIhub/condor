@@ -1,12 +1,8 @@
 language: python
-
-python:
-  - '2.7'
-
 sudo: false
 
 virtualenv:
-  system_site_packages: true
+  system_site_packages: false
 
 cache:
   directories:
@@ -19,6 +15,14 @@ cache:
     - $HOME/spsim
     - $HOME/local
     - $HOME/localpy
+    - $HOME/virutalenv
+
+matrix:
+  include:
+    - python: '2.7'
+    - python: '3.4'
+    - python: '3.5'
+    - python: '3.6'
 
 addons:
   apt:
@@ -34,14 +38,10 @@ addons:
       - gsl-bin
       - libgsl0-dev
       - swig
-# Python stuff (for discovering these packages set in virtualenv: system_site_packages: true)
-      - python-scipy      
-      - python-numpy
-#      - python-h5py
 
 before_install:
   - echo $HOME
-  - export PY27_PREFIX=/opt/python/2.7/
+  - export PY_SITE=$(python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
   - export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${HOME}/local/lib:${HOME}/local/lib64:${PY27_PREFIX}/lib
   - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
 # Install hdf5
@@ -58,12 +58,26 @@ before_install:
   - ls ${HDF5_DIR}
   - ls ${HDF5_DIR}/include
   - ls ${HDF5_DIR}/lib
+# Install numpy and scipy
+  - pip install numpy
+  - pip install scipy
+# Install configparser with pip (this is to make condor compatible with Python 3, which no longer has the ConfigParser module)
+  - pip install configparser
+# Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
+#  - export HDF5_DIR=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/
+#  - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
+  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
+  - pip install h5py
+# Testing imports
+  - python -c "import numpy; print(numpy.__file__)"
+  - python -c "import scipy; print(scipy.__file__)"
+  - python -c "import h5py; print(h5py.__file__)"
 # Install libspimage
   - cd $HOME
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 -DPYTHON_LIBRARY=${PY27_PREFIX}/lib/libpython2.7.so ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/virtualenv/python${TRAVIS_PYTHON_VERSION} -DPYTHON_INSTDIR=${PY_SITE} ..
   - make
   #; -j 2 VERBOSE=1
   - make install
@@ -75,19 +89,12 @@ before_install:
   - if [ ! -d "$HOME/spsim/.git" ]; then git clone https://github.com/FilipeMaia/spsim; else echo 'Using spsim from cached directory'; fi
   - mkdir -p spsim/build && cd spsim/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/local -DPYTHON_INSTDIR=${HOME}/localpy -DPYTHON_INCLUDE_DIR=/usr/include/python2.7 -DPYTHON_LIBRARY=${PY27_PREFIX}/lib/libpython2.7.so -DPYTHON_INCLUDE_DIR2=/usr/include/python2.7 ..
-  - make -j 2 VERBOSE=1
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/virtualenv/python${TRAVIS_PYTHON_VERSION} -DPYTHON_INSTDIR=${PY_SITE}  ..
+  - make VERBOSE=1
   - make install
   - ls -alh $HOME/local/lib
-  #- ls -alh /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
-  #- ls -alh /home/travis/virtualenv/python2.7_with_system_site_packages/lib/python2.7/site-packages
 # Command to install dependencies
 install:
-# Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
-#  - export HDF5_DIR=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/
-#  - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
-  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
-  - pip install h5py
 # Install condor
   - cd $HOME/build/FXIhub/condor
   - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
@@ -96,11 +103,11 @@ script:
   - echo $LD_LIBRARY_PATH
   - echo $PYTHONPATH
   # TESTING IMPORTS
-  - python -c "import spimage; print spimage.__file__"
-  - python -c "import spsim; print spsim.__file__"
-  - python -c "import spimage_pybackend; print spimage_pybackend.__file__"
-  - python -c "import spsim_pybackend; print spsim_pybackend.__file__"
-  - python -c "import condor; print condor.__file__"
+  - python -c "import spimage; print(spimage.__file__)"
+  - python -c "import spsim; print(spsim.__file__)"
+  - python -c "import spimage_pybackend; print(spimage_pybackend.__file__)"
+  - python -c "import spsim_pybackend; print(spsim_pybackend.__file__)"
+  - python -c "import condor; print(condor.__file__)"
   # UNITTESTS
   - python -m unittest -v condor.tests.test_all
   # EXAMPLES

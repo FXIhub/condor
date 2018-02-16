@@ -29,24 +29,24 @@
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
-
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy, os
   
 import logging
 logger = logging.getLogger(__name__)
 
-import log
+from .log import log_and_raise_error,log_warning,log_info,log_debug
 
 try:
     import h5py
 except ImportError:
-    log.log_warning(logger, "Could not import h5py.")
+    log_warning(logger, "Could not import h5py.")
 
 class CXIWriter:
     def __init__(self, filename, chunksize=2, gzip_compression=False):
         self._filename = os.path.expandvars(filename)
         if os.path.exists(filename):
-            log.log_warning(logger, "File %s exists and is being overwritten" % filename)
+            log_warning(logger, "File %s exists and is being overwritten" % filename)
         self._f = h5py.File(filename, "w")
         self._i = 0
         self._chunksize = chunksize
@@ -63,19 +63,22 @@ class CXIWriter:
         for k in D.keys():
             if isinstance(D[k],dict):
                 group_prefix_new = group_prefix + k + "/"
-                log.log_debug(logger, "Writing group %s" % group_prefix_new)
+                log_debug(logger, "Writing group %s" % group_prefix_new)
                 if k not in self._f[group_prefix]:
                     self._f.create_group(group_prefix_new)
                 self._write_without_iterate(D[k], group_prefix_new)
             else:
                 name = group_prefix + k
-                log.log_debug(logger, "Writing dataset %s" % name)
+                log_debug(logger, "Writing dataset %s" % name)
                 data = D[k]
                 if k not in self._f[group_prefix]:
                     if numpy.isscalar(data):
                         maxshape = (None,)
                         shape = (self._chunksize,)
-                        dtype = numpy.dtype(type(data))
+                        if (isinstance(data, str)):
+                            dtype = numpy.dtype(type(data.encode('utf8')))
+                        else:
+                            dtype = numpy.dtype(type(data))
                         if dtype == "S":
                             dtype = h5py.new_vlen(str)
                         axes = "experiment_identifier:value"
@@ -84,7 +87,7 @@ class CXIWriter:
                         try:
                             h5py.h5t.py_create(data.dtype, logical=1)
                         except TypeError:
-                            log.log_warning(logger, "Could not save dataset %s. Conversion to numpy array failed" % name)
+                            log_warning(logger, "Could not save dataset %s. Conversion to numpy array failed" % name)
                             continue
                         maxshape = tuple([None]+list(data.shape))
                         shape = tuple([self._chunksize]+list(data.shape))
@@ -94,18 +97,18 @@ class CXIWriter:
                         if ndim == 1: axes = axes + ":x"
                         elif ndim == 2: axes = axes + ":y:x"
                         elif ndim == 3: axes = axes + ":z:y:x"
-                    log.log_debug(logger, "Create dataset %s [shape=%s, dtype=%s]" % (name,str(shape),str(dtype)))
+                    log_debug(logger, "Create dataset %s [shape=%s, dtype=%s]" % (name,str(shape),str(dtype)))
                     self._f.create_dataset(name, shape, maxshape=maxshape, dtype=dtype, **self._create_dataset_kwargs)
-                    self._f[name].attrs.modify("axes",[axes])
+                    self._f[name].attrs.modify("axes",[axes.encode('utf8')])
                 if self._f[name].shape[0] <= self._i:
                     if numpy.isscalar(data):
                         data_shape = []
                     else:
                         data_shape = data.shape
                     new_shape = tuple([self._chunksize*(self._i/self._chunksize+1)]+list(data_shape))
-                    log.log_debug(logger, "Resize dataset %s [old shape: %s, new shape: %s]" % (name,str(self._f[name].shape),str(new_shape)))
+                    log_debug(logger, "Resize dataset %s [old shape: %s, new shape: %s]" % (name,str(self._f[name].shape),str(new_shape)))
                     self._f[name].resize(new_shape)
-                log.log_debug(logger, "Write to dataset %s at stack position %i" % (name, self._i))
+                log_debug(logger, "Write to dataset %s at stack position %i" % (name, self._i))
                 if numpy.isscalar(data):
                     self._f[name][self._i] = data
                 else:
@@ -115,7 +118,7 @@ class CXIWriter:
         for k in self._f[group_prefix].keys():
             name = group_prefix + k
             if isinstance(self._f[name], h5py.Dataset):
-                log.log_debug(logger, "Shrinking dataset %s to stack length %i" % (name, self._i))
+                log_debug(logger, "Shrinking dataset %s to stack length %i" % (name, self._i))
                 s = list(self._f[name].shape)
                 s.pop(0)
                 s.insert(0, self._i)
@@ -126,7 +129,7 @@ class CXIWriter:
                     
     def close(self):
         self._shrink_stacks()
-        log.log_debug(logger, "Closing file %s" % self._filename)
+        log_debug(logger, "Closing file %s" % self._filename)
         self._f.close()
 
 
@@ -155,11 +158,11 @@ def read_map(filename):
         MODE = numpy.frombuffer(header_buf, dtype="int32")[3]
         dtype = ["i8", "int32", "float32", "cint32", "complex64", "i8"][MODE]
         if dtype_mode not in [0,2]:
-            log.log_warning(logger, "WARNING: Map file data type \"MODE=%i\" may not work." % MODE)
+            log_warning(logger, "WARNING: Map file data type \"MODE=%i\" may not work." % MODE)
         #24      NSYMBT          Number of bytes used for storing symmetry operators
         NSYMBT = numpy.frombuffer(header_buf, dtype="int32")[23]
         if NSYMBT > 0:
-            log.log_warning(logger, "WARNING: Omitting symmetry operations in map file.")
+            log_warning(logger, "WARNING: Omitting symmetry operations in map file.")
             f.read(NSYMBT)
         # The remaining bytes are data
         data = f.read()

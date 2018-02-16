@@ -58,7 +58,7 @@ a) Python
    with h5py.File('condor.cxi', 'r') as f:
      intensity_pattern0 = numpy.asarray(f["entry_1/data_1/data"])
 
-   print "Maximum intensity value in first pattern: %f photons" % intensity_pattern[0].max()
+   print("Maximum intensity value in first pattern: %f photons" % intensity_pattern[0].max())
    
 b) Matlab
 ^^^^^^^^^

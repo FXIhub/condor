@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy
  
 def crossproduct(a, b):

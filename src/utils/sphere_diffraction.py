@@ -30,9 +30,10 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy
 
-from scattering_vector import generate_qmap
+from .scattering_vector import generate_qmap
 
 _F_sphere_diffraction = lambda K,q,r: numpy.sqrt(abs(K))*3*(numpy.sin(q*r)-q*r*numpy.cos(q*r))/((q*r)**3+numpy.finfo("float64").eps)
 F_sphere_diffraction = lambda K,q,r: ((q*r)**6 < numpy.finfo("float64").resolution)*numpy.sqrt(abs(K)) + ((q*r)**6 >= numpy.finfo("float64").resolution)*_F_sphere_diffraction(K,q,r)

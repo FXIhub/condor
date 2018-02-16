@@ -34,6 +34,7 @@ Pickle constants data form text tables
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import os, glob, numpy, pickle, sys, re
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -54,7 +55,7 @@ def pickle_atomic_scattering_factors(inpath, outpath):
                     S[el].append([float(arg[0]),float(arg[1]),float(arg[2])])
         S[el] = numpy.array(S[el])
         
-    with open('%s/sf.dat' % (outpath),'w') as f:
+    with open('%s/sf.dat' % (outpath),'wb') as f:
         pickle.dump(S,f)
 
 def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
@@ -79,10 +80,10 @@ def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
         W[s] = w
         Z[s] = z
 
-    with open(outpath + "/sw.dat", "w") as f:
+    with open(outpath + "/sw.dat", "wb") as f:
         pickle.dump(W,f)
 
-    with open(outpath + "/z.dat", "w") as f:
+    with open(outpath + "/z.dat", "wb") as f:
         pickle.dump(Z,f)
 
 
@@ -93,16 +94,16 @@ if __name__ == "__main__":
     # B.L. Henke, E.M. Gullikson, and J.C. Davis. X-ray interactions: photoabsorption, scattering, transmission, and reflection at E=50-30000 eV, Z=1-92
     # Atomic Data and Nuclear Data Tables Vol. 54 (no.2), 181-342 (July 1993).
     # http://henke.lbl.gov/optical_constants/asf.html
-    print 'Generate data file with atomic scattering constants...'
+    print('Generate data file with atomic scattering constants...')
     pickle_atomic_scattering_factors(here + "/sf", here)
-    print 'Done.'
+    print('Done.')
     
     # Standard atomic weights from the IUPAC tables
     # Atomic weights of the elements 2011 (IUPAC Technical Report) Michael E. Wieser et al., Pure and Applied Chemistry. Volume 85, Issue 5, Pages 1047-1078
     # ISSN (Online) 1365-3075, ISSN (Print) 0033-4545
     # DOI: 10.1351/PAC-REP-13-03-02, April 2013
     # Data loaded from: http://www.chem.qmul.ac.uk/iupac/AtWt/ table 2 (2015/07/01)
-    print 'Generate data file with atomic standard weight constants...'
+    print('Generate data file with atomic standard weight constants...')
     pickle_atomic_standard_weights_and_numbers(here + "/sw", here)
-    print 'Done.'
+    print('Done.')
 

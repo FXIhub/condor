@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import os
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -115,28 +116,28 @@ def run_examples(on_travis=False):
 
     nerrors = 0
         
-    print "-"*100
-    print ""
+    print("-"*100)
+    print("")
     for i,e in enumerate(examples):
-        print ">>> Example %i/%i: %s" % (i+1, len(examples), e["name"])
+        print(">>> Example %i/%i: %s" % (i+1, len(examples), e["name"]))
         cmd = "cd %s; %s" % (e["dir"],e["cmd"])
-        print cmd
-        print "[start output]"
+        print(cmd)
+        print("[start output]")
         error = os.system(cmd)
-        print "[end output]"
+        print("[end output]")
         if error != 0:
             nerrors += 1
             raise Exception(">>> Example %i (%s) failed. Abort." % (i+1,e["name"]))
         else:
-            print ">>> Success!"
-        print ""
-        print "-"*100
-        print ""
+            print(">>> Success!")
+        print("")
+        print("-"*100)
+        print("")
 
     if nerrors == 0:
-        print "SUCCESS: All examples finished successfully."
+        print("SUCCESS: All examples finished successfully.")
     else:
-        print "ERROR: %i/%i example(s) failed." % (nerrors, len(examples))
+        print("ERROR: %i/%i example(s) failed." % (nerrors, len(examples)))
 
 
 if __name__ == "__main__":

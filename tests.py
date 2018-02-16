@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import sys
 import numpy, scipy.constants
 import os
@@ -50,10 +51,10 @@ def test_compare_spheroid_with_map(tolerance = 0.15):
     diff = I_ideal-I_map
     err = abs(diff).sum() / ((I_ideal.sum()+I_map.sum())/2.)
     if err < tolerance:
-        print "\t=> Test successful (err = %e)" % err
+        print("\t=> Test successful (err = %e)" % err)
         return False
     else:
-        print "\t=> Test failed (err = %e)" % err
+        print("\t=> Test failed (err = %e)" % err)
         return True
 
 def test_compare_atoms_with_map(tolerance = 0.1):
@@ -113,10 +114,10 @@ def test_compare_atoms_with_map(tolerance = 0.1):
     pypl.imsave("./Iatoms_mol.png", abs(I_atoms))
     pypl.imsave("./Iatoms_map.png", abs(I_map))
     if err < tolerance:
-        print "\t=> Test successful (err = %e)" % err
+        print("\t=> Test successful (err = %e)" % err)
         return False
     else:
-        print "\t=> Test failed (err = %e)" % err
+        print("\t=> Test failed (err = %e)" % err)
         return True
 
 # DEVELOPMENT (CURRENTLY WITHOUT INTERPOLATION)
@@ -133,7 +134,7 @@ def test_map_interpolation(tolerance=0.1):
     res0 = E.propagate()
     I0 = res0["entry_1"]["data_1"]["data"]
     # Now without interpolation
-    print "NOW WITHOUT INTERPOLATION"
+    print("NOW WITHOUT INTERPOLATION")
     condor.particle.particle_map.ENABLE_MAP_INTERPOLATION = False
     src = condor.Source(wavelength=10.0E-9, pulse_energy=1E-3, focus_diameter=1E-6)
     det = condor.Detector(distance=1.0, pixel_size=300E-6, nx=256, ny=256)
@@ -148,27 +149,27 @@ def test_map_interpolation(tolerance=0.1):
     pypl.imsave("./Imap_no_interp.png", abs(I1), vmin=0, vmax=I0.max())
     err = abs(I0-I1).sum() / ((I0+I1).sum() / 2.)
     if err < tolerance:
-        print "\t=> Test successful (err = %e)" % err
+        print("\t=> Test successful (err = %e)" % err)
         return False
     else:
-        print "\t=> Test failed (err = %e)" % err
+        print("\t=> Test failed (err = %e)" % err)
         return True
     
 
 if __name__ == "__main__":
-    print "STARTING CONDOR TEST ROUTINE ..."
+    print("STARTING CONDOR TEST ROUTINE ...")
     err = False
-    print "1) MODULE condor.utils.rotation ..."
+    print("1) MODULE condor.utils.rotation ...")
     err = err or condor.utils.rotation._all_tests()
-    print "2) Compare: Spheroid vs. map ..."
+    print("2) Compare: Spheroid vs. map ...")
     err = err or test_compare_spheroid_with_map()
-    print "3) Compare: Atoms vs. map ..."
+    print("3) Compare: Atoms vs. map ...")
     err = err or test_compare_atoms_with_map()
-    #print "4) Compare: Map with and without interpolation ..."
+    #print*"4) Compare: Map with and without interpolation ...")
     #err = err or test_map_interpolation()
-    print "EXITING CONDOR TEST ROUTINE"
+    print("EXITING CONDOR TEST ROUTINE")
     if err:
-        print "=> ERROR: At least one test failed"
+        print("=> ERROR: At least one test failed")
     else:
-        print "=> SUCCESS: All tests passed successfully"
+        print("=> SUCCESS: All tests passed successfully")
     

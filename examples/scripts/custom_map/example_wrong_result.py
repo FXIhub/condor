@@ -34,7 +34,7 @@ src = condor.Source(wavelength=wavelength, pulse_energy=pulse_energy , focus_dia
 # Detector
 det = condor.Detector(distance=distance, pixel_size=pixelsize, nx=414, ny=414)
 # Map
-print "Simulating map"
+print("Simulating map")
 par = condor.ParticleMap(diameter=40E-9, material_type="poliovirus", geometry="custom",
                          map3d_filename="../../map3d.h5", map3d_dataset="data", dx=dx,
                          rotation_formalism=rotation_formalism, rotation_values=rotation_values)

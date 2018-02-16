@@ -2,13 +2,14 @@
 This module is an implementation of a variety of tools for rotations in 3D space.
 """
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import sys, numpy, types, pickle, time, math
  
 import logging
 logger = logging.getLogger(__name__)
 
-from log import log_and_raise_error,log_warning,log_info,log_debug
-import linalg
+from .log import log_and_raise_error,log_warning,log_info,log_debug
+import condor.utils.linalg
 
 # CANONICAL ROTATION MATRICES   
 # Rotation matrix around x-axis - observing the right hand rule
@@ -245,7 +246,7 @@ class Rotation:
             return           
         n_ax = list(vectors.shape)[-1]
         N = vectors.size
-        Nv = N/3
+        Nv = int(N/3)
         if vectors.ndim == 2 and n_ax != 3:
             log_and_raise_error(logger, "Cannot rotate vectors. The given array has length %i in last dimension but should be 3." % (n_ax))
             return
@@ -438,11 +439,11 @@ def euler_from_quat(q, rotation_axes="zxz"):
        :rotation_axes(str): Rotation axes of the three consecutive Euler rotations (default ``\'zxz\'``) 
     """
     if len(rotation_axes) != 3:
-        print "Error: rotation_axes = %s is an invalid input." % rotation_axes
+        print("Error: rotation_axes = %s is an invalid input." % rotation_axes)
         return
     for s in rotation_axes:
         if s not in "xyz":
-            print "Error: rotation_axes = %s is an invalid input." % rotation_axes
+            print("Error: rotation_axes = %s is an invalid input." % rotation_axes)
             return
     i1 = 0 if rotation_axes[0] == "x" else 1 if rotation_axes[0] == "y" else 2 if rotation_axes[0] == "z" else None
     i2 = 0 if rotation_axes[1] == "x" else 1 if rotation_axes[1] == "y" else 2 if rotation_axes[1] == "z" else None
@@ -480,9 +481,9 @@ def euler_from_quat(q, rotation_axes="zxz"):
     v3n[(i3+1)%3] = 1.
     v3n12 = quat_vec_mult(q12, v3n)
     v3nG = quat_vec_mult(q, v3n)
-    e2_mag = numpy.arccos(linalg.dotproduct(v3n12,v3nG))
-    vc = linalg.crossproduct(v3n12, v3nG)
-    m = linalg.dotproduct(vc, v3r)
+    e2_mag = numpy.arccos(condor.utils.linalg.dotproduct(v3n12,v3nG))
+    vc = condor.utils.linalg.crossproduct(v3n12, v3nG)
+    m = condor.utils.linalg.dotproduct(vc, v3r)
     e2 = numpy.sign(m) * e2_mag
     return numpy.array([e0,e1,e2])
 
@@ -582,9 +583,9 @@ def norm_quat(q, tolerance=0.00001):
        :tolerance(float): Maximum deviation of length before rescaling (default ``0.00001``)
     """
     # Adjust length
-    l = linalg.length(q)
+    l = condor.utils.linalg.length(q)
     if abs(l - 1.) > tolerance:
-        q_norm = q_norm/linalg.length(q_norm)
+        q_norm = q_norm/condor.utils.linalg.length(q_norm)
     else:
         q_norm = q.copy()
     return q_norm
