@@ -40,8 +40,13 @@ from codecs import open
 import sys, os, fileinput
 from textwrap import dedent
 import numpy
+import re
 
 here = os.path.dirname(os.path.realpath(__file__))
+
+def get_property(prop):
+    result = re.search(r'{}\s*=\s*[\'"]([^\'"]*)[\'"]'.format(prop), open('src/__init__.py').read())
+    return result.group(1)
 
 def _post_install(dir):
     from subprocess import call
@@ -85,7 +90,6 @@ def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_in
 
     return [ext_icosahedron, ext_nfft]
 
-
 class InstallCommand(setuptools.command.install.install):
     user_options = setuptools.command.install.install.user_options + [
         ('enable-threads=', None, 'Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf).'),
@@ -123,7 +127,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.5',
+    version=get_property('__version__'),
 
     description='Condor: Simulation of single particle X-ray diffraction patterns',
     long_description=long_description,

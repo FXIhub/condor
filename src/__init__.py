@@ -36,15 +36,13 @@ from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleAto
 from .detector import Detector
 #import tests.test_all
 
+__version__ = '1.0.5'
+
 def _init():    
     # Log to stdout
     import logging, sys
     h = logging.StreamHandler(sys.stdout)
     logging.getLogger('condor').addHandler(h)
-
-    import pkg_resources
-    global __version__
-    __version__ = pkg_resources.require("condor")[0].version
 
 _init()
 
