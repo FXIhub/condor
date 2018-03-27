@@ -10,6 +10,12 @@
 #include "nfft3util.h"
 #endif
 
+// NFFT_DEFINE_MALLOC_API is a new macro that was introduced in nfft version 3.3
+#if defined(NFFT_DEFINE_MALLOC_API)
+#define NFFT_VERSION_ABOVE_3_3 1
+#else
+#define NFFT_VERSION_ABOVE_3_3 0
+#endif
 
 
 PyDoc_STRVAR(nfft__doc__, "nfft(real_space, coordinates)\n\nCalculate nfft from arbitrary dimensional array.\nreal_space should be an array (or any object that can trivially be converted to one.\ncoordinates should be a NxD array where N is the number of points where the Fourier transform should be evaluated and D is the dimensionality of the input array");
@@ -57,18 +63,24 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   }
 
   #if defined(ENABLE_THREADS)
-  printf("OMP_NUM_THREADS=%s\n",getenv("OMP_NUM_THREADS"));   
-  printf("nthreads = %d\n", nfft_get_num_threads());
+  printf("nthreads = %d (OMP_NUM_THREADS=%s)\n", nfft_get_num_threads(), getenv("OMP_NUM_THREADS"));
   fftw_init_threads();
   #endif
 
   nfft_init(&my_plan, ndim, dims, number_of_points);
   memcpy(my_plan.f_hat, PyArray_DATA(in_array), total_number_of_pixels*sizeof(fftw_complex));
   memcpy(my_plan.x, PyArray_DATA(coord_array), ndim*number_of_points*sizeof(double));
-  
+
+  // As of NFFT 3.3, "nfft_flags" has been renamed to "flags" 
+  #if NFFT_VERSION_ABOVE_3_3==1
+  if (my_plan.flags &PRE_PSI) {
+    nfft_precompute_one_psi(&my_plan);
+  }
+  #else
   if (my_plan.nfft_flags &PRE_PSI) {
     nfft_precompute_one_psi(&my_plan);
   }
+  #endif
 
   nfft_trafo(&my_plan);
 
