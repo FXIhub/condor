@@ -5,17 +5,21 @@
 #include <math.h>
 #include <stdio.h>
 
-#if defined(ENABLE_THREADS)
-#include <omp.h>
-#include "nfft3util.h"
-#endif
-
 // NFFT_DEFINE_MALLOC_API is a new macro that was introduced in nfft version 3.3
 #if defined(NFFT_DEFINE_MALLOC_API)
 #define NFFT_VERSION_ABOVE_3_3 1
 #else
 #define NFFT_VERSION_ABOVE_3_3 0
 #endif
+
+#if defined(ENABLE_THREADS)
+#include <omp.h>
+#endif
+
+#if (defined(ENABLE_THREADS) && NFFT_VERSION_ABOVE_3_3==0)
+#include <nfft3util.h>
+#endif
+
 
 
 PyDoc_STRVAR(nfft__doc__, "nfft(real_space, coordinates)\n\nCalculate nfft from arbitrary dimensional array.\nreal_space should be an array (or any object that can trivially be converted to one.\ncoordinates should be a NxD array where N is the number of points where the Fourier transform should be evaluated and D is the dimensionality of the input array");
