@@ -34,6 +34,7 @@
 # TO DO:
 # Take into account illumination profile
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy, os, sys, copy
 
 import logging
@@ -49,6 +50,7 @@ import condor.utils.scattering_vector
 import condor.utils.resample
 from condor.utils.rotation import Rotation
 import condor.particle
+import condor.utils.nfft
 
 
 def experiment_from_configfile(configfile):
@@ -290,7 +292,7 @@ class Experiment:
                     D_particle["dx"] = dx
                 # Rescale and shape qmap for nfft
                 qmap_scaled = dx * qmap / (2. * numpy.pi)
-                qmap_shaped = qmap_scaled.reshape(qmap_scaled.size/3, 3)
+                qmap_shaped = qmap_scaled.reshape(int(qmap_scaled.size/3), 3)
                 # Check inputs
                 invalid_mask = ~((qmap_shaped>=-0.5) * (qmap_shaped<0.5))
                 if numpy.any(invalid_mask):
@@ -555,7 +557,7 @@ class Experiment:
 
 
 def remove_from_dict(D, startswith="_"):
-    for k,v in D.items():
+    for k,v in list(D.items()):
         if k.startswith(startswith):
             del D[k]
         if isinstance(v, dict):

@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import sys
 import numpy
 #from scipy.interpolate import RegularGridInterpolator
@@ -48,7 +49,7 @@ import condor.utils.bodies
 
 import condor.utils.emdio
 
-from particle_abstract import AbstractContinuousParticle
+from .particle_abstract import AbstractContinuousParticle
 
 ENABLE_MAP_INTERPOLATION = False
 
@@ -459,7 +460,7 @@ class ParticleMap(AbstractContinuousParticle):
                     m_tmp = self._get_map_sphere(O["diameter"]/2., dx)
 
                 elif O["geometry"] == "cube":
-                    m_tmp = self._get_map_cube(O["diameter"]/2., dx)
+                    m_tmp = self._get_map_cube(O["diameter"], dx)
 
                 else:
                     log_and_raise_error(logger, "Particle map geometry \"%s\" is not implemented. Change your configuration and try again." % O["geometry"])
@@ -501,7 +502,7 @@ class ParticleMap(AbstractContinuousParticle):
             # Can we downsample current map?
             # MAX: We would do this only for performance reasons but have not found a good way of downsampling without introducing artifacts
             #if (dx_suggested/dx_rescaled >= 2.) and (dx_suggested/self._dx_orig >= 2.) and ENABLE_MAP_INTERPOLATION:
-            #    print "ENABLE_MAP_INTERPOLATION=%i" % ENABLE_MAP_INTERPOLATION
+            #    print("ENABLE_MAP_INTERPOLATION=%i" % ENABLE_MAP_INTERPOLATION)
             #    N1 = self._map3d_orig.shape[0]
             #    m1 = numpy.zeros(shape=(N1,N1,N1), dtype=numpy.float64)
             #    m1[:self._map3d_orig.shape[0],:self._map3d_orig.shape[0],:self._map3d_orig.shape[0]] = self._map3d_orig[:,:,:]

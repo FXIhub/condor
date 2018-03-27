@@ -2,6 +2,7 @@
 """
 Create example configuration files by concatenation
 """
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import os,sys
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -18,7 +19,7 @@ def concatenate_files(infilenames,outfilename,extra_newlines=0):
 
 if __name__ == "__main__":
 
-    print "Concatenating example configuration files..."
+    print("Concatenating example configuration files...")
 
     src = here + "/examples/configfile/source.conf"
     det = here + "/examples/configfile/detector.conf"
@@ -32,7 +33,7 @@ if __name__ == "__main__":
             # Ensure that user can write to the directory if setup is run by root
             os.system("chmod a+rwx %s" % d)
         outfilename = d + "/condor.conf"
-        print "Concatenating " + outfilename + "..."
+        print("Concatenating " + outfilename + "...")
         concatenate_files(infilenames, outfilename, 2)
     
-    print "Done."
+    print("Done.")

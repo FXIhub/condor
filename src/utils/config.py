@@ -33,19 +33,25 @@
 Reading, writing and converting configuration in different representations
 """
 
-import os, numpy, ConfigParser, tempfile, copy
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
+import os, numpy, tempfile, copy
+try:
+    import ConfigParser as configparser
+except ImportError:
+    # In Python 3, configparser needs to be installed with pip
+    import configparser
 
 import logging
 logger = logging.getLogger(__name__)
 
-from log import log_and_raise_error,log_warning,log_info,log_debug
+from .log import log_and_raise_error,log_warning,log_info,log_debug
 import condor
 
 def read_configfile(configfile):
     """
     Read configuration file to dictionary
     """
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     with open(configfile,"r") as f:
         config.readfp(f)
         confDict = {}
@@ -164,7 +170,7 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None)
             return
     import spsim
     # Create temporary file for pdb file
-    tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
+    tmpf_pdb = tempfile.NamedTemporaryFile(mode='w+', suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
     tmpf_pdb_name = tmpf_pdb.name
     tmpf_pdb.close()
     # Write pdb file
@@ -174,7 +180,7 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None)
     # Start with default spsim configuration
     opts = spsim.set_defaults()
     # Create temporary file for spsim configuration
-    tmpf_conf = tempfile.NamedTemporaryFile(mode='w+b', bufsize=-1, suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
+    tmpf_conf = tempfile.NamedTemporaryFile(mode='w+', suffix='.conf', prefix='tmp_spsim', dir=None, delete=False)
     # Write string sequence from configuration dicts
     s = []
     s += "# THIS FILE WAS CREATED AUTOMATICALLY BY CONDOR\n"
@@ -219,11 +225,11 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None)
     intrinsic_rotation.invert()
     e0, e1, e2 = intrinsic_rotation.get_as_euler_angles("zxz")
     if not numpy.isfinite(e0):
-        print "ERROR: phi is not finite"
+        print("ERROR: phi is not finite")
     if not numpy.isfinite(e1):
-        print "ERROR: theta is not finite"
+        print("ERROR: theta is not finite")
     if not numpy.isfinite(e2):
-        print "ERROR: psi is not finite"
+        print("ERROR: psi is not finite")
     s += "phi = %.12e;\n" % e0
     s += "theta = %.12e;\n" % e1
     s += "psi = %.12e;\n" % e2

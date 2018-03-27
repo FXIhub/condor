@@ -30,6 +30,7 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy
 
 import logging
@@ -39,7 +40,7 @@ import condor
 import condor.utils.log
 from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
 
-from particle_abstract import AbstractContinuousParticle
+from .particle_abstract import AbstractContinuousParticle
 
 from condor.utils.variation import Variation
 

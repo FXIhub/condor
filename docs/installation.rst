@@ -39,14 +39,14 @@ Install the `NFFT library <https://www-user.tu-chemnitz.de/~potts/nfft/>`_:
 c) libspimage and spsim (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Install the libraries `libspimage <https://github.com/FilipeMaia/libspimage>`_ and the `spsim <https://github.com/FilipeMaia/libspimage>`_:
+Install the libraries `libspimage <https://github.com/FXIhub/libspimage>`_ and the `spsim <https://github.com/FXIhub/libspimage>`_:
 
 i) libspimage
 ,,,,,,,,,,,,,
 
 .. code:: bash
 
-   git clone https://github.com/FilipeMaia/libspimage.git
+   git clone https://github.com/FXIhub/libspimage.git
    cd libspimage
    mkdir build
    cd build
@@ -67,7 +67,7 @@ ii) spsim
 
 .. code:: bash
 
-   git clone https://github.com/FilipeMaia/spsim.git
+   git clone https://github.com/FXIhub/spsim.git
    cd spsim
    mkdir build
    cd build
@@ -88,7 +88,7 @@ Make sure everything is set up correctly, then press the **G** key for generatio
 
 .. code:: bash
 
-   git clone https://github.com/mhantke/condor.git
+   git clone https://github.com/FXIhub/condor.git
    cd condor
    python setup.py install
 

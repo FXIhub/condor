@@ -34,7 +34,7 @@ for i,par in enumerate(particles):
         axs1[i].imshow(data, norm=LogNorm(lims[0], lims[1]), cmap="gnuplot")
         
     res = E.propagate3d()
-    data = res["entry_1"]["data_1"]["data"][1024/ds/2,:,:] 
+    data = res["entry_1"]["data_1"]["data"][int(1024/ds/2),:,:] 
     if do_plot:
         axs2[i].set_title("3D slice: " + par.keys()[0])
         axs2[i].imshow(data, norm=LogNorm(lims[0], lims[1]), cmap="gnuplot")

@@ -7,6 +7,7 @@
 **/#*
 **/.#*
 **/.ipynb_checkpoints
+**/*~
 src/data
 tests/example_out
 tests/example_out/*

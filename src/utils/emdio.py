@@ -30,8 +30,13 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-import urllib2
-import StringIO
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
+try:
+    from urllib2 import urlopen
+except ImportError:
+    from urllib.request import urlopen
+
+from io import StringIO
 import gzip
 
 import numpy
@@ -44,24 +49,24 @@ import scipy.ndimage.measurements
 import logging
 logger = logging.getLogger(__name__)
 
-import log
+from .log import log_and_raise_error,log_warning,log_info,log_debug
 
 def fetch_map(emd_id):
     url = "ftp://ftp.ebi.ac.uk/pub/databases/emdb/structures/EMD-%s/map/emd_%s.map.gz" % (str(emd_id),str(emd_id))
-    log.log_debug(logger, "Downloading file for EMDID %s from URL %s" % (emd_id, url))
+    log_debug(logger, "Downloading file for EMDID %s from URL %s" % (emd_id, url))
     filename = "./emd_%s.map" % str(emd_id)
     response = urllib2.urlopen(url)
     compressedFile = StringIO.StringIO()
     compressedFile.write(response.read())
     compressedFile.seek(0)
     decompressedFile = gzip.GzipFile(fileobj=compressedFile, mode='rb')
-    log.log_debug(logger, "Download of %s ended." % (filename))
+    log_debug(logger, "Download of %s ended." % (filename))
     with open(filename, 'w') as outfile:
         outfile.write(decompressedFile.read())
     return read_map(filename)
     
 def read_map(filename):
-    log.log_info(logger, "Automatic scaling of EM maps may not be reliable. Please make sure to check your map after using this functionality.")
+    log_info(logger, "Automatic scaling of EM maps may not be reliable. Please make sure to check your map after using this functionality.")
     # CCP4 map file format
     # http://www.ccp4.ac.uk/html/maplib.html
     with open(filename, "rb") as f:
@@ -76,7 +81,7 @@ def read_map(filename):
         NR = temp_int32[1]
         NS = temp_int32[2]
         if NC != NR or NR != NS:
-            log.log_and_raise_error(logger, "Cannot read a map with unequal dimensions")
+            log_and_raise_error(logger, "Cannot read a map with unequal dimensions")
         N = NC
         #4      MODE            Data type
         #                  0 = envelope stored as signed bytes (from
@@ -93,9 +98,9 @@ def read_map(filename):
         MODE = temp_int32[3]
         dtype = ["int8", "int16", "float32", None, "complex64", "int8"][MODE]
         if MODE == 3:
-            log.log_and_raise_error(logger, "Map file data type \"MODE=%i\" is not implemented yet." % MODE)
+            log_and_raise_error(logger, "Map file data type \"MODE=%i\" is not implemented yet." % MODE)
         if MODE not in [0,1,2,5]:
-            log.log_warning(logger, "Map file data type \"MODE=%i\" not supported yet and may not work reliably." % MODE)
+            log_warning(logger, "Map file data type \"MODE=%i\" not supported yet and may not work reliably." % MODE)
         #11      X length        Cell Dimensions (Angstroms)
         #12      Y length                     "
         #13      Z length                     "
@@ -103,7 +108,7 @@ def read_map(filename):
         dY = temp_float32[11]/float(N)*1E-10
         dZ = temp_float32[12]/float(N)*1E-10
         if dX != dY or dY != dZ:
-            log.log_and_raise_error(logger, "Cannot read a map with unequal voxel dimensions")
+            log_and_raise_error(logger, "Cannot read a map with unequal voxel dimensions")
         #17      MAPC            Which axis corresponds to Cols.  (1,2,3 for X,Y,Z)
         #18      MAPR            Which axis corresponds to Rows   (1,2,3 for X,Y,Z)
         #19      MAPS            Which axis corresponds to Sects. (1,2,3 for X,Y,Z)
@@ -113,7 +118,7 @@ def read_map(filename):
         #24      NSYMBT          Number of bytes used for storing symmetry operators
         NSYMBT = temp_int32[23]
         if NSYMBT > 0:
-            log.log_and_raise_error(logger, "Omitting symmetry operations in map file.")
+            log_and_raise_error(logger, "Omitting symmetry operations in map file.")
             f.read(NSYMBT)
         # The remaining bytes are data
         raw_data = f.read()

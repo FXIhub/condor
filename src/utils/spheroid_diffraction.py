@@ -30,10 +30,11 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy
 
-from scattering_vector import generate_qmap
-import rotation
+from .scattering_vector import generate_qmap
+#import rotation
 
 _q_spheroid_diffraction = lambda q_x, q_y: numpy.sqrt(q_x**2+q_y**2)
 _g_spheroid_diffraction = lambda q_x, q_y, theta, phi: numpy.arccos((numpy.cos(theta)*(1-numpy.finfo("float64").eps))*(-q_x*numpy.sin(phi)+q_y*numpy.cos(phi))/(_q_spheroid_diffraction(q_x,q_y)+numpy.finfo("float64").eps))
