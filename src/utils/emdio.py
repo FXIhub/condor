@@ -36,7 +36,11 @@ try:
 except ImportError:
     from urllib.request import urlopen
 
-from io import StringIO
+try:
+    import StringIO
+except ImportError:
+    from io import StringIO
+    
 import gzip
 
 import numpy
@@ -55,7 +59,7 @@ def fetch_map(emd_id):
     url = "ftp://ftp.ebi.ac.uk/pub/databases/emdb/structures/EMD-%s/map/emd_%s.map.gz" % (str(emd_id),str(emd_id))
     log_debug(logger, "Downloading file for EMDID %s from URL %s" % (emd_id, url))
     filename = "./emd_%s.map" % str(emd_id)
-    response = urllib2.urlopen(url)
+    response = urlopen(url)
     compressedFile = StringIO.StringIO()
     compressedFile.write(response.read())
     compressedFile.seek(0)
