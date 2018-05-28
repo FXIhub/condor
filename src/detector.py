@@ -563,7 +563,7 @@ class Detector:
             P = numpy.ones(shape=(self._ny, self._nx))
         else:
             X, Y = self.generate_xypix(cx=cx, cy=cy)
-            P = condor.utils.diffraction.polarization_factor(X, Y, self.distance, polarization=polarization)
+            P = condor.utils.diffraction.polarization_factor(X*self.pixel_size, Y*self.pixel_size, self.distance, polarization=polarization)
         return P
     
     def detect_photons(self, I):

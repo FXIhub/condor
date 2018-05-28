@@ -102,7 +102,7 @@ def polarization_factor(x, y, detector_distance, polarization="ignore"):
 
     Unpolarized:
     
-      P = \left(1 + \cos^2\left(\frac{\sqrt{x^2+y^2}}{\sqrt{x^2+y^2+D^2}}\right)^2\right)
+      P = 0.5\left(1 + \cos^2\left(\frac{\sqrt{x^2+y^2}}{\sqrt{x^2+y^2+D^2}}\right)^2\right)
 
     Ignore polarization:
 
@@ -131,5 +131,5 @@ def polarization_factor(x, y, detector_distance, polarization="ignore"):
         elif polarization == "horizontal":
             P = numpy.cos( numpy.arcsin(x/r) )**2
         elif polarization == "unpolarized":
-            P = ( 1. + numpy.cos( numpy.arcsin(numpy.sqrt(x**2+y**2)/r) )**2 )
+            P = 0.5*( 1. + numpy.cos( numpy.arcsin(numpy.sqrt(x**2+y**2)/r) )**2 )
     return P
