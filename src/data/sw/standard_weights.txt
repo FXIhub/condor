@@ -1,5 +1,5 @@
 # Source
-# Atomic weights of the elements 2011 (IUPAC Technical Report) Michael E. Wieser et al., Pure and Applied Chemistry. Volume 85, Issue 5, Pages 1047–1078
+# Atomic weights of the elements 2011 (IUPAC Technical Report) Michael E. Wieser et al., Pure and Applied Chemistry. Volume 85, Issue 5, Pages 1047-1078
 # ISSN (Online) 1365-3075, ISSN (Print) 0033-4545
 # DOI: 10.1351/PAC-REP-13-03-02, April 2013
 # Data loaded from: http://www.chem.qmul.ac.uk/iupac/AtWt/ table 2 (2015/07/01)

@@ -36,7 +36,6 @@ Pickle constants data form text tables
 
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import os, glob, numpy, pickle, sys, re
-import codecs
 
 here = os.path.dirname(os.path.realpath(__file__))
 
@@ -60,7 +59,7 @@ def pickle_atomic_scattering_factors(inpath, outpath):
         pickle.dump(S,f)
 
 def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
-    with codecs.open(inpath + "/standard_weights.txt", "r") as f:
+    with open(inpath + "/standard_weights.txt", "r") as f:
         lines = f.readlines()
     # Skip the header
     lines = [l for l in lines if not l.startswith("#")]
