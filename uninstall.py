@@ -39,7 +39,7 @@ import shutil
 
 import argparse, subprocess
 
-
+from builtins import input
 from distutils.core import setup, Extension
 from distutils.spawn import find_executable
 from distutils.sysconfig import get_python_lib
@@ -96,7 +96,7 @@ if __name__ == "__main__":
         while True:
             print('Found the following directories/files:')
             print(str(dirs))
-            s = raw_input('Do you really want to delete them?\n[yes/no] ')
+            s = input('Do you really want to delete them?\n[yes/no] ')
             print("")
             if s == "yes":
                 # Delete installation files
