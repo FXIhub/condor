@@ -350,6 +350,18 @@ class Experiment:
                     qmap = 2*numpy.pi * qmap_img.image.real
                 else:
                     qmap = 2*numpy.pi * numpy.reshape(qmap_img.image.real, (qn, qn, qn, 3))
+                self._qmap_cache = {
+                    "qmap"              : qmap,
+                    "nx"                : nx,
+                    "ny"                : ny,
+                    "cx"                : cx,
+                    "cy"                : cy,
+                    "pixel_size"        : pixel_size,
+                    "detector_distance" : detector_distance,
+                    "wavelength"        : wavelength,
+                    "extrinsic_rotation": copy.deepcopy(extrinsic_rotation),
+                    "order"             : 'zyx',
+                }   
                 spsim.sp_image_free(qmap_img)
                 spsim.free_diffraction_pattern(pat)
                 spsim.free_output_in_options(opts)                
