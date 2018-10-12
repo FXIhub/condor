@@ -1,7 +1,7 @@
 Conventions
 ===========
 
-Coodrinate system
+Coordinate system
 -----------------
 
 Positions in three dimensional space are described in a right-handed cartesian coordinate system with :math:`x`, :math:`y` and :math:`z` axis. In the lab reference frame :math:`x` and :math:`y` are often referred to by *horizontal* and *vertical* coordinate, respectively. The :math:`z` axis is codirectional with the primary beam propagation.
