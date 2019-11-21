@@ -481,7 +481,10 @@ def euler_from_quat(q, rotation_axes="zxz"):
     v3n[(i3+1)%3] = 1.
     v3n12 = quat_vec_mult(q12, v3n)
     v3nG = quat_vec_mult(q, v3n)
-    e2_mag = numpy.arccos(condor.utils.linalg.dotproduct(v3n12,v3nG))
+    dprod = condor.utils.linalg.dotproduct(v3n12,v3nG)
+    if abs(dprod) > 1.:
+        dprod = numpy.sign(dprod)
+    e2_mag = numpy.arccos(dprod)
     vc = condor.utils.linalg.crossproduct(v3n12, v3nG)
     m = condor.utils.linalg.dotproduct(vc, v3r)
     e2 = numpy.sign(m) * e2_mag
