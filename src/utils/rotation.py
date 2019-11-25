@@ -451,6 +451,8 @@ def euler_from_quat(q, rotation_axes="zxz"):
     v3 = numpy.array([0.,0.,0.])
     v3[i3] = 1.
     v3r = rotate_quat(v3, q)
+    if abs(v3r[i1]) > 1.:
+        v3r[i1] = numpy.sign(v3r[i1])
     if ((i1==0) and (i2==2) and (i3==0)) or \
        ((i1==1) and (i2==0) and (i3==1)) or \
        ((i1==2) and (i2==1) and (i3==2)):
