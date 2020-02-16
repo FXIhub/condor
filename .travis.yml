@@ -52,7 +52,7 @@ before_install:
   # - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
   # - if [ ! -d "${HDF5_DIR}/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current18/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
   - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
-  - if [ ! -d "${HDF5_DIR}/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current18/bin/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
+  - if [ ! -d "${HDF5_DIR}/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.20/bin/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
   
 #  - export LD_LIBRARY_PATH=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
   - export LD_LIBRARY_PATH=${HDF5_DIR}/lib:${LD_LIBRARY_PATH}
