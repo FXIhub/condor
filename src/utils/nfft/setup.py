@@ -35,9 +35,16 @@ import numpy.distutils.misc_util
 #import os
 #os.environ["CC"] = "/usr/local/bin/gcc-4.9" 
 
-ext = Extension("nfftthreads",
-                library_dirs= ['/home/hantke/local_fftw_threads/lib'],
-                libraries=["nfft3","nfft3_threads" ,"fftw3_threads" ,"fftw3"],
+# ext = Extension("nfftthreads",
+#                 library_dirs= ['/home/hantke/local_fftw_threads/lib'],
+#                 libraries=["nfft3","nfft3_threads" ,"fftw3_threads" ,"fftw3"],
+#                 sources=["nfftmodule.c"],
+#                 include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs() + ["/home/hantke/local_fftw_threads/include"])
+# setup(name="condor_nfftthreads", ext_modules=[ext])
+
+
+ext = Extension("nfft",
+                libraries=["nfft3", "fftw3"],
                 sources=["nfftmodule.c"],
-                include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs() + ["/home/hantke/local_fftw_threads/include"])
-setup(name="condor_nfftthreads", ext_modules=[ext])
+                include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs())
+setup(name="condor_nfft", ext_modules=[ext], include_dirs=[numpy.get_include()])
