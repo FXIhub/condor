@@ -1,5 +1,6 @@
 #include <Python.h>
 #include "structmember.h"
+#include <numpy/npy_common.h>
 #include <numpy/arrayobject.h>
 #include <nfft3.h>
 #include <math.h>
@@ -88,8 +89,8 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
 
   nfft_trafo(&my_plan);
 
-  int out_dim[] = {number_of_points};
-  PyObject *out_array = (PyObject *)PyArray_FromDims(1, out_dim, NPY_COMPLEX128);
+  npy_intp out_dim[] = {number_of_points};
+  PyObject *out_array = (PyObject *)PyArray_SimpleNew(1, out_dim, NPY_COMPLEX128);
   memcpy(PyArray_DATA(out_array), my_plan.f, number_of_points*sizeof(fftw_complex));
 
   // Clean up memory
