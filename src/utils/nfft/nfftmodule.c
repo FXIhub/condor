@@ -46,6 +46,8 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   int ndim = PyArray_NDIM(in_array);
   if (ndim <= 0) {
     PyErr_SetString(PyExc_ValueError, "Input array can't be 0 dimensional\n");
+    Py_XDECREF(coord_array);
+    Py_XDECREF(in_array);
     return NULL;
   }
 
@@ -87,10 +89,44 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   }
   #endif
 
+  const char *error_str;
+
+  error_str = nfft_check(&my_plan);
+  if (error_str != NULL) {
+    char buffer[256];
+    snprintf(buffer, 256, "Error in nfft module: '%s'.\n", error_str);
+    PyErr_SetString(PyExc_RuntimeError, buffer);
+
+    nfft_finalize(&my_plan);
+
+    #if defined(ENABLE_THREADS)
+    fftw_cleanup_threads();
+    #endif
+
+    Py_XDECREF(coord_array);
+    Py_XDECREF(in_array);
+    return NULL;
+  }
+
   nfft_trafo(&my_plan);
 
   npy_intp out_dim[] = {number_of_points};
   PyObject *out_array = (PyObject *)PyArray_SimpleNew(1, out_dim, NPY_COMPLEX128);
+
+  if (out_array == NULL) {
+    PyErr_SetString(PyExc_RuntimeError, "Can't allocate output array.\n");
+
+    nfft_finalize(&my_plan);
+
+    #if defined(ENABLE_THREADS)
+    fftw_cleanup_threads();
+    #endif
+
+    Py_XDECREF(coord_array);
+    Py_XDECREF(in_array);
+    return NULL;
+  }
+
   memcpy(PyArray_DATA(out_array), my_plan.f, number_of_points*sizeof(fftw_complex));
 
   // Clean up memory
