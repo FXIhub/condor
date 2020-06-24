@@ -13,6 +13,7 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
 
   static char *kwlist[] = {"array_side", "radius", "rotation", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "id|O", kwlist, &image_side, &radius, &rotation_obj)) {
+    PyErr_SetString(PyExc_ValueError, "Invalid input for iscoahedron.");
     return NULL;
   }
 
@@ -23,6 +24,7 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
 
   if (radius <= 0.) {
     PyErr_SetString(PyExc_ValueError, "Radius must be > 0.");
+    return NULL;
   }
 
   double rotm_11, rotm_12, rotm_13;
@@ -69,8 +71,8 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
     rotm_33 = quat_1*quat_1 - quat_2*quat_2 - quat_3*quat_3 + quat_4*quat_4;
   }
 
-  int out_dim[] = {image_side, image_side, image_side};
-  PyObject *out_array = (PyObject *)PyArray_FromDims(3, out_dim, NPY_FLOAT64);
+  npy_intp out_dim[] = {image_side, image_side, image_side};
+  PyObject *out_array = (PyObject *)PyArray_SimpleNew(3, out_dim, NPY_FLOAT64);
   double *out = PyArray_DATA(out_array);
 
   //double edge_thickness = 1./image_side;
@@ -130,6 +132,7 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
   double scalar_product, distance;
   double image_side_float = (double) image_side;
   int x_pixel, y_pixel, z_pixel, i;
+  
   for (z_pixel = 0; z_pixel < image_side; z_pixel++) {
     //x = fabs(((double)x_pixel - image_side_float/2. + 0.5));
     no_rot_z = ((double)z_pixel - image_side_float/2. + 0.5);
@@ -150,12 +153,12 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
 	  y = fabs(no_rot_y);
 	  x = fabs(no_rot_x);
 	}
-	
+
 	scalar_product = x*face_normal_center[2] + y*face_normal_center[1] + z*face_normal_center[0];
 	projected_x = x * face_distance/scalar_product;
 	projected_y = y * face_distance/scalar_product;
 	projected_z = z * face_distance/scalar_product;
-
+  
 	i = z_pixel*image_side*image_side + y_pixel*image_side + x_pixel;
 	if ((projected_x-center_x)*normal1_x + (projected_y-center_y)*normal1_y +
 	    (projected_z-center_z)*normal1_z > edge_distance) {
@@ -204,6 +207,7 @@ static PyObject *icosahedron(PyObject *self, PyObject *args, PyObject *kwargs)
       }
     }
   }
+  
   return out_array;
 }
 
