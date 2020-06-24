@@ -40,7 +40,7 @@ def crossproduct(a, b):
     return c
 
 def dotproduct(v1, v2):
-    return numpy.sum((a*b) for a, b in zip(v1, v2))
+    return (numpy.asarray(v1)*numpy.asarray(v2)).sum()
 
 def length(v):
     return numpy.sqrt(dotproduct(v, v))
