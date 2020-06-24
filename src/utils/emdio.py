@@ -37,9 +37,9 @@ except ImportError:
     from urllib.request import urlopen
 
 try:
-    import StringIO
+    from StringIO import StringIO ## for Python 2
 except ImportError:
-    from io import StringIO
+    from io import BytesIO as StringIO ## for Python 3
     
 import gzip
 
@@ -60,12 +60,12 @@ def fetch_map(emd_id):
     log_debug(logger, "Downloading file for EMDID %s from URL %s" % (emd_id, url))
     filename = "./emd_%s.map" % str(emd_id)
     response = urlopen(url)
-    compressedFile = StringIO.StringIO()
+    compressedFile = StringIO()
     compressedFile.write(response.read())
     compressedFile.seek(0)
     decompressedFile = gzip.GzipFile(fileobj=compressedFile, mode='rb')
     log_debug(logger, "Download of %s ended." % (filename))
-    with open(filename, 'w') as outfile:
+    with open(filename, 'wb') as outfile:
         outfile.write(decompressedFile.read())
     return read_map(filename)
     
