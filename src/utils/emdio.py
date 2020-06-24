@@ -187,7 +187,7 @@ def preproc_map_auto(map3d_raw, ed_water, ed_particle):#, water_layer=0.1):
     threshold = v_water + (v_particle_min - v_water)*0.1
     map3d_bin = mask * map3d_raw > threshold
     labeled_array, num_features = scipy.ndimage.measurements.label(map3d_bin)
-    map3d_bin2 = labeled_array == labeled_array[N/2,N/2,N/2]
+    map3d_bin2 = labeled_array == labeled_array[N//2,N//2,N//2]
     map3d_bin_filled = scipy.ndimage.morphology.binary_fill_holes(map3d_bin2)
     v_particle = numpy.mean(map3d_raw[map3d_bin_filled])
     ed_map3d = (ed_water + (map3d_raw-v_water)/(v_particle-v_water)*(ed_particle-ed_water))/ed_particle * map3d_bin_filled
