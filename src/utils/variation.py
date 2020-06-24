@@ -36,9 +36,9 @@ Tools for applying noise / statistical variation to values
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy
 try:
-    from abc import Iterable ## Python >= 3.3
+    from collections.abc import Iterable ## Python >= 3.3
 except ImportError:
-    from collections.abc import Iterable  ## Python < 3.3
+    from collections import Iterable  ## Python < 3.3
 
 import logging
 logger = logging.getLogger(__name__)
