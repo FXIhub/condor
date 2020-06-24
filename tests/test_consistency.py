@@ -3,7 +3,6 @@ from __future__ import print_function, absolute_import # Compatibility with pyth
 import sys
 import numpy, scipy.constants
 import os
-from pathlib import Path
 import logging
 logger = logging.getLogger('condor')
 logger.setLevel("WARNING")
@@ -12,9 +11,8 @@ import condor
 
 SAVE_OUTPUT = False
 
-TESTS_PATH = Path(__file__).parent
-MAP3D_PATH = TESTS_PATH.parent / "examples" / "map3d.h5"
-assert MAP3D_PATH.exists()
+TESTS_DIR = os.path.dirname(os.path.realpath(__file__))
+MAP3D_LOCATION = os.path.join(TESTS_DIR, "..", "examples", "map3d.h5")
 
 
 def test_compare_spheroid_with_map(tolerance = 0.15):
@@ -125,7 +123,7 @@ def test_map_interpolation(tolerance=0.1):
     src = condor.Source(wavelength=10.0E-9, pulse_energy=1E-3, focus_diameter=1E-6)
     det = condor.Detector(distance=1.0, pixel_size=300E-6, nx=256, ny=256)
     par = condor.ParticleMap(diameter=600E-9, material_type="cell", geometry="custom",
-                             map3d_filename=str(MAP3D_PATH), map3d_dataset="data", dx=5E-9)
+                             map3d_filename=MAP3D_LOCATION, map3d_dataset="data", dx=5E-9)
     s = "particle_map"
     E = condor.Experiment(src, {s : par}, det)
     res0 = E.propagate()
@@ -136,7 +134,7 @@ def test_map_interpolation(tolerance=0.1):
     src = condor.Source(wavelength=10.0E-9, pulse_energy=1E-3, focus_diameter=1E-6)
     det = condor.Detector(distance=1.0, pixel_size=300E-6, nx=256, ny=256)
     par = condor.ParticleMap(diameter=600E-9, material_type="cell", geometry="custom",
-                             map3d_filename=str(MAP3D_PATH), map3d_dataset="data", dx=5E-9)
+                             map3d_filename=MAP3D_LOCATION, map3d_dataset="data", dx=5E-9)
     s = "particle_map"
     E = condor.Experiment(src, {s : par}, det)
     res1 = E.propagate()
