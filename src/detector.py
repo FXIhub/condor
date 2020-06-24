@@ -35,6 +35,10 @@ import sys,os
 import collections
 sys.path.append("utils")
 import numpy
+try:
+    from abc import Iterable ## Python >= 3.3
+except ImportError:
+    from collections.abc import Iterable  ## Python < 3.3
 
 import logging
 logger = logging.getLogger(__name__)
@@ -369,7 +373,7 @@ class Detector:
           :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
         """
         r_max = numpy.sqrt(x_off**2+y_off**2) * self.pixel_size
-        it = isinstance(r_max, collections.Iterable)
+        it = isinstance(r_max, Iterable)
         if it:
             r_max = r_max.max()
         if r_max/self.distance < 0.0001:

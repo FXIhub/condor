@@ -35,7 +35,10 @@ Tools for applying noise / statistical variation to values
 
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import numpy
-import collections
+try:
+    from abc import Iterable ## Python >= 3.3
+except ImportError:
+    from collections.abc import Iterable  ## Python < 3.3
 
 import logging
 logger = logging.getLogger(__name__)
@@ -174,7 +177,7 @@ class Variation:
         """
         if spread is None:
             self._spread = None
-        elif isinstance(spread, collections.Iterable):
+        elif isinstance(spread, Iterable):
             self._spread = list(spread)
         else:
             self._spread = [spread]
