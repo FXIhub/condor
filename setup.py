@@ -173,7 +173,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages = ['condor', 'condor.utils', 'condor.particle', 'condor.scripts', 'condor.data', 'condor.tests'],
+    packages = ['condor', 'condor.utils', 'condor.particle', 'condor.scripts', 'condor.data'],
     package_dir = {'condor':'src'},
     
     # Alternatively, if you want to distribute just a my_module.py, uncomment 
