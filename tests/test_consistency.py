@@ -50,17 +50,13 @@ def test_compare_spheroid_with_map(tolerance = 0.15):
     # Compare
     I_ideal = abs(F_ideal)**2
     I_map = abs(F_map)**2
-    #import matplotlib.pyplot as pypl
-    #pypl.imsave("./Ispheroid_sph.png", abs(I_ideal))
-    #pypl.imsave("./Ispheroid_map.png", abs(I_map))
+    if SAVE_OUTPUT:
+        import matplotlib.pyplot as pypl
+        pypl.imsave("./Ispheroid_sph.png", abs(I_ideal))
+        pypl.imsave("./Ispheroid_map.png", abs(I_map))
     diff = I_ideal-I_map
     err = abs(diff).sum() / ((I_ideal.sum()+I_map.sum())/2.)
-    if err < tolerance:
-        print("\t=> Test successful (err = %e)" % err)
-        return False
-    else:
-        print("\t=> Test failed (err = %e)" % err)
-        return True
+    assert err < tolerance
 
 def test_compare_atoms_with_map(tolerance = 0.1):
     """
