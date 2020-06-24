@@ -80,7 +80,7 @@ class CXIWriter:
                         else:
                             dtype = numpy.dtype(type(data))
                         if dtype == "S":
-                            dtype = h5py.new_vlen(str)
+                            dtype = h5py.vlen_dtype(str)
                         axes = "experiment_identifier:value"
                     else:
                         data = numpy.asarray(data)
