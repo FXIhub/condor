@@ -1,7 +1,7 @@
 language: python
 sudo: false
 os: linux
-dist: trusty
+dist: bionic
 
 virtualenv:
   system_site_packages: false
@@ -9,9 +9,6 @@ virtualenv:
 cache:
   directories:
     - $HOME/.cache/pip
-#    - $HOME/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared
-#    - $HOME/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared
-#    - $HOME/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared
     - $HOME/nfft-3.2.3
     - $HOME/libspimage
     - $HOME/spsim
@@ -25,13 +22,11 @@ matrix:
     - python: '3.4'
     - python: '3.5'
     - python: '3.6'
+    - python: '3.7'
+    - python: '3.8'
 
 addons:
   apt:
-    sources:
-      - ubuntu-toolchain-r-test
-      - kubuntu-backports
-      - couchbase-precise
     packages:
       - libpng-dev
       - libtiff4-dev
@@ -49,27 +44,12 @@ before_install:
   - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
 # Install hdf5
   - cd $HOME
-#  - if [ ! -d "$HOME/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
-  # - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
-  # - if [ ! -d "${HDF5_DIR}/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current18/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
-#  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
-#  - if [ ! -d "${HDF5_DIR}/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.8/hdf5-1.8.20/bin/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
-  
-#  - export LD_LIBRARY_PATH=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
-#  - export LD_LIBRARY_PATH=${HDF5_DIR}/lib:${LD_LIBRARY_PATH}
   - ls ${HOME}/
-#  - ls ${HDF5_DIR}
-#  - ls ${HDF5_DIR}/include
-#  - ls ${HDF5_DIR}/lib
 # Install numpy and scipy
   - pip install numpy
   - pip install scipy
 # Install configparser with pip (this is to make condor compatible with Python 3, which no longer has the ConfigParser module)
   - pip install configparser
-# Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
-#  - export HDF5_DIR=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/
-#  - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
-#  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
   - pip install h5py
   - pip install pytest
 # Testing imports
