@@ -32,13 +32,13 @@
 
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import sys,os
-import collections
+try:
+    from collections.abc import Iterable ## Python >= 3.3
+except ImportError:
+    from collections import Iterable  ## Python < 3.3
+
 sys.path.append("utils")
 import numpy
-try:
-    from abc import Iterable ## Python >= 3.3
-except ImportError:
-    from collections.abc import Iterable  ## Python < 3.3
 
 import logging
 logger = logging.getLogger(__name__)
