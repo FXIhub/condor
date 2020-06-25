@@ -22,3 +22,9 @@ examples/configfile/particle_molecule
 examples/configfile/particle_atoms
 condor.egg-info
 dist
+*.pdb
+*.map
+*.tar.gz
+*.h5
+venv
+*.ipynb

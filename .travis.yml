@@ -71,10 +71,12 @@ before_install:
 #  - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
 #  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
   - pip install h5py
+  - pip install pytest
 # Testing imports
   - python -c "import numpy; print(numpy.__file__)"
   - python -c "import scipy; print(scipy.__file__)"
   - python -c "import h5py; print(h5py.__file__)"
+  - python -c "import pytest; print(pytest.__file__)"
 # Install libspimage
   - cd $HOME
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
@@ -111,7 +113,7 @@ script:
   - python -c "import spimage_pybackend; print(spimage_pybackend.__file__)"
   - python -c "import spsim_pybackend; print(spsim_pybackend.__file__)"
   - python -c "import condor; print(condor.__file__)"
-  # UNITTESTS
-  - python -m unittest -v condor.tests.test_all
+  # PYTEST
+  - python -m pytest -v tests
   # EXAMPLES
   - cd $HOME/build/FXIhub/condor/; python .travis_examples.py

@@ -36,7 +36,7 @@ from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleAto
 from .detector import Detector
 #import tests.test_all
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 
 def _init():    
     # Log to stdout

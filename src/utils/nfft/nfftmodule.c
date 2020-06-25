@@ -27,10 +27,9 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
 {
   PyObject *in_obj, *coord_obj;
 
-  
-  
   static char *kwlist[] = {"real_space", "coordinates", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist, &in_obj, &coord_obj)) {
+    PyErr_SetString(PyExc_ValueError, "Cannot parse input to nfft.\n");
     return NULL;
   }
   
@@ -39,6 +38,7 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   if (coord_array == NULL || in_array == NULL) {
     Py_XDECREF(coord_array);
     Py_XDECREF(in_array);
+    PyErr_SetString(PyExc_ValueError, "Invalid input to nfft.\n");
     return NULL;
   }
 
@@ -49,13 +49,12 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
   }
 
   if ((PyArray_NDIM(coord_array) != 2 || PyArray_DIM(coord_array, 1) != ndim) && (ndim != 1 || PyArray_NDIM(coord_array) != 1)) {
-    PyErr_SetString(PyExc_ValueError, "Coordinates must be given as array of dimensions [NUMBER_OF_POINTS, NUMBER_OF_DIMENSIONS] of [NUMBER_OF_POINTS for 1D transforms.\n");
     Py_XDECREF(coord_array);
     Py_XDECREF(in_array);
+    PyErr_SetString(PyExc_ValueError, "Coordinates must be given as array of dimensions [NUMBER_OF_POINTS, NUMBER_OF_DIMENSIONS] of [NUMBER_OF_POINTS for 1D transforms.\n");
     return NULL;
   }
   int number_of_points = (int) PyArray_DIM(coord_array, 0);
-
   
   nfft_plan my_plan;
   int total_number_of_pixels = 1;
@@ -88,8 +87,8 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
 
   nfft_trafo(&my_plan);
 
-  int out_dim[] = {number_of_points};
-  PyObject *out_array = (PyObject *)PyArray_FromDims(1, out_dim, NPY_COMPLEX128);
+  npy_intp out_dim[] = {number_of_points};
+  PyObject *out_array = (PyObject *)PyArray_SimpleNew(1, out_dim, NPY_COMPLEX128);
   memcpy(PyArray_DATA(out_array), my_plan.f, number_of_points*sizeof(fftw_complex));
 
   // Clean up memory

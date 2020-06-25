@@ -32,7 +32,11 @@
 
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import sys,os
-import collections
+try:
+    from collections.abc import Iterable ## Python >= 3.3
+except ImportError:
+    from collections import Iterable  ## Python < 3.3
+
 sys.path.append("utils")
 import numpy
 
@@ -369,7 +373,7 @@ class Detector:
           :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
         """
         r_max = numpy.sqrt(x_off**2+y_off**2) * self.pixel_size
-        it = isinstance(r_max, collections.Iterable)
+        it = isinstance(r_max, Iterable)
         if it:
             r_max = r_max.max()
         if r_max/self.distance < 0.0001:
