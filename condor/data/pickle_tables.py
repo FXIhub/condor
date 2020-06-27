@@ -55,7 +55,7 @@ def pickle_atomic_scattering_factors(inpath, outpath):
                     S[el].append([float(arg[0]),float(arg[1]),float(arg[2])])
         S[el] = numpy.array(S[el])
         
-    with open('%s/sf.dat' % (outpath),'wb') as f:
+    with open(os.path.join(outpath, 'sf.dat'),'wb') as f:
         pickle.dump(S,f)
 
 def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
