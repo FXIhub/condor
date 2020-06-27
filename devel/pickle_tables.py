@@ -58,7 +58,7 @@ def pickle_atomic_scattering_factors(inpath, outpath):
         S[el] = numpy.array(S[el])
         
     with open(os.path.join(outpath, 'sf.dat'),'wb') as f:
-        pickle.dump(S,f)
+        pickle.dump(S, f, protocol=2)
 
 def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
     with open(inpath + "/standard_weights.txt", "r") as f:
@@ -83,10 +83,10 @@ def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
         Z[s] = z
 
     with open(outpath + "/sw.dat", "wb") as f:
-        pickle.dump(W,f)
+        pickle.dump(W, f, protocol=2)
 
     with open(outpath + "/z.dat", "wb") as f:
-        pickle.dump(Z,f)
+        pickle.dump(Z, f, protocol=2)
 
 
 
