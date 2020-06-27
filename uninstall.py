@@ -78,7 +78,7 @@ if __name__ == "__main__":
         print("WARNING:\tCannot find build directory in %s. Skipping removal of build directory." % d)
 
     # Data files
-    d = os.path.dirname(os.path.realpath(__file__)) + "/src/data"
+    d = os.path.dirname(os.path.realpath(__file__)) + "/condor/data"
     if os.path.exists(d):
         files = [d+"/"+f for f in os.listdir(d) if f.endswith(".dat")]
         if len(files) == 0:

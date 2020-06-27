@@ -45,14 +45,17 @@ import re
 here = os.path.dirname(os.path.realpath(__file__))
 
 def get_property(prop):
-    result = re.search(r'{}\s*=\s*[\'"]([^\'"]*)[\'"]'.format(prop), open('src/__init__.py').read())
+    result = re.search(
+        r'{}\s*=\s*[\'"]([^\'"]*)[\'"]'.format(prop),
+        open(os.path.join('condor', '__init__.py')).read()
+    )
     return result.group(1)
 
-def _post_install(dir):
+def _post_install(directory):
     from subprocess import call
     call(
         [sys.executable, 'pickle_tables.py'],
-        cwd=os.path.join(dir, 'condor/data'),
+        cwd=os.path.join(directory, 'condor', 'data'),
     )   
     call(
         [sys.executable, '_concat_examples.py'],
@@ -64,7 +67,7 @@ def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_in
 
     ext_icosahedron = Extension(
         "condor.utils.icosahedron",
-        sources=["src/utils/icosahedron/icosahedronmodule.c"],
+        sources=[os.path.join('condor', 'utils' , 'icosahedron', 'icosahedronmodule.c')],
         include_dirs=[numpy.get_include()],
     )
 
@@ -79,7 +82,7 @@ def make_extension_modules(mode="disable_threads", nfft_library_dirs=[], nfft_in
     
     ext_nfft = Extension(
         "condor.utils.nfft",
-        sources=["src/utils/nfft/nfftmodule.c"],
+        sources=[os.path.join('condor', 'utils', 'nfft', 'nfftmodule.c')],
         library_dirs=nfft_library_dirs,
         libraries=_nfft_libraries[mode],
         include_dirs=[numpy.get_include()] + nfft_include_dirs,
@@ -174,7 +177,7 @@ setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages = ['condor', 'condor.utils', 'condor.particle', 'condor.scripts', 'condor.data'],
-    package_dir = {'condor':'src'},
+    package_dir = {'condor':'condor'},
     
     # Alternatively, if you want to distribute just a my_module.py, uncomment 
     # this:
@@ -200,8 +203,8 @@ setup(
     # have to be included in MANIFEST.in as well.
     package_data={
         'condor': [
-            'data/sf/*.nff',
-            'data/sw/standard_weights.txt',
+            os.path.join('data', 'sf', '*.nff'),
+            os.path.join('data', 'sw', 'standard_weights.txt'),
         ]
     },
 

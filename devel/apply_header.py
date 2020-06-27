@@ -62,5 +62,5 @@ def apply_header(p):
             print(p)
 
 
-folder = "../src"
+folder = "../condor"
 apply_header(folder)
