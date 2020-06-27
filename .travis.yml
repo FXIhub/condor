@@ -101,6 +101,6 @@ script:
   - python -c "import condor; print(condor.__file__)"
   # PYTEST
   - cd $HOME/build/FXIhub/condor
-  - python -m pytest -v tests
+  - pytest -v tests
   # EXAMPLES
   - cd $HOME/build/FXIhub/condor/; python .travis_examples.py
