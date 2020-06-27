@@ -54,7 +54,7 @@ from .particle_abstract import AbstractContinuousParticle
 ENABLE_MAP_INTERPOLATION = False
 
 class ParticleMap(AbstractContinuousParticle):
-    """
+    r"""
     Class for a particle model
 
     *Model:* Refractive index map sampled on a cubic grid (continuum approximation)
@@ -64,15 +64,15 @@ class ParticleMap(AbstractContinuousParticle):
 
         *Choose one of the following options:*
 
-          - ``\'custom\'`` - provide map either with an HDF5 file (``map3d_filename``, ``map3d_dataset``) or with a numpy array (``map3d``)
+          - ``'custom'`` - provide map either with an HDF5 file (``map3d_filename``, ``map3d_dataset``) or with a numpy array (``map3d``)
 
-          - ``\'icosahedron\'`` - create map of a uniformly filled icosahedron
+          - ``'icosahedron'`` - create map of a uniformly filled icosahedron
 
-          - ``\'cube\'`` - create map of a uniformly filled cube
+          - ``'cube'`` - create map of a uniformly filled cube
 
-          - ``\'sphere\'`` - create map of a uniformly filled sphere
+          - ``'sphere'`` - create map of a uniformly filled sphere
 
-          - ``\'spheroid\'`` - create map of a uniformly filled spheroid
+          - ``'spheroid'`` - create map of a uniformly filled spheroid
 
       :diameter (float): Particle diameter (not map diameter)
 
@@ -83,7 +83,7 @@ class ParticleMap(AbstractContinuousParticle):
 
       :diameter_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_diameter_variation` (default ``None``)
 
-      :dx: Distance between grid points of the map. This needs to be specified only if ``geometry=`\custom'\'. Depending on whether the geometry is specified by file (``map3d_filename``, ``map3d_dataset``) or by numpy array (``map3d``) for more documentation see :meth:`set_custom_geometry_by_h5file` or :meth:`set_custom_geometry_by_array` respectively (default ``None``)
+      :dx: Distance between grid points of the map. This needs to be specified only if ``geometry=`custom''. Depending on whether the geometry is specified by file (``map3d_filename``, ``map3d_dataset``) or by numpy array (``map3d``) for more documentation see :meth:`set_custom_geometry_by_h5file` or :meth:`set_custom_geometry_by_array` respectively (default ``None``)
 
       :map3d: See :meth:`set_custom_geometry_by_array` (default ``None``)
 
@@ -99,7 +99,7 @@ class ParticleMap(AbstractContinuousParticle):
 
       :rotation_mode (str): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_alignment` (default ``None``)
 
-      :flattening (float): (Mean) value of :math:`a/c`, takes only effect if ``geometry=\'spheroid\'`` (default ``0.75``)
+      :flattening (float): (Mean) value of :math:`a/c`, takes only effect if ``geometry='spheroid'`` (default ``0.75``)
     
       :number (float): Expectation value for the number of particles in the interaction volume. (defaukt ``1.``)
 
@@ -113,7 +113,7 @@ class ParticleMap(AbstractContinuousParticle):
 
       :position_variation_n (int): See :meth:`condor.particle.particle_abstract.AbstractParticle.set_position_variation` (default ``None``)
 
-      :material_type (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``\'water\'``)
+      :material_type (str): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``'water'``)
 
       :massdensity (float): See :meth:`condor.particle.particle_abstract.AbstractContinuousParticle.set_material` (default ``None``)
 
