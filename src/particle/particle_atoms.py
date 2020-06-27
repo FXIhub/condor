@@ -199,7 +199,7 @@ class ParticleAtoms(AbstractParticle):
         """
         Z = self.get_atomic_numbers()
         names = [condor.utils.material.atomic_names[z-1] for z in Z]
-        M = numpy.array([condor.utils.material.atomic_masses[n] for n in names], dtype=numpy.float64)
+        M = numpy.array([condor.utils.material.get_atomic_mass(n) for n in names], dtype=numpy.float64)
         return M
     
     def get_radius_of_gyration(self):
@@ -210,10 +210,10 @@ class ParticleAtoms(AbstractParticle):
 
         :math:`R_g = \fract{ \sqrt{ \sum_{i=0}^N{ \vec{r}_i-\vec{r}_{\text{COM}} } } }{ \sum_{i=0}^N{ m_i }}`
         """
-        M = self.get_atomic_masses()
+        M = self.get_atomic_standard_weights()
         r = self.get_atomic_positions()
         r_com = self.get_center_of_mass()
-        r_g = numpy.sqrt( (M*(r-r_com)**2).sum() / M.sum() )
+        r_g = numpy.sqrt( (M[:, numpy.newaxis]*(r-r_com)**2).sum() / M.sum() )
         return r_g
 
     def get_center_of_mass(self):
@@ -224,9 +224,9 @@ class ParticleAtoms(AbstractParticle):
 
         :math:`\vec{r}_{\text{COM}} = \frac{\sum_{i=0}^N{m_i \, \vec{r}_i}}{\sum_{i=0}^N{m_i}}`
         """
-        M = self.get_atomic_masses()
+        M = self.get_atomic_standard_weights()
         r = self.get_atomic_positions()
-        r_com = (r*M).sum() / M.sum()
+        r_com = (r*M[:, numpy.newaxis]).sum() / M.sum()
         return r_com
             
     @property
