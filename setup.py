@@ -67,14 +67,10 @@ ADDITIONAL_USER_OPTIONS = [
 ]
 
 class _Command:
-    def initialize_options(self):
+    def _initialize_options(self):
         self.enable_threads   = False
         self.nfft_include_dir = None
         self.nfft_library_dir = None
-        try:
-            super().initialize_options() # Python 3
-        except TypeError:
-            super(type(self), self).initialize_options() # Python 2
 
     def _make_ext_nfft(self):
         library_dirs = []
@@ -113,20 +109,45 @@ class _Command:
             extra_link_args=extra_link_args,
         )
         
-    def run(self):
+    def _run(self):
         self.distribution.ext_modules.append(self._make_ext_nfft())
-        try:
-            super().run() # Python 3
-        except TypeError:
-            super(type(self), self).run() # Python 2
-
+        
 
 class InstallCommand(_Command, setuptools.command.install.install):
     user_options = setuptools.command.install.install.user_options + ADDITIONAL_USER_OPTIONS
     
+    def initialize_options(self):
+        self._initialize_options()
+        try:
+            super().initialize_options() # Python 3
+        except TypeError:
+            setuptools.command.install.install.initialize_options(self) # Python 2
+    
+    def run(self):
+        self._run()
+        try:
+            super().run() # Python 3
+        except TypeError:
+            setuptools.command.install.install.run(self) # Python 2
+
+
 
 class DevelopCommand(_Command, setuptools.command.develop.develop):
     user_options = setuptools.command.develop.develop.user_options + ADDITIONAL_USER_OPTIONS
+
+    def initialize_options(self):
+        self._initialize_options()
+        try:
+            super().initialize_options() # Python 3
+        except TypeError:
+            setuptools.command.develop.develop.initialize_options(self) # Python 2
+    
+    def run(self):
+        self._run()
+        try:
+            super().run() # Python 3
+        except TypeError:
+            setuptools.command.develop.develop.run(self) # Python 2
 
 
 # Get the long description from the README file
