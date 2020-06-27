@@ -71,7 +71,10 @@ class _Command:
         self.enable_threads   = False
         self.nfft_include_dir = None
         self.nfft_library_dir = None
-        super().initialize_options()
+        try:
+            super().initialize_options() # Python 3
+        except TypeError:
+            super(type(self), self).initialize_options() # Python 2
 
     def _make_ext_nfft(self):
         library_dirs = []
@@ -112,7 +115,11 @@ class _Command:
         
     def run(self):
         self.distribution.ext_modules.append(self._make_ext_nfft())
-        super().run()
+        try:
+            super().run() # Python 3
+        except TypeError:
+            super(type(self), self).run() # Python 2
+
 
 class InstallCommand(_Command, setuptools.command.install.install):
     user_options = setuptools.command.install.install.user_options + ADDITIONAL_USER_OPTIONS
