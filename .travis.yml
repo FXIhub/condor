@@ -93,12 +93,14 @@ script:
   - echo $LD_LIBRARY_PATH
   - echo $PYTHONPATH
   # TESTING IMPORTS
+  - cd $HOME
   - python -c "import spimage; print(spimage.__file__)"
   - python -c "import spsim; print(spsim.__file__)"
   - python -c "import spimage_pybackend; print(spimage_pybackend.__file__)"
   - python -c "import spsim_pybackend; print(spsim_pybackend.__file__)"
   - python -c "import condor; print(condor.__file__)"
   # PYTEST
+  - cd $HOME/build/FXIhub/condor
   - python -m pytest -v tests
   # EXAMPLES
   - cd $HOME/build/FXIhub/condor/; python .travis_examples.py
