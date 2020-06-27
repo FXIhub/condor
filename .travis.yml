@@ -87,7 +87,9 @@ before_install:
 install:
 # Install condor
   - cd $HOME/build/FXIhub/condor
-  - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
+  - export NFFT_INCLUDE_DIR=$HOME/local/include
+  - export NFFT_LIBRARY_DIR=$HOME/local/lib
+  - pip install -e .
 # command to run tests
 script:
   - echo $LD_LIBRARY_PATH
@@ -103,4 +105,5 @@ script:
   - cd $HOME/build/FXIhub/condor
   - pytest -v tests
   # EXAMPLES
-  - cd $HOME/build/FXIhub/condor/; python .travis_examples.py
+  - cd $HOME/build/FXIhub/condor
+  - python .travis_examples.py
