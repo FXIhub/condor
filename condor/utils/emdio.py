@@ -201,4 +201,4 @@ def preproc_map_auto(map3d_raw, ed_water, ed_particle):#, water_layer=0.1):
     return ed_map3d
 
 def preproc_map_manual(map3d_raw, offset, factor):
-    map3d = (map3d_raw + offset) * factor
+    return (map3d_raw + offset) * factor
