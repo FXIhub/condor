@@ -89,7 +89,7 @@ install:
   - cd $HOME/build/FXIhub/condor
   - export NFFT_INCLUDE_DIR=$HOME/local/include
   - export NFFT_LIBRARY_DIR=$HOME/local/lib
-  - pip install .
+  - pip install -e . 
 # command to run tests
 script:
   - echo $LD_LIBRARY_PATH
