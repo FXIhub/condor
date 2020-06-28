@@ -32,16 +32,16 @@
 import pickle
 
 def load_atomic_scattering_factors(data_dir):
-    with open('%s/sf.dat' % data_dir, 'rb') as f:
+    with open(os.path.join(data_dir, 'sf.dat', 'rb') as f:
         atomic_scattering_factors = pickle.load(f)
     return atomic_scattering_factors
 
 def load_atomic_masses(data_dir):
-    with open('%s/sw.dat' % data_dir, 'rb') as f:
+    with open(os.path.join(data_dir, 'sw.dat'), 'rb') as f:
         atomic_masses = pickle.load(f)
     return atomic_masses
 
 def load_atomic_numbers(data_dir):
-    with open('%s/z.dat' % data_dir, 'rb') as f:
+    with open(os.path.join(data_dir, 'z.dat'), 'rb') as f:
         atomic_numbers = pickle.load(f)
     return atomic_numbers

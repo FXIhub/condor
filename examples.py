@@ -2,110 +2,113 @@
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import os
 
-this_dir = os.path.dirname(os.path.realpath(__file__))
+repodir = os.path.dirname(os.path.realpath(__file__))
+examplesdir_configfile = os.path.join(repodir, "examples", "configfile")
+examplesdir_scripts = os.path.join(repodir, "examples", "scripts")
+examplesdir_publication = os.path.join(repodir, "examples_publication")
 
 def run_examples(on_travis=False):
 
     examples = [
         {
             "name": "PARTICLE IDEAL SPHERE (configfile)",
-            "dir": this_dir + "/examples/configfile/particle_sphere",
+            "dir": os.path.join(examplesdir_configfile, "particle_sphere"),
             "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PARTICLE IDEAL SPHEROID (configfile)",
-            "dir": this_dir + "/examples/configfile/particle_spheroid",
+            "dir": os.path.join(examplesdir_configfile, "particle_spheroid"),
             "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PARTICLE MAP (configfile)",
-            "dir": this_dir + "/examples/configfile/particle_map",
+            "dir": os.path.join(examplesdir_configfile, "particle_map"),
             "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PARTICLE ATOMS (configfile)",
-            "dir": this_dir + "/examples/configfile/particle_atoms",
+            "dir": os.path.join(examplesdir_configfile, "particle_atoms"),
             "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PARTICLE CUSTOM MAP (script)",
-            "dir": this_dir + "/examples/scripts/custom_map",
+            "dir": os.path.join(examplesdir_scripts, "custom_map"),
             "cmd": "rm -f condor.cxi; python example.py",
             "travis": False,
         },
         {
             "name": "PARTICLE MAP EMD FETCH (script)",
-            "dir": this_dir + "/examples/scripts/emd_fetch",
+            "dir": os.path.join(examplesdir_scripts, "emd_fetch"),
             "cmd": "rm -f condor.cxi; python example.py",
             "travis": False,
         },
         {
             "name": "PARTICLE MAP MODELS (script)",
-            "dir": this_dir + "/examples/scripts/particle_models",
+            "dir": os.path.join(examplesdir_scripts, "particle_models"),
             "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE ROTATIONS (script)",
-            "dir": this_dir + "/examples/scripts/rotations",
+            "dir": os.path.join(examplesdir_scripts, "rotations"),
             "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE SIMPLE (script)",
-            "dir": this_dir + "/examples/scripts/simple",
+            "dir": os.path.join(examplesdir_scripts, "simple"),
             "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE ATOMS PDB FETCH (script)",
-            "dir": this_dir + "/examples/scripts/pdb_fetch",
+            "dir": os.path.join(examplesdir_scripts, "pdb_fetch"),
             "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE ATOMS PDB FILE (script)",
-            "dir": this_dir + "/examples/scripts/pdb",
+            "dir": os.path.join(examplesdir_scripts, "pdb"),
             "cmd": "rm -f condor.cxi; python example.py",
             "travis": True,
         },
         {
             "name": "PARTICLE MAP MULTIPLE MATERIALS (script)",
-            "dir": this_dir + "/examples/scripts/multiple_materials",
+            "dir": os.path.join(examplesdir_scripts, "multiple_materials"),
             "cmd": "python example.py",
             "travis": False,
         },
         {
             "name": "PARTICLE MAP DIFFRACTION SPACE 3D INTERPOLATION (script)",
-            "dir": this_dir + "/examples/scripts/diffraction_3d",
+            "dir": os.path.join(examplesdir_scripts, "diffraction_3d"),
             "cmd": "python example.py",
             "travis": False,
         },
         {
             "name": "DIFFRACTION SPACE 3D SIMULATION (script)",
-            "dir": this_dir + "/examples/scripts/full_fourier_volume",
+            "dir": os.path.join(examplesdir_scripts, "full_fourier_volume"),
             "cmd": "python example.py",
             "travis": True,
         },
         {
             "name": "PUBLICATION EXAMPLE A: PARTICLE ATOMS GROEL (configfile)",
-            "dir": this_dir + "/examples_publication/a",
+            "dir": os.path.join(examplesdir_publication, "a"),
             "cmd": "rm -f condor.cxi; condor",
             "travis": True,
         },
         {
             "name": "PUBLICATION EXAMPLE B: PARTICLE MAP EMD1144 (configfile)",
-            "dir": this_dir + "/examples_publication/b",
+            "dir": os.path.join(examplesdir_publication, "b"),
             "cmd": "rm -f condor.cxi; condor",
             "travis": False,
         },
         {
             "name": "PUBLICATION EXAMPLE B: PARTICLE MAP EMD1144 (script)",
-            "dir": this_dir + "/examples/scripts/publication_example_b",
+            "dir": os.path.join(examplesdir_scripts, "publication_example_b"),
             "cmd": "rm -f condor.cxi; python example.py",
             "travis": False,
         },        
