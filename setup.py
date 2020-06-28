@@ -61,25 +61,30 @@ def get_property(prop):
     return result.group(1)
 
 ADDITIONAL_USER_OPTIONS = [
-    ('enable-threads=', None, 'Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf).'),
-    ('nfft-include-dir=', None, 'Specify the include directory of the NFFT library.'),
-    ('nfft-library-dir=', None, 'Specify the library directory of the NFFT library.'),
+    ('enable-threads=', None, 'Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf). While command line options take precendence this option can also be set using the environment variable CONDOR_ENABLE_THREADS.'),
+    ('nfft-include-dir=', None, 'Specify the include directory of the NFFT library. While command line options take precendence this option can also be set using the environment variable NFFT_LIBRARY_DIR.'),
+    ('nfft-library-dir=', None, 'Specify the library directory of the NFFT library. While command line options take precendence this option can also be set using the environment variable NFFT_INCLUDE_DIR.'),
 ]
 
 class _Command:
     def _initialize_options(self):
-        self.enable_threads   = False
+        self.enable_threads = None
         self.nfft_include_dir = None
         self.nfft_library_dir = None
 
     def _make_ext_nfft(self):
+        if self.enable_threads is not None:
+            enable_threads = self.enable_threads
+        else:
+            enable_threads = ENABLE_THREADS
+
         library_dirs = []
         if self.nfft_library_dir is not None:
             library_dirs = [self.nfft_library_dir]
         elif NFFT_LIBRARY_DIR is not None:
             library_dirs = [NFFT_LIBRARY_DIR]
         
-        libraries = ["nfft3"] if not self.enable_threads else ["nfft3_threads" ,"fftw3_threads" ,"fftw3"]
+        libraries = ["nfft3"] if not enable_threads else ["nfft3_threads" ,"fftw3_threads" ,"fftw3"]
         
         include_dirs = [numpy.get_include()]
         if self.nfft_include_dir is not None:
@@ -87,7 +92,7 @@ class _Command:
         elif NFFT_INCLUDE_DIR is not None:
             include_dirs += [NFFT_INCLUDE_DIR]
 
-        define_macros = [] if not self.enable_threads else [("ENABLE_THREADS", None)]
+        define_macros = [] if not enable_threads else [("ENABLE_THREADS", None)]
         
         runtime_library_dirs = library_dirs
 
