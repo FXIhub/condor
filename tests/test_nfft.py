@@ -141,12 +141,3 @@ class TestNfft(unittest.TestCase):
         a = numpy.random.random(self._size)
         self.assertRaises(TypeError, nfft.nfft, (a, "hej"))
         self.assertRaises(TypeError, nfft.nfft, ("hej", a))
-
-if __name__ == "__main__":
-    unittest.main()
-    # my_tests = unittest.TestSuite()
-    # my_tests.addTest(TestNfft("test_nfft_inplace_1d"))
-    # my_tests.addTest(TestNfft("test_nfft_direct"))
-    # my_tests.addTest(TestNfft("test_nfft_inplace_direct"))
-    # unittest.TextTestRunner().run(my_tests)
-

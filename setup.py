@@ -105,7 +105,7 @@ class _Command:
 
         return Extension(
             "condor.utils.nfft",
-            sources=[os.path.join('condor', 'utils', 'nfft', 'nfftmodule.c')],
+            sources=[os.path.join('condor', 'utils', 'nfftmodule.c')],
             library_dirs=library_dirs,
             libraries=libraries,
             include_dirs=include_dirs,
@@ -222,7 +222,7 @@ setup(
     ext_modules = [
         Extension(
             "condor.utils.icosahedron",
-            sources=[os.path.join('condor', 'utils' , 'icosahedron', 'icosahedronmodule.c')],
+            sources=[os.path.join('condor', 'utils' , 'icosahedronmodule.c')],
             include_dirs=[numpy.get_include()],
         )
     ],
