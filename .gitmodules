@@ -1,9 +1,0 @@
-[submodule "src/utils/python_tools_raw"]
-	path = src/utils/python_tools
-	url = https://github.com/mhantke/python_tools.git
-[submodule "src/utils/icosahedron"]
-	path = src/utils/icosahedron
-	url = https://github.com/ekeberg/icosahedron.git
-[submodule "src/utils/nfft"]
-	path = src/utils/nfft
-	url = https://github.com/ekeberg/pynfft.git

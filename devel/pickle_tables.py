@@ -37,7 +37,9 @@ Pickle constants data form text tables
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import os, glob, numpy, pickle, sys, re
 
-here = os.path.dirname(os.path.realpath(__file__))
+repodir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+datadir = os.path.join(repodir, 'data')
+srcdir = os.path.join(repodir, 'condor')
 
 
 def pickle_atomic_scattering_factors(inpath, outpath): 
@@ -55,8 +57,8 @@ def pickle_atomic_scattering_factors(inpath, outpath):
                     S[el].append([float(arg[0]),float(arg[1]),float(arg[2])])
         S[el] = numpy.array(S[el])
         
-    with open('%s/sf.dat' % (outpath),'wb') as f:
-        pickle.dump(S,f)
+    with open(os.path.join(outpath, 'sf.dat'),'wb') as f:
+        pickle.dump(S, f, protocol=2)
 
 def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
     with open(inpath + "/standard_weights.txt", "r") as f:
@@ -81,10 +83,10 @@ def pickle_atomic_standard_weights_and_numbers(inpath, outpath):
         Z[s] = z
 
     with open(outpath + "/sw.dat", "wb") as f:
-        pickle.dump(W,f)
+        pickle.dump(W, f, protocol=2)
 
     with open(outpath + "/z.dat", "wb") as f:
-        pickle.dump(Z,f)
+        pickle.dump(Z, f, protocol=2)
 
 
 
@@ -95,7 +97,10 @@ if __name__ == "__main__":
     # Atomic Data and Nuclear Data Tables Vol. 54 (no.2), 181-342 (July 1993).
     # http://henke.lbl.gov/optical_constants/asf.html
     print('Generate data file with atomic scattering constants...')
-    pickle_atomic_scattering_factors(here + "/sf", here)
+    pickle_atomic_scattering_factors(
+        inpath=os.path.join(datadir, "sf"),
+        outpath=os.path.join(srcdir, 'data'),
+    )
     print('Done.')
     
     # Standard atomic weights from the IUPAC tables
@@ -104,6 +109,9 @@ if __name__ == "__main__":
     # DOI: 10.1351/PAC-REP-13-03-02, April 2013
     # Data loaded from: http://www.chem.qmul.ac.uk/iupac/AtWt/ table 2 (2015/07/01)
     print('Generate data file with atomic standard weight constants...')
-    pickle_atomic_standard_weights_and_numbers(here + "/sw", here)
+    pickle_atomic_standard_weights_and_numbers(
+        inpath=os.path.join(datadir, "sw"),
+        outpath=os.path.join(srcdir, 'data')
+    )
     print('Done.')
 

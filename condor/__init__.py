@@ -29,8 +29,20 @@
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
-from distutils.core import setup, Extension
-import numpy.distutils.misc_util
 
-ext = Extension("icosahedron", sources=["icosahedronmodule.c"])
-setup(name="condor_icosahedron",ext_modules=[ext], include_dirs=numpy.distutils.misc_util.get_numpy_include_dirs())
+from .experiment import Experiment
+from .source import Source
+from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleAtoms
+from .detector import Detector
+#import tests.test_all
+
+__version__ = '1.0.7'
+
+def _init():    
+    # Log to stdout
+    import logging, sys
+    h = logging.StreamHandler(sys.stdout)
+    logging.getLogger('condor').addHandler(h)
+
+_init()
+
