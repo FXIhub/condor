@@ -30,9 +30,10 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 import pickle
+import os
 
 def load_atomic_scattering_factors(data_dir):
-    with open(os.path.join(data_dir, 'sf.dat', 'rb') as f:
+    with open(os.path.join(data_dir, 'sf.dat'), 'rb') as f:
         atomic_scattering_factors = pickle.load(f)
     return atomic_scattering_factors
 
