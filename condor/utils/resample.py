@@ -89,8 +89,8 @@ def downsample(array2d0,factor0,mode="pick",mask2d0=None,bad_bits=None,min_N_pix
         Y,X = numpy.indices((Ny,Nx))
         Y = Y.flatten()
         X = X.flatten()
-        Y /= factor
-        X /= factor
+        Y //= factor
+        X //= factor
         superp = Y*Nx_new+X
         superp_order = superp.argsort()
         A = A[superp_order]
