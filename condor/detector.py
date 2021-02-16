@@ -284,11 +284,11 @@ class Detector:
         if y_gap_size_in_pixel > 0:
             cy = int(numpy.ceil((self._ny-1)/2.))
             gy = int(numpy.round(y_gap_size_in_pixel))
-            self._mask[cy-gy/2:cy-gy/2+gy,:] |= PixelMask.PIXEL_IS_MISSING
+            self._mask[cy-gy//2:cy-gy//2+gy,:] |= PixelMask.PIXEL_IS_MISSING
         if x_gap_size_in_pixel > 0:
             cx = int(numpy.ceil((self._nx-1)/2.))
             gx = int(numpy.round(x_gap_size_in_pixel))
-            self._mask[:,cx-gx/2:cx-gx/2+gx] |= PixelMask.PIXEL_IS_MISSING
+            self._mask[:,cx-gx//2:cx-gx//2+gx] |= PixelMask.PIXEL_IS_MISSING
         # Mask out pixels in hole    
         if hole_diameter_in_pixel > 0:
             if cx_hole is None:
