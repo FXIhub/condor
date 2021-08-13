@@ -63,7 +63,7 @@ class ParticleMap(AbstractContinuousParticle):
       :geometry (str): Geometry type
 
         *Choose one of the following options:*
-
+
           - ``\'custom\'`` - provide map either with an HDF5 file (``map3d_filename``, ``map3d_dataset``) or with a numpy array (``map3d``)
 
           - ``\'icosahedron\'`` - create map of a uniformly filled icosahedron

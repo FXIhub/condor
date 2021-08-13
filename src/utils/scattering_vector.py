@@ -80,8 +80,8 @@ def generate_qmap(X,Y,pixel_size,detector_distance,wavelength,extrinsic_rotation
     """
     log_debug(logger, "Allocating qmap (%i,%i,%i)" % (X.shape[0],X.shape[1],3))
     R_Ewald = 2*numpy.pi/wavelength
-    p_x = X*pixel_size
-    p_y = Y*pixel_size
+    p_x = X*pixel_size[0]
+    p_y = Y*pixel_size[1]
     p_z = numpy.ones_like(X)*detector_distance
     l = numpy.sqrt(p_x**2+p_y**2+p_z**2)
     r_x = p_x/l
@@ -131,7 +131,9 @@ def generate_rpix_3d(qn, qmax, wavelength, detector_distance, pixel_size):
     R_Ewald = 2*numpy.pi/wavelength
     qmap = generate_qmap_3d(qn, qmax)
     q = (qmap**2).sum(axis=3)
-    rpix = detector_distance * numpy.tan(2.*numpy.arcsin(qmap/(2.*R_Ewald)))/pixel_size
+    if pixel_size[0] != pixel_size[1]:
+        raise ValueError("3D map output is not allowed for non-square pixel size.")
+    rpix = detector_distance * numpy.tan(2.*numpy.arcsin(qmap/(2.*R_Ewald)))/pixel_size[0]
     return rpix
 
 # Convenience function

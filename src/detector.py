@@ -134,7 +134,11 @@ class Detector:
                  nx=None, ny=None, binning=None):
 
         self.distance = distance
-        self.pixel_size = float(pixel_size)
+        try:
+            pixel_size[1]
+        except TypeError:
+            pixel_size = (pixel_size, )*2
+        self.pixel_size = tuple(float(s) for s in pixel_size)
         self._init_mask(mask=mask, mask_is_cxi_bitmask=mask_is_cxi_bitmask, mask_filename=mask_filename, mask_dataset=mask_dataset, nx=nx, ny=ny,
                         x_gap_size_in_pixel=x_gap_size_in_pixel, y_gap_size_in_pixel=y_gap_size_in_pixel, cx_hole=cx_hole, cy_hole=cy_hole, hole_diameter_in_pixel=hole_diameter_in_pixel)
         self.cx_mean = cx if cx != 'middle' else None
@@ -368,19 +372,20 @@ class Detector:
 
           :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
         """
-        r_max = numpy.sqrt(x_off**2+y_off**2) * self.pixel_size
+        # r_max = numpy.sqrt(x_off**2+y_off**2) * self.pixel_size
+        r_max = numpy.sqrt((x_off*self.pixel_size[0])**2 + (y_off*self.pixel_size[1])**2)
         it = isinstance(r_max, collections.Iterable)
         if it:
             r_max = r_max.max()
         if r_max/self.distance < 0.0001:
             # Small angle approximation (fast)
-            omega = self.pixel_size**2 / self.distance**2
+            omega = (self.pixel_size[0]*self.pixel_size[1]) / self.distance**2
             if it:
                 omega *= numpy.ones_like(r_max)
         else:
             # More precise formula for large angles (slow)
-            x_alpha = numpy.arctan2((x_off+0.5)*self.pixel_size, self.distance) - numpy.arctan2((x_off-0.5)*self.pixel_size, self.distance)
-            y_alpha = numpy.arctan2((y_off+0.5)*self.pixel_size, self.distance) - numpy.arctan2((y_off-0.5)*self.pixel_size, self.distance)
+            x_alpha = numpy.arctan2((x_off+0.5)*self.pixel_size[0], self.distance) - numpy.arctan2((x_off-0.5)*self.pixel_size[0], self.distance)
+            y_alpha = numpy.arctan2((y_off+0.5)*self.pixel_size[1], self.distance) - numpy.arctan2((y_off-0.5)*self.pixel_size[1], self.distance)
             omega = 4. * numpy.arcsin(numpy.sin(x_alpha/2.)*numpy.sin(y_alpha/2.))
         return omega
 
@@ -431,8 +436,8 @@ class Detector:
           :center_variation (bool): If ``True`` the beam center variation is taken into account. With respect to the mean position a maximum deviation of *factor/2* times the variational spread is assumed. The *factor* is 3 for Gaussian distributed centers and 1 for others  (default ``False``)
         """
         x, y = self._get_xy_max_dist(cx=cx, cy=cy, center_variation=center_variation)
-        xm = x*self.pixel_size
-        ym = y*self.pixel_size        
+        xm = x*self.pixel_size[0]
+        ym = y*self.pixel_size[1]
         log_debug(logger, "x = %.1f pix, y = %.1f pix" % (x, y))
         p = numpy.array([0.,0.,self.distance])
         if pos == "corner":
@@ -538,6 +543,7 @@ class Detector:
         Y, X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-(0. if cy is None else cy),
                               numpy.float64(numpy.arange(self._nx))-(0. if cx is None else cx),
                               indexing="ij")
+        print(Y.shape, X.shape)
         return X, Y
         
     def generate_qmap(self, wavelength, cx=None, cy=None, extrinsic_rotation=None, order='xyz'):
@@ -563,7 +569,7 @@ class Detector:
             P = numpy.ones(shape=(self._ny, self._nx))
         else:
             X, Y = self.generate_xypix(cx=cx, cy=cy)
-            P = condor.utils.diffraction.polarization_factor(X*self.pixel_size, Y*self.pixel_size, self.distance, polarization=polarization)
+            P = condor.utils.diffraction.polarization_factor(X*self.pixel_size[0], Y*self.pixel_size[1], self.distance, polarization=polarization)
         return P
     
     def detect_photons(self, I):

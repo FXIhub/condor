@@ -50,7 +50,8 @@ import condor.utils.scattering_vector
 import condor.utils.resample
 from condor.utils.rotation import Rotation
 import condor.particle
-import condor.utils.nfft
+# import condor.utils.nfft
+import nfft
 
 
 def experiment_from_configfile(configfile):
@@ -228,7 +229,7 @@ class Experiment:
                 if self.detector.solid_angle_correction:
                     Omega_p = self.detector.get_all_pixel_solid_angles(cx, cy)
                 else:
-                    Omega_p = pixel_size**2 / detector_distance**2
+                    Omega_p = (pixel_size[0]*pixel_size[1]) / detector_distance**2
             
             # UNIFORM SPHERE
             if isinstance(p, condor.particle.ParticleSphere):
@@ -305,7 +306,7 @@ class Experiment:
                 if (numpy.isfinite(qmap_shaped)==False).sum() > 0:
                     log_warning(logger, "There are infinite values in the scattering vectors.")
                 # NFFT
-                fourier_pattern = log_execution_time(logger)(condor.utils.nfft.nfft)(map3d_dn, qmap_shaped)
+                fourier_pattern = log_execution_time(logger)(nfft.nfft)(map3d_dn, 1., qmap_shaped)
                 # Check output - masking in case of invalid values
                 if numpy.any(invalid_mask):
                     fourier_pattern[invalid_mask.any(axis=1)] = numpy.nan
@@ -513,7 +514,7 @@ class Experiment:
                 p = self.particles[particle_key]
             particle_diameter = p.diameter_mean
         pN = utils.diffraction.nyquist_pixel_size(wavelength, detector_distance, particle_diameter)
-        pD = self.detector.pixel_size
+        pD = 0.5*(self.detector.pixel_size[0] + self.detector.pixel_size[1])
         ratio = pN/pD
         return ratio
         

@@ -194,24 +194,26 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None)
     s += "pdb_filename = \"%s\";\n" % tmpf_pdb_name
     if ndim == 2:
         D = D_detector["distance"]
-        Lx = D_detector["pixel_size"] * D_detector["nx"]
-        Ly = D_detector["pixel_size"] * D_detector["ny"]
+        Lx = D_detector["pixel_size"][0] * D_detector["nx"]
+        Ly = D_detector["pixel_size"][1] * D_detector["ny"]
     else:
+        if pixel_size[0] != pixel_size[1]:
+            raise ValueError("3D map output is not allowed for non-square pixel size.")
         k0 = 2. * numpy.pi / D_source["wavelength"]
-        D = qn / 2. * D_detector["pixel_size"] * k0 / qmax
-        Lx = Ly = Lz = D_detector["pixel_size"] * qn
+        D = qn / 2. * D_detector["pixel_size"][0] * k0 / qmax
+        Lx = Ly = Lz = D_detector["pixel_size"][0] * qn
     s += "detector_distance = %.12e;\n" % D
     s += "detector_width = %.12e;\n" % Lx 
     s += "detector_height = %.12e;\n" % Ly
     if ndim == 3:
         s += "detector_depth = %.12e;\n" % Lz        
-    s += "detector_pixel_width = %.12e;\n" % D_detector["pixel_size"]
-    s += "detector_pixel_height = %.12e;\n" % D_detector["pixel_size"]
+    s += "detector_pixel_width = %.12e;\n" % D_detector["pixel_size"][0]
+    s += "detector_pixel_height = %.12e;\n" % D_detector["pixel_size"][1]
     if ndim == 3:
-        s += "detector_pixel_depth = %.12e;\n" % D_detector["pixel_size"]
+        s += "detector_pixel_depth = %.12e;\n" % D_detector["pixel_size"][0]
     if ndim == 2:
-        s += "detector_center_x = %.12e;\n" % (D_detector["pixel_size"] * (D_detector["cx"] - (D_detector["nx"]-1)/2.))
-        s += "detector_center_y = %.12e;\n" % (D_detector["pixel_size"] * (D_detector["cy"] - (D_detector["ny"]-1)/2.))
+        s += "detector_center_x = %.12e;\n" % (D_detector["pixel_size"][0] * (D_detector["cx"] - (D_detector["nx"]-1)/2.))
+        s += "detector_center_y = %.12e;\n" % (D_detector["pixel_size"][1] * (D_detector["cy"] - (D_detector["ny"]-1)/2.))
     else:
         s += "detector_center_x = 0;\n"
         s += "detector_center_y = 0;\n"
