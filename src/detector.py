@@ -543,7 +543,6 @@ class Detector:
         Y, X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-(0. if cy is None else cy),
                               numpy.float64(numpy.arange(self._nx))-(0. if cx is None else cx),
                               indexing="ij")
-        print(Y.shape, X.shape)
         return X, Y
         
     def generate_qmap(self, wavelength, cx=None, cy=None, extrinsic_rotation=None, order='xyz'):
