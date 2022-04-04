@@ -6,7 +6,7 @@ import condor
 import condor.utils.cxiwriter
 from condor.utils.log import log_info
 import logging
-logger = logging.getLogger("condor")
+logger = logging.getLogger('condor')
 import time, numpy
 
 
@@ -14,18 +14,18 @@ def main():
     parser = argparse.ArgumentParser(description='Condor - simulation of single particle X-ray diffraction patterns')
     parser.add_argument('-c', '--config-file', help='Configuration file (default: condor.conf)', default='condor.conf')
     parser.add_argument('-n', '--number-of-patterns', metavar='number_of_patterns', type=int,
-                        help="number of patterns to be simulated", default=1)
+                        help='number of patterns to be simulated', default=1)
     parser.add_argument('-v', '--verbose', dest='verbose',  action='store_true', help='verbose mode', default=False)
     parser.add_argument('-d', '--debug', dest='debug',  action='store_true', help='debugging mode (even more output than in verbose mode)', default=False)
     parser.add_argument('-t', '--measure-time', dest='measure_time',  action='store_true', help='Measure execution time', default=False)
-    parser.add_argument('-r', '--number-of-repetitions', metavar='number_of_repetitions', type=int, help="number of repetitions (for time measurements)", default=1)
+    parser.add_argument('-r', '--number-of-repetitions', metavar='number_of_repetitions', type=int, help='number of repetitions (for time measurements)', default=1)
     args = parser.parse_args()
     if not op.exists(args.config_file):
         parser.error('Cannot find configuration file ' + args.config_file)
     if args.verbose:
-        logger.setLevel("INFO")
+        logger.setLevel('INFO')
     if args.debug:
-        logger.setLevel("DEBUG")
+        logger.setLevel('DEBUG')
 
     t_exec = []
     t_write = []    
@@ -66,10 +66,10 @@ def main():
     if args.measure_time:
         t_exec = numpy.array(t_exec)
         t_write = numpy.array(t_write)
-        print("TIME MEASUREMENT RESULTS IN SECONDS")
-        print("Total time: %.3f" % numpy.round(t4 - t0, 3))
-        print("Computation time per image: %.3f" % numpy.round(t_exec.mean(), 3))
-        print("( Individual computation times: ", numpy.round(t_exec, 3), " )")
-        print("Writing time per image: %.3f" % numpy.round(t_write.mean(), 3))
-        print("( Individual writing times: ", numpy.round(t_write, 3), " )")
+        print('TIME MEASUREMENT RESULTS IN SECONDS')
+        print('Total time: %.3f' % numpy.round(t4 - t0, 3))
+        print('Computation time per image: %.3f' % numpy.round(t_exec.mean(), 3))
+        print('( Individual computation times: ', numpy.round(t_exec, 3), ' )')
+        print('Writing time per image: %.3f' % numpy.round(t_write.mean(), 3))
+        print('( Individual writing times: ', numpy.round(t_write, 3), ' )')
         
