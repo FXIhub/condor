@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 import argparse
-import os
+import os.path as op
 import condor
 import condor.utils.cxiwriter
 from condor.utils.log import log_info
@@ -12,6 +12,7 @@ import time, numpy
 
 def main():
     parser = argparse.ArgumentParser(description='Condor - simulation of single particle X-ray diffraction patterns')
+    parser.add_argument('-c', '--config-file', help='Configuration file (default: condor.conf)', default='condor.conf')
     parser.add_argument('-n', '--number-of-patterns', metavar='number_of_patterns', type=int,
                         help="number of patterns to be simulated", default=1)
     parser.add_argument('-v', '--verbose', dest='verbose',  action='store_true', help='verbose mode', default=False)
@@ -19,8 +20,8 @@ def main():
     parser.add_argument('-t', '--measure-time', dest='measure_time',  action='store_true', help='Measure execution time', default=False)
     parser.add_argument('-r', '--number-of-repetitions', metavar='number_of_repetitions', type=int, help="number of repetitions (for time measurements)", default=1)
     args = parser.parse_args()
-    if not os.path.exists("./condor.conf"):
-        parser.error("Cannot find configuration file \"condor.conf\" in current directory.")
+    if not op.exists(args.config_file):
+        parser.error('Cannot find configuration file ' + args.config_file)
     if args.verbose:
         logger.setLevel("INFO")
     if args.debug:
@@ -33,7 +34,7 @@ def main():
     
     for i in range(args.number_of_repetitions):
 
-        E = condor.experiment.experiment_from_configfile("./condor.conf")
+        E = condor.experiment.experiment_from_configfile(args.config_file)
     
         # FOR BENCHMARKING
         #from pycallgraph import PyCallGraph
@@ -47,7 +48,9 @@ def main():
         #])
         #with PyCallGraph(output=GraphvizOutput(),config=config):
         
-        W = condor.utils.cxiwriter.CXIWriter("./condor.cxi")
+        out_fname = op.splitext(args.config_file)[0] + '.cxi'
+        print('Writing results to', out_fname)
+        W = condor.utils.cxiwriter.CXIWriter(out_fname)
         for i in range(args.number_of_patterns):
             t1 = time.time()
             res = E.propagate()
