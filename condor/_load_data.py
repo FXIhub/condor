@@ -1,8 +1,4 @@
-#!/usr/bin/env python
-from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
-import os
-
-HEADER = """# -----------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------
 # CONDOR
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
 # http://xfel.icm.uu.se/condor/
@@ -33,34 +29,20 @@ HEADER = """# ------------------------------------------------------------------
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
-""".splitlines(True)
+import pickle
+import os
 
+def load_atomic_scattering_factors(data_dir):
+    with open(os.path.join(data_dir, 'sf.dat'), 'rb') as f:
+        atomic_scattering_factors = pickle.load(f)
+    return atomic_scattering_factors
 
-str_starts_with = lambda s,s_start: s[:len(s_start)] == s_start
-str_ends_with   = lambda s,s_end  : s[-len(s_end):]  == s_end
+def load_atomic_masses(data_dir):
+    with open(os.path.join(data_dir, 'sw.dat'), 'rb') as f:
+        atomic_masses = pickle.load(f)
+    return atomic_masses
 
-def apply_header(p):
-    if os.path.isdir(p):
-        print("Process directory: %s" % p)
-        for pp in os.listdir(p):
-            apply_header(p+"/"+pp)
-    elif str_ends_with(p,".py") and not str_starts_with(p.split("/")[-1],"."):
-        ll_new = []
-        with open(p,"r") as f:
-            ll = f.readlines()
-            if ll[0][:len("#!")] == "#!":
-                ll_new.append(ll.pop(0))
-            ll_new += HEADER
-            in_header = True    
-            for l in ll:
-                if l[0] != "#":
-                    in_header = False
-                if not in_header:
-                    ll_new.append(l)
-        with open(p,"w") as f:
-            f.writelines(ll_new)
-            print(p)
-
-
-folder = "../condor"
-apply_header(folder)
+def load_atomic_numbers(data_dir):
+    with open(os.path.join(data_dir, 'z.dat'), 'rb') as f:
+        atomic_numbers = pickle.load(f)
+    return atomic_numbers

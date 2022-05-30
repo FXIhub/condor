@@ -8,7 +8,6 @@
 **/.#*
 **/.ipynb_checkpoints
 **/*~
-src/data
 tests/example_out
 tests/example_out/*
 tests/ensemble_out
@@ -22,3 +21,9 @@ examples/configfile/particle_molecule
 examples/configfile/particle_atoms
 condor.egg-info
 dist
+*.pdb
+*.map
+*.tar.gz
+*.h5
+venv
+*.ipynb

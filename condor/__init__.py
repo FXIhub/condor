@@ -1,8 +1,4 @@
-#!/usr/bin/env python
-from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
-import os
-
-HEADER = """# -----------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------
 # CONDOR
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
 # http://xfel.icm.uu.se/condor/
@@ -33,34 +29,20 @@ HEADER = """# ------------------------------------------------------------------
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
-""".splitlines(True)
 
+from .experiment import Experiment
+from .source import Source
+from .particle import ParticleSphere, ParticleSpheroid, ParticleMap, ParticleAtoms
+from .detector import Detector
+#import tests.test_all
 
-str_starts_with = lambda s,s_start: s[:len(s_start)] == s_start
-str_ends_with   = lambda s,s_end  : s[-len(s_end):]  == s_end
+__version__ = '1.0.7'
 
-def apply_header(p):
-    if os.path.isdir(p):
-        print("Process directory: %s" % p)
-        for pp in os.listdir(p):
-            apply_header(p+"/"+pp)
-    elif str_ends_with(p,".py") and not str_starts_with(p.split("/")[-1],"."):
-        ll_new = []
-        with open(p,"r") as f:
-            ll = f.readlines()
-            if ll[0][:len("#!")] == "#!":
-                ll_new.append(ll.pop(0))
-            ll_new += HEADER
-            in_header = True    
-            for l in ll:
-                if l[0] != "#":
-                    in_header = False
-                if not in_header:
-                    ll_new.append(l)
-        with open(p,"w") as f:
-            f.writelines(ll_new)
-            print(p)
+def _init():    
+    # Log to stdout
+    import logging, sys
+    h = logging.StreamHandler(sys.stdout)
+    logging.getLogger('condor').addHandler(h)
 
+_init()
 
-folder = "../condor"
-apply_header(folder)

@@ -1,8 +1,4 @@
-#!/usr/bin/env python
-from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
-import os
-
-HEADER = """# -----------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------
 # CONDOR
 # Simulator for diffractive single-particle imaging experiments with X-ray lasers
 # http://xfel.icm.uu.se/condor/
@@ -33,34 +29,21 @@ HEADER = """# ------------------------------------------------------------------
 # General note:
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
-""".splitlines(True)
 
+from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
+import numpy
+ 
+def crossproduct(a, b):
+    c = numpy.array([a[1]*b[2] - a[2]*b[1],
+                     a[2]*b[0] - a[0]*b[2],
+                     a[0]*b[1] - a[1]*b[0]])
+    return c
 
-str_starts_with = lambda s,s_start: s[:len(s_start)] == s_start
-str_ends_with   = lambda s,s_end  : s[-len(s_end):]  == s_end
+def dotproduct(v1, v2):
+    return (numpy.asarray(v1)*numpy.asarray(v2)).sum()
 
-def apply_header(p):
-    if os.path.isdir(p):
-        print("Process directory: %s" % p)
-        for pp in os.listdir(p):
-            apply_header(p+"/"+pp)
-    elif str_ends_with(p,".py") and not str_starts_with(p.split("/")[-1],"."):
-        ll_new = []
-        with open(p,"r") as f:
-            ll = f.readlines()
-            if ll[0][:len("#!")] == "#!":
-                ll_new.append(ll.pop(0))
-            ll_new += HEADER
-            in_header = True    
-            for l in ll:
-                if l[0] != "#":
-                    in_header = False
-                if not in_header:
-                    ll_new.append(l)
-        with open(p,"w") as f:
-            f.writelines(ll_new)
-            print(p)
+def length(v):
+    return numpy.sqrt(dotproduct(v, v))
 
-
-folder = "../condor"
-apply_header(folder)
+def angle(v1, v2):
+    return numpy.arccos(dotproduct(v1, v2) / (length(v1) * length(v2)))

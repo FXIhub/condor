@@ -1,5 +1,6 @@
 language: python
 sudo: false
+os: linux
 
 virtualenv:
   system_site_packages: false
@@ -7,9 +8,6 @@ virtualenv:
 cache:
   directories:
     - $HOME/.cache/pip
-#    - $HOME/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared
-#    - $HOME/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared
-    - $HOME/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared
     - $HOME/nfft-3.2.3
     - $HOME/libspimage
     - $HOME/spsim
@@ -20,20 +18,25 @@ cache:
 matrix:
   include:
     - python: '2.7'
+      dist: bionic
     - python: '3.4'
+      dist: xenial
     - python: '3.5'
+      dist: bionic
     - python: '3.6'
+      dist: bionic
+    - python: '3.7'
+      dist: bionic
+    - python: '3.8'
+      dist: bionic
 
 addons:
   apt:
-    sources:
-      - ubuntu-toolchain-r-test
-      - kubuntu-backports
-      - couchbase-precise
     packages:
       - libpng-dev
-      - libtiff4-dev
+      - libtiff5-dev
       - libfftw3-dev
+      - libhdf5-serial-dev
       - cmake
       - gsl-bin
       - libgsl0-dev
@@ -46,38 +49,25 @@ before_install:
   - export PYTHONPATH=${HOME}/localpy:${PYTHONPATH}
 # Install hdf5
   - cd $HOME
-#  - if [ ! -d "$HOME/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current/bin/linux-centos7-x86_64-gcc485/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
-  # - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
-  # - if [ ! -d "${HDF5_DIR}/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current18/bin/linux-centos7-x86_64-gcc485/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
-  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
-  - if [ ! -d "${HDF5_DIR}/include" ]; then wget https://support.hdfgroup.org/ftp/HDF5/current18/bin/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared.tar.gz && tar xvzf hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared.tar.gz; else echo 'Using hdf5 from cached directory'; fi
-  
-#  - export LD_LIBRARY_PATH=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/lib:${LD_LIBRARY_PATH}
-  - export LD_LIBRARY_PATH=${HDF5_DIR}/lib:${LD_LIBRARY_PATH}
   - ls ${HOME}/
-  - ls ${HDF5_DIR}
-  - ls ${HDF5_DIR}/include
-  - ls ${HDF5_DIR}/lib
 # Install numpy and scipy
   - pip install numpy
   - pip install scipy
 # Install configparser with pip (this is to make condor compatible with Python 3, which no longer has the ConfigParser module)
   - pip install configparser
-# Install h5py (we want an h5py that is built with the new hdf5 version, that is why)
-#  - export HDF5_DIR=${HOME}/hdf5-1.10.0-patch1-linux-centos7-x86_64-gcc485-shared/
-#  - export HDF5_DIR=${HOME}/hdf5-1.8.19-linux-centos7-x86_64-gcc485-shared/
-  - export HDF5_DIR=${HOME}/hdf5-1.8.20-linux-centos7-x86_64-gcc485-shared/
   - pip install h5py
+  - pip install pytest
 # Testing imports
   - python -c "import numpy; print(numpy.__file__)"
   - python -c "import scipy; print(scipy.__file__)"
   - python -c "import h5py; print(h5py.__file__)"
+  - python -c "import pytest; print(pytest.__file__)"
 # Install libspimage
   - cd $HOME
   - if [ ! -d "$HOME/libspimage/.git" ]; then git clone https://github.com/FilipeMaia/libspimage; else echo 'Using libspimage from cached directory'; fi
   - mkdir -p libspimage/build && cd libspimage/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/virtualenv/python${TRAVIS_PYTHON_VERSION} -DPYTHON_INSTDIR=${PY_SITE} ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DUSE_CUDA=OFF -DPYTHON_WRAPPERS=ON -DCMAKE_INSTALL_PREFIX=${HOME}/virtualenv/python${TRAVIS_PYTHON_VERSION} -DPYTHON_INSTDIR=${PY_SITE} ..
   - make
   #; -j 2 VERBOSE=1
   - make install
@@ -89,7 +79,7 @@ before_install:
   - if [ ! -d "$HOME/spsim/.git" ]; then git clone https://github.com/FilipeMaia/spsim; else echo 'Using spsim from cached directory'; fi
   - mkdir -p spsim/build && cd spsim/build
   - git pull
-  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DHDF5_INCLUDE_DIR=${HDF5_DIR}/include -DHDF5_LIBRARY=${HDF5_DIR}/lib/libhdf5.so -DCMAKE_INSTALL_PREFIX=${HOME}/virtualenv/python${TRAVIS_PYTHON_VERSION} -DPYTHON_INSTDIR=${PY_SITE}  ..
+  - cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_LIBRARY=ON -DUSE_CUDA=OFF -DUSE_NFFT=OFF -DPYTHON_WRAPPERS=ON -DCMAKE_INSTALL_PREFIX=${HOME}/virtualenv/python${TRAVIS_PYTHON_VERSION} -DPYTHON_INSTDIR=${PY_SITE}  ..
   - make VERBOSE=1
   - make install
   - ls -alh $HOME/local/lib
@@ -97,18 +87,23 @@ before_install:
 install:
 # Install condor
   - cd $HOME/build/FXIhub/condor
-  - python setup.py install --nfft-include-dir=$HOME/local/include --nfft-library-dir=$HOME/local/lib
+  - export NFFT_INCLUDE_DIR=$HOME/local/include
+  - export NFFT_LIBRARY_DIR=$HOME/local/lib
+  - pip install -e . 
 # command to run tests
 script:
   - echo $LD_LIBRARY_PATH
   - echo $PYTHONPATH
   # TESTING IMPORTS
+  - cd $HOME
   - python -c "import spimage; print(spimage.__file__)"
   - python -c "import spsim; print(spsim.__file__)"
   - python -c "import spimage_pybackend; print(spimage_pybackend.__file__)"
   - python -c "import spsim_pybackend; print(spsim_pybackend.__file__)"
   - python -c "import condor; print(condor.__file__)"
-  # UNITTESTS
-  - python -m unittest -v condor.tests.test_all
+  # PYTEST
+  - cd $HOME/build/FXIhub/condor
+  - pytest -v tests
   # EXAMPLES
-  - cd $HOME/build/FXIhub/condor/; python .travis_examples.py
+  - cd $HOME/build/FXIhub/condor
+  - python .travis_examples.py
