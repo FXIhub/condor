@@ -77,7 +77,7 @@ class Rotation:
         self.rotation_matrix = None
         if values is None and formalism is None:
             # No rotation (rotation matrix = identity matrix)
-            self.rotation_matrix = numpy.ones(shape=(3,3))
+            self.rotation_matrix = numpy.identity(3)
         elif formalism.startswith("euler_angles_") and len(formalism) == len("euler_angles_xyz"):
             self.set_with_euler_angles(values, rotation_axes=formalism[-3:])
         elif formalism == "rotation_matrix":
