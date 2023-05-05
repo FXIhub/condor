@@ -373,7 +373,7 @@ class Detector:
         """
         alpha = a/(2*d)
         beta = b/(2*d)
-        return 4*np.arccos(np.sqrt((1+alpha**2+beta**2)/((1+alpha**2)*(1+beta**2))))
+        return 4*numpy.arccos(numpy.sqrt((1+alpha**2+beta**2)/((1+alpha**2)*(1+beta**2))))
 
     def get_pixel_solid_angle(self, x_off=0., y_off=0.):
         """
@@ -386,10 +386,10 @@ class Detector:
           :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
         """
         a = b = self.pixel_size
-        A = x_off*self.pixel_size
-        B = y_off*self.pixel_size
+        A = numpy.abs(x_off*self.pixel_size)
+        B = numpy.abs(y_off*self.pixel_size)
         d = self.distance
-        return (self.omega(2*(a+A), 2*(b+B), d) - self.omega(2*A, 2*(b+B),d) - self.omega(2*(a+A), 2*B, d) + self.omega(2*A, 2*B, d))/4
+        return (self._omega(2*(a+A), 2*(b+B), d) - self._omega(2*A, 2*(b+B),d) - self._omega(2*(a+A), 2*B, d) + self._omega(2*A, 2*B, d))/4
 
     def get_all_pixel_solid_angles(self, cx, cy):
         """
