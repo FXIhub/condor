@@ -363,30 +363,33 @@ class Detector:
             O["cy_xxx"] = condor.utils.resample.downsample_pos(cy, self._ny, self.binning)
         return O
 
+    def _omega(self, a, b, d):
+        """
+        Calculate the solid angle of a rectangular pixel with sides a, b at a distance of d
+        centered along the z axis
+
+        Follows the implementation of Solid Angle of a Rectangular Plate by Richard J. Mathar
+        https://vixra.org/pdf/2001.0603v1.pdf
+        """
+        alpha = a/(2*d)
+        beta = b/(2*d)
+        return 4*np.arccos(np.sqrt((1+alpha**2+beta**2)/((1+alpha**2)*(1+beta**2))))
+
     def get_pixel_solid_angle(self, x_off=0., y_off=0.):
         """
         Get the solid angle for a pixel at position ``x_off``, ``y_off`` with respect to the beam center
-        
+
+        Follows the implementation of Solid Angle of a Rectangular Plate by Richard J. Mathar
+        https://vixra.org/pdf/2001.0603v1.pdf
         Kwargs:
           :x_off: *x*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
-
           :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
         """
-        r_max = numpy.sqrt(x_off**2+y_off**2) * self.pixel_size
-        it = isinstance(r_max, Iterable)
-        if it:
-            r_max = r_max.max()
-        if r_max/self.distance < 0.0001:
-            # Small angle approximation (fast)
-            omega = self.pixel_size**2 / self.distance**2
-            if it:
-                omega *= numpy.ones_like(r_max)
-        else:
-            # More precise formula for large angles (slow)
-            x_alpha = numpy.arctan2((x_off+0.5)*self.pixel_size, self.distance) - numpy.arctan2((x_off-0.5)*self.pixel_size, self.distance)
-            y_alpha = numpy.arctan2((y_off+0.5)*self.pixel_size, self.distance) - numpy.arctan2((y_off-0.5)*self.pixel_size, self.distance)
-            omega = 4. * numpy.arcsin(numpy.sin(x_alpha/2.)*numpy.sin(y_alpha/2.))
-        return omega
+        a = b = self.pixel_size
+        A = x_off*self.pixel_size
+        B = y_off*self.pixel_size
+        d = self.distance
+        return (self.omega(2*(a+A), 2*(b+B), d) - self.omega(2*A, 2*(b+B),d) - self.omega(2*(a+A), 2*B, d) + self.omega(2*A, 2*B, d))/4
 
     def get_all_pixel_solid_angles(self, cx, cy):
         """
