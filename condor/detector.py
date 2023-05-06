@@ -363,38 +363,12 @@ class Detector:
             O["cy_xxx"] = condor.utils.resample.downsample_pos(cy, self._ny, self.binning)
         return O
 
-    def _omega(self, a, b, d):
-        """
-        Calculate the solid angle of a rectangular pixel with sides a, b at a distance of d
-        centered along the z axis
-
-        Follows the implementation of Solid Angle of a Rectangular Plate by Richard J. Mathar
-        https://vixra.org/pdf/2001.0603v1.pdf
-        """
-        alpha = a/(2*d)
-        beta = b/(2*d)
-        return 4*numpy.arccos(numpy.sqrt((1+alpha**2+beta**2)/((1+alpha**2)*(1+beta**2))))
-
-    def get_pixel_solid_angle(self, x_off=0., y_off=0.):
-        """
-        Get the solid angle for a pixel at position ``x_off``, ``y_off`` with respect to the beam center
-
-        Follows the implementation of Solid Angle of a Rectangular Plate by Richard J. Mathar
-        https://vixra.org/pdf/2001.0603v1.pdf
-        Kwargs:
-          :x_off: *x*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
-          :y_off: *y*-coordinate of the pixel position (center) in unit pixel with respect to the beam center (default 0.)
-        """
-        a = b = self.pixel_size
-        A = numpy.abs(x_off*self.pixel_size)
-        B = numpy.abs(y_off*self.pixel_size)
-        d = self.distance
-        return (self._omega(2*(a+A), 2*(b+B), d) - self._omega(2*A, 2*(b+B),d) - self._omega(2*(a+A), 2*B, d) + self._omega(2*A, 2*B, d))/4
-
     def get_all_pixel_solid_angles(self, cx, cy):
         """
         Return the solid angles of all detector pixels assuming a beam center at position (``cx``, ``cy``).
         
+        Using a formula similar to pyFAI. It does not take the square shape of the pixel into account,
+        only its area and incidence angle.
         Args:
           :cx (float): *x*-coordinate of the center position in unit pixel
 
@@ -403,7 +377,9 @@ class Detector:
         Y, X = numpy.meshgrid(numpy.float64(numpy.arange(self._ny))-cy,
                               numpy.float64(numpy.arange(self._nx))-cx,
                               indexing="ij")
-        return self.get_pixel_solid_angle(X, Y)
+        incidence = numpy.arctan(numpy.sqrt(((X+0.5)*self.pixel_size)**2+((Y+0.5)*self.pixel_size)**2)/self.distance)
+        self.omega = self.pixel_size**2/self.distance**2*numpy.cos(incidence)**3
+        return self.omega
     
     def _get_xy_max_dist(self, cx = None, cy = None, center_variation = False):
         dist_max = []
