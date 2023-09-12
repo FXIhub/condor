@@ -135,7 +135,7 @@ class Detector:
                  noise=None, noise_spread=None, noise_variation_n=None, noise_filename=None, noise_dataset=None,
                  cx=None, cy=None, center_variation=None, center_spread_x=None, center_spread_y=None, center_variation_n=None,
                  saturation_level=None, mask=None, mask_filename=None, mask_dataset=None, mask_is_cxi_bitmask=False, solid_angle_correction=True,
-                 nx=None, ny=None, binning=None):
+                 nx=None, ny=None, binning=None, flat_ewald_sphere=False):
 
         self.distance = distance
         self.pixel_size = float(pixel_size)
@@ -155,6 +155,7 @@ class Detector:
         self.saturation_level = saturation_level
         self.binning = binning
         self.solid_angle_correction = solid_angle_correction
+        self.flat_ewald_sphere = flat_ewald_sphere
 
     def get_conf(self):
         """
