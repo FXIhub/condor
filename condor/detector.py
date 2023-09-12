@@ -186,6 +186,7 @@ class Detector:
         conf["detector"]["mask"]               = self._mask.copy()
         conf["detector"]["mask_CXI_bitmask"]   = True
         conf["detector"]["solid_angle_correction"] = self.solid_angle_correction
+        conf["detector"]["flat_ewald_sphere"] = self.flat_ewald_sphere
         return conf
         
     def set_noise(self, noise=None, noise_spread=None, noise_variation_n=None, noise_filename=None, noise_dataset=None):
