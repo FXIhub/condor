@@ -363,6 +363,7 @@ class Detector:
         if self.binning is not None:
             O["cx_xxx"] = condor.utils.resample.downsample_pos(cx, self._nx, self.binning)
             O["cy_xxx"] = condor.utils.resample.downsample_pos(cy, self._ny, self.binning)
+        O["flat_ewald_sphere"] = self.flat_ewald_sphere
         return O
 
     def get_all_pixel_solid_angles(self, cx, cy):
