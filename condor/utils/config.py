@@ -213,7 +213,7 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None)
         s += "detector_center_x = %.12e;\n" % (D_detector["pixel_size"] * (D_detector["cx"] - (D_detector["nx"]-1)/2.))
         s += "detector_center_y = %.12e;\n" % (D_detector["pixel_size"] * (D_detector["cy"] - (D_detector["ny"]-1)/2.))
         if D_detector["flat_ewald_sphere"]:
-            s += "detector_spherical = 1\n"
+            s += "detector_spherical = 1;\n"
     else:
         s += "detector_center_x = 0;\n"
         s += "detector_center_y = 0;\n"
