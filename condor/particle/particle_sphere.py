@@ -100,7 +100,7 @@ class ParticleSphere(AbstractContinuousParticle):
         O["particle_model"] = "sphere"
         return O
 
-    def get_conf(sef):
+    def get_conf(self):
         """
         Get configuration in form of a dictionary. Another identically configured ParticleMap instance can be initialised by:
 
