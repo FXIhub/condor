@@ -182,22 +182,21 @@ def preproc_map_auto(map3d_raw, ed_water, ed_particle):#, water_layer=0.1):
     c = S0.min() + (S0.max()-S0.min())/2.
     S1 = S0[S0<c]
     S2 = S0[S0>=c]
-    v_water = scipy.stats.mode(S1)[0][0]
-    v_particle_min = scipy.stats.mode(S2)[0][0]
+    v_water = scipy.stats.mode(S1,keepdims=True)[0][0]
+    log_info(logger, "Water map threshold: %f" % v_water)
+    v_particle_min = scipy.stats.mode(S2,keepdims=True)[0][0]
     threshold = v_water + (v_particle_min - v_water)*0.1
     map3d_bin = mask * map3d_raw > threshold
     labeled_array, num_features = scipy.ndimage.measurements.label(map3d_bin)
     map3d_bin2 = labeled_array == labeled_array[N//2,N//2,N//2]
     map3d_bin_filled = scipy.ndimage.morphology.binary_fill_holes(map3d_bin2)
     v_particle = numpy.mean(map3d_raw[map3d_bin_filled])
-    ed_map3d = (ed_water + (map3d_raw-v_water)/(v_particle-v_water)*(ed_particle-ed_water))/ed_particle * map3d_bin_filled
-
-    #import h5py
-    #with h5py.File("/Users/hantke/test.h5","w") as f:
-    #    f["mask"] = mask
-    #    f["ed_map3d"] = ed_map3d
-    #    f["map3d_raw"] = map3d_raw
-    #    f["map3d_bin_filled"] = map3d_bin_filled
+    log_info(logger, "Particle map threshold: %f" % v_particle)
+    # Scale the map such that the water density corresponds to v_water and the particle density corresponds to v_particle
+    ed_map3d = (ed_water + (map3d_raw-v_water)/(v_particle-v_water)*(ed_particle-ed_water)) * map3d_bin_filled
+    # Divide everything by the particle electron density, as we'll use the refractive index of the particle later
+    # to convert the map to a scattering potential
+    ed_map3d /= ed_particle
     return ed_map3d
 
 def preproc_map_manual(map3d_raw, offset, factor):
