@@ -140,7 +140,7 @@ class ParticleMap(AbstractContinuousParticle):
         
         # Check for valid geometry
         if geometry not in ["icosahedron", "cube", "sphere", "spheroid", "custom"]:
-            log_and_raise_error(logger, "Cannot initialize %s because \'%s\' is not a valid argument for \'geometry\'." % (kwargs["geometry"], self.__class__.__name__))
+            log_and_raise_error(logger, "Cannot initialize %s because \'%s\' is not a valid argument for \'geometry\'." % (self.__class__.__name__, geometry))
             sys.exit(1)
         self.geometry = geometry
         
