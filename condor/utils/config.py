@@ -222,6 +222,7 @@ def _conf_to_spsim_opts(D_source,D_particle,D_detector,ndim=2,qn=None,qmax=None)
     s += "experiment_wavelength = %.12e;\n" % D_source["wavelength"]
     s += "experiment_beam_intensity = %.12e;\n" % D_particle["intensity"]
     s += "experiment_polarization = \"ignore\";\n" # polarization correction will be done in Condor if needed (see experiment.py)
+    s += "experiment_beam_fwhm = %.12e;\n" % D_source["focus_diameter"]
     #s += "use_cuda = 0;\n"
     intrinsic_rotation = condor.utils.rotation.Rotation(values=D_particle["extrinsic_quaternion"],formalism="quaternion")
     intrinsic_rotation.invert()
