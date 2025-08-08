@@ -58,7 +58,7 @@ from .log import log_and_raise_error,log_warning,log_info,log_debug
 
 def fetch_map(emd_id):
     url = "ftp://ftp.ebi.ac.uk/pub/databases/emdb/structures/EMD-%s/map/emd_%s.map.gz" % (str(emd_id),str(emd_id))
-    log_debug(logger, "Downloading file for EMDID %s from URL %s" % (emd_id, url))
+    log_info(logger, "Downloading file for EMDID %s from URL %s" % (emd_id, url))
     filename = "./emd_%s.map" % str(emd_id)
     response = urlopen(url)
     compressedFile = StringIO()
