@@ -32,15 +32,16 @@
 
 from __future__ import print_function, absolute_import # Compatibility with python 2 and 3
 try:
-    from urllib2 import urlopen
+    from urllib2 import urlopen # type: ignore
 except ImportError:
     from urllib.request import urlopen
 
 try:
-    from StringIO import StringIO ## for Python 2
-except ImportError:
     from io import BytesIO as StringIO ## for Python 3
-    
+except ImportError:
+    from StringIO import StringIO ## for Python 2 # type: ignore
+
+
 import gzip
 
 import numpy

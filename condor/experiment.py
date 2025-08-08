@@ -46,7 +46,6 @@ import condor.utils.config
 from condor.utils.pixelmask import PixelMask
 import condor.utils.sphere_diffraction
 import condor.utils.spheroid_diffraction
-import condor.utils.scattering_vector
 import condor.utils.resample
 from condor.utils.rotation import Rotation
 import condor.particle
@@ -512,7 +511,7 @@ class Experiment:
             else:
                 p = self.particles[particle_key]
             particle_diameter = p.diameter_mean
-        pN = utils.diffraction.nyquist_pixel_size(wavelength, detector_distance, particle_diameter)
+        pN = condor.utils.diffraction.nyquist_pixel_size(wavelength, detector_distance, particle_diameter)
         pD = self.detector.pixel_size
         ratio = pN/pD
         return ratio

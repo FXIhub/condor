@@ -498,7 +498,7 @@ class MaterialMap:
         self._shape = tuple(shape)
 
     def add_material(self, material, density_map):
-        if not isinstance(material, Material):
+        if not isinstance(material, AbstractMaterial):
             log_and_raise_error(logger, "Cannot add material %s. It is not an instance of Material." % str(material))
         if density_map.shape != self._shape:
             log_and_raise_error(logger, "Cannot add material. Density map has incompatible shape: %s. Should be %s." % (str(density_map.shape), str(self._shape)))
@@ -534,7 +534,7 @@ class MaterialMap:
         f = numpy.zeros(shape=self._shape, dtype=numpy.complex128)
         for mat,dmap in zip(self.materials, self.density_maps):
             f += mat.get_f(photon_wavelength)*dmap
-        return trans
+        return f
         
     def get_electron_density(self, photon_wavelength):
         ed = numpy.zeros(shape=self._shape, dtype=numpy.float64)
