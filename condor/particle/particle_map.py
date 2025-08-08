@@ -300,7 +300,8 @@ class ParticleMap(AbstractContinuousParticle):
         Args:
           :emd_id (str): EMD ID code.
         """
-        map3d, dx = condor.utils.emdio.fetch_map(emd_id)         
+        log_info(logger, "No automatic scaling of EM maps. If desired check ParticleMap.scale_bimodal_electron_density_map().")
+        map3d, dx = condor.utils.emdio.fetch_map(emd_id)
         self.set_custom_geometry_by_array(map3d, dx)
 
     def set_custom_geometry_by_mrcfile(self, filename):
@@ -309,6 +310,7 @@ class ParticleMap(AbstractContinuousParticle):
         Args:
           :filename (str): Filename of MRC file.
         """
+        log_info(logger, "No automatic scaling of EM maps. If desired check ParticleMap.scale_bimodal_electron_density_map().")
         map3d, dx = condor.utils.emdio.read_map(filename)
         self.set_custom_geometry_by_array(map3d, dx)
 
