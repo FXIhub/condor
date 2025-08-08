@@ -300,6 +300,7 @@ class ParticleMap(AbstractContinuousParticle):
         Args:
           :emd_id (str): EMD ID code.
         """
+
         map3d, dx = condor.utils.emdio.fetch_map(emd_id)        
         self.set_custom_geometry_by_array(map3d, dx)
         if not auto_scale:
@@ -326,7 +327,7 @@ class ParticleMap(AbstractContinuousParticle):
           :factor (float): Rescale factor of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
         """
         m,dx = self.get_current_map()
-        map3d = condor.utils.emdio.preproc_map_manual(m, offset=offset, factor=factor)
+        map3d = condor.utils.emdio.preproc_map_manual(m[0], offset=offset, factor=factor)
         self.set_custom_geometry_by_array(map3d, dx)
 
     def scale_bimodal_electron_density_map(self, light_material="water", heavy_material="protein"):
@@ -340,7 +341,7 @@ class ParticleMap(AbstractContinuousParticle):
         m,dx = self.get_current_map()
         ed_water = condor.utils.material.AtomDensityMaterial(material_type=light_material).get_electron_density()
         ed_particle = condor.utils.material.AtomDensityMaterial(material_type=heavy_material).get_electron_density()
-        map3d = condor.utils.emdio.preproc_map_auto(m, ed_water=ed_water, ed_particle=ed_particle)
+        map3d = condor.utils.emdio.preproc_map_auto(m[0], ed_water=ed_water, ed_particle=ed_particle)
         self.set_custom_geometry_by_array(map3d, dx)
 
     def get_new_dn_map(self, O, dx_required, dx_suggested, photon_wavelength):
