@@ -39,12 +39,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 import condor
-import condor.utils.log
-from condor.utils.log import log_and_raise_error,log_warning,log_info,log_debug
+from condor.utils.log import log_and_raise_error,log_info,log_debug
 
-from condor.utils.variation import Variation
 import condor.utils.spheroid_diffraction
-import condor.utils.diffraction
 import condor.utils.bodies
 
 import condor.utils.emdio
@@ -150,7 +147,7 @@ class ParticleMap(AbstractContinuousParticle):
         # Has effect only for spheroids
         self.flattening = flattening
 
-        # Init chache
+        # Init cache
         self._cache = {}
         self._dx_orig                = None
         self._map3d_orig             = None
@@ -297,61 +294,50 @@ class ParticleMap(AbstractContinuousParticle):
                 return 
         self.set_custom_geometry_by_array(map3d, dx)                
         
-    def set_custom_geometry_by_emd_id(self, emd_id, offset=None, factor=None):
+    def set_custom_geometry_by_emd_id(self, emd_id):
         """
         Fetch map from the EMD by id code.
-
-        The map will be preprocessed by applying an offset and rescaling and by padding the water background with zeros.
-
-        Finally, the avereage value of the map will be rescaled by the refractive index of the associated material.
-
         Args:
           :emd_id (str): EMD ID code.
-
-          :offset (float): Offset value of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
-
-          :factor (float): Rescale factor of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
         """
-        map3d, dx = condor.utils.emdio.fetch_map(emd_id)
-        if offset is None and factor is None:
-            ed_water = condor.utils.material.AtomDensityMaterial(material_type="water").get_electron_density()
-            if len(self.materials) > 1:
-                log_and_raise_error(logger, "More than one material defined. This is incompatible with automatic scaling of an EMD map.")
-                sys.exit(1)
-            ed_particle = self.materials[0].get_electron_density()
-            map3d = condor.utils.emdio.preproc_map_auto(map3d, ed_water=ed_water, ed_particle=ed_particle)
-        else:
-            map3d = condor.utils.emdio.perproc_map_manual(map3d, offset=offset, factor=factor)           
-        self.set_custom_geometry_by_array(map3d, dx)                
-        
-    def set_custom_geometry_by_mrcfile(self, filename, offset=None, factor=None):
+        map3d, dx = condor.utils.emdio.fetch_map(emd_id)         
+        self.set_custom_geometry_by_array(map3d, dx)
+
+    def set_custom_geometry_by_mrcfile(self, filename):
         """
         Read map from the MRC file (CCP4 file format, see http://www.ccp4.ac.uk/html/maplib.html).
-
-        The map will be preprocessed by applying an offset and rescaling and by padding the water background with zeros.
-
-        Finally, the avereage value of the map will be rescaled by the refractive index of the associated material.
-
         Args:
           :filename (str): Filename of MRC file.
-
-          :offset (float): Offset value of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
-
-          :factor (float): Rescale factor of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
         """
         map3d, dx = condor.utils.emdio.read_map(filename)
-        if offset is None and factor is None:
-            ed_water = condor.utils.material.AtomDensityMaterial(material_type="water").get_electron_density()
-            if len(self.materials) > 1:
-                log_and_raise_error(logger, "More than one material defined. This is incompatible with automatic scaling of an EMD map.")
-                sys.exit(1)
-            ed_particle = self.materials[0].get_electron_density()
-            map3d = condor.utils.emdio.preproc_map_auto(map3d, ed_water=ed_water, ed_particle=ed_particle)
-        else:
-            map3d = condor.utils.emdio.perproc_map_manual(map3d, offset=offset, factor=factor) 
-        self.set_custom_geometry_by_array(map3d, dx)                
+        self.set_custom_geometry_by_array(map3d, dx)
 
-        
+    def scale_and_offset_map_values(self, offset=None, factor=None):
+        """
+        The current map will be preprocessed by applying an offset and rescaling.
+
+        Args:
+          :offset (float): Offset value of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
+          :factor (float): Rescale factor of the map (MAP = (EM_DATA + OFFSET) X FACTOR)
+        """
+        m,dx = self.get_current_map()
+        map3d = condor.utils.emdio.preproc_map_manual(m, offset=offset, factor=factor)
+        self.set_custom_geometry_by_array(map3d, dx)
+
+    def scale_bimodal_electron_density_map(self, light_material="water", heavy_material="protein"):
+        """
+        Scale the current map by the electron density of two materials, e.g. water and protein
+        It assumes that the mode of the 50% lowest density part of the map corresponds to the 
+        electron density of the light material (by default water), and that the mode of the 50% highest
+        density part of the map corresponds to the electron density of the heavy material (by default protein).
+        It rescales the current map to fit the above assumption.
+        """
+        m,dx = self.get_current_map()
+        ed_water = condor.utils.material.AtomDensityMaterial(material_type=light_material).get_electron_density()
+        ed_particle = condor.utils.material.AtomDensityMaterial(material_type=heavy_material).get_electron_density()
+        map3d = condor.utils.emdio.preproc_map_auto(m, ed_water=ed_water, ed_particle=ed_particle)
+        self.set_custom_geometry_by_array(map3d, dx)
+
     def get_new_dn_map(self, O, dx_required, dx_suggested, photon_wavelength):
         """
         Return the a new refractive index map
