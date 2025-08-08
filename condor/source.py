@@ -182,7 +182,9 @@ class Source:
         return {"pulse_energy":self._get_next_pulse_energy(),
                 "wavelength":self.photon.get_wavelength(),
                 "photon_energy":self.photon.get_energy(),
-                "photon_energy_eV":self.photon.get_energy_eV()}
+                "photon_energy_eV":self.photon.get_energy_eV(),
+                "focus_diameter":self.profile.focus_diameter,
+                "polarization":self.polarization}
 
     def _get_next_pulse_energy(self):
         p = self._pulse_energy_variation.get(self.pulse_energy_mean)
