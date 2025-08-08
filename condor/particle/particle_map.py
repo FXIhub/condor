@@ -39,7 +39,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 import condor
-from condor.utils.log import log_and_raise_error,log_info,log_debug
+from condor.utils.log import log_and_raise_error,log_info,log_warning,log_debug
 
 import condor.utils.spheroid_diffraction
 import condor.utils.bodies
@@ -294,15 +294,18 @@ class ParticleMap(AbstractContinuousParticle):
                 return 
         self.set_custom_geometry_by_array(map3d, dx)                
         
-    def set_custom_geometry_by_emd_id(self, emd_id):
+    def set_custom_geometry_by_emd_id(self, emd_id, auto_scale=True):
         """
         Fetch map from the EMD by id code.
         Args:
           :emd_id (str): EMD ID code.
         """
-        log_info(logger, "No automatic scaling of EM maps. If desired check ParticleMap.scale_bimodal_electron_density_map().")
-        map3d, dx = condor.utils.emdio.fetch_map(emd_id)
+        map3d, dx = condor.utils.emdio.fetch_map(emd_id)        
         self.set_custom_geometry_by_array(map3d, dx)
+        if not auto_scale:
+            log_warning(logger, "No automatic scaling of EM maps. Using the maps without scaling leads to meaningless results. Check ParticleMap.scale_bimodal_electron_density_map().")
+        else:
+            self.scale_bimodal_electron_density_map()
 
     def set_custom_geometry_by_mrcfile(self, filename):
         """
@@ -310,7 +313,7 @@ class ParticleMap(AbstractContinuousParticle):
         Args:
           :filename (str): Filename of MRC file.
         """
-        log_info(logger, "No automatic scaling of EM maps. If desired check ParticleMap.scale_bimodal_electron_density_map().")
+        log_warning(logger, "No automatic scaling of MRC maps. If desired check ParticleMap.scale_bimodal_electron_density_map().")
         map3d, dx = condor.utils.emdio.read_map(filename)
         self.set_custom_geometry_by_array(map3d, dx)
 
@@ -361,6 +364,8 @@ class ParticleMap(AbstractContinuousParticle):
                 dn_i = mat_i.get_dn(photon_wavelength=photon_wavelength)
                 dn += m_i * dn_i
         else:
+            log_warning(logger, "No material defined. This assumes the input map is a refractive index map.")
+            log_warning(logger, "If the input map is electron density or atomic density the result will be nonsense!")
             dn = m[0]    
         return dn,dx
 
