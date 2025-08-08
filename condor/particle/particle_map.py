@@ -373,7 +373,7 @@ class ParticleMap(AbstractContinuousParticle):
         """
         Return the current map
         """
-        return self._map3d, self._dx
+        return self._cache["map3d"], self._cache["dx"]
 
     def get_original_map(self):
         """
