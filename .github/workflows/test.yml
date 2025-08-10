@@ -10,7 +10,7 @@ on:
     branches: [ master ]
 
 jobs:
-  dummy-build:
+  build:
 
     runs-on: ubuntu-latest
     strategy:
@@ -45,7 +45,7 @@ jobs:
     - name: Install libspimage
       run: |
         pip install numpy
-        sudo apt-get install libtiff-dev libpng-dev
+        sudo apt-get install libtiff-dev libpng-dev libhdf5-dev libgsl-dev libfftw3-dev swig libnfft3-dev
         git clone https://github.com/FXIhub/libspimage.git
         cd libspimage
         mkdir build
