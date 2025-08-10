@@ -1,0 +1,50 @@
+# pyproject.toml
+
+[build-system]
+# These are the build-time dependencies. numpy is required to get its include path.
+requires = ["setuptools>=61.0", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "condor"
+# The version is dynamic and will be read from condor/__init__.py by setuptools
+dynamic = ["version"]
+description = "Condor: Simulation of single particle X-ray diffraction patterns"
+readme = "README.rst"
+authors = [
+    { name = "Hantke, Max Felix", email = "hantke@xray.bmc.uu.se" },
+]
+license = "BSD-2-Clause"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+keywords = ["X-ray", "diffraction", "single", "particle"]
+
+# Define supported Python versions.
+# Corresponds to classifiers, excluding EOL versions where appropriate.
+requires-python = ">=3.8"
+
+# Runtime dependencies
+dependencies = [
+    "numpy",
+    "scipy",
+    "h5py",
+]
+
+[project.urls]
+Homepage = "https://github.com/FXIhub/condor"
+
+[project.scripts]
+condor = "condor.scripts.condor_script:main"
+
+[tool.setuptools]
+# Automatically find packages under the current directory
+packages = ["condor", "condor.utils", "condor.particle", "condor.scripts", "condor.data"]
+# This is equivalent to `package_data` and is often used with MANIFEST.in
+include-package-data = true
+
+[tool.setuptools.dynamic]
+# This tells setuptools how to find the dynamic version number
+version = {attr = "condor.__version__"}

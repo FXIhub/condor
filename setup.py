@@ -31,242 +31,72 @@
 # All variables are in SI units by default. Exceptions explicit by variable name.
 # -----------------------------------------------------------------------------------------------------
 
-# Always prefer setuptools over distutils
-from setuptools import setup, find_packages, Extension
-import setuptools.command.install
-import setuptools.command.develop
-# To use a consistent encoding
-from codecs import open
-# Other stuff
-import sys, os, fileinput
-from textwrap import dedent
+# setup.py (simplified)
+
+from setuptools import setup, Extension
+import os
 import numpy
-import re
 
-here = os.path.dirname(os.path.realpath(__file__))
+# --- C Extension Build Logic ---
 
-# Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf)
+# Enable using threads (requires nfft installation with threads)
+# This is now controlled ONLY by environment variables.
 ENABLE_THREADS = bool(os.environ.get("CONDOR_ENABLE_THREADS"))
-# Specify the include directory of the NFFT library
+
+# Specify the include/library directories of the NFFT library via environment variables
 NFFT_LIBRARY_DIR = os.environ.get("NFFT_LIBRARY_DIR")
-# Specify the include directory of the NFFT library
 NFFT_INCLUDE_DIR = os.environ.get("NFFT_INCLUDE_DIR")
 
+print(numpy.get_include())
+def get_extensions():
+    """Constructs the list of C extensions to build."""
 
-def get_property(prop):
-    result = re.search(
-        r'{}\s*=\s*[\'"]([^\'"]*)[\'"]'.format(prop),
-        open(os.path.join('condor', '__init__.py')).read()
+    # 1. Simple Icosahedron Extension
+    ext_icosahedron = Extension(
+        "condor.utils.icosahedron",
+        sources=[os.path.join('condor', 'utils', 'icosahedronmodule.c')],
+        include_dirs=[numpy.get_include()],
     )
-    return result.group(1)
 
-ADDITIONAL_USER_OPTIONS = [
-    ('enable-threads=', None, 'Enable using threads (requires nfft installation with threads (https://www-user.tu-chemnitz.de/~potts/paper/openmpNFFT.pdf). While command line options take precendence this option can also be set using the environment variable CONDOR_ENABLE_THREADS.'),
-    ('nfft-include-dir=', None, 'Specify the include directory of the NFFT library. While command line options take precendence this option can also be set using the environment variable NFFT_LIBRARY_DIR.'),
-    ('nfft-library-dir=', None, 'Specify the library directory of the NFFT library. While command line options take precendence this option can also be set using the environment variable NFFT_INCLUDE_DIR.'),
-]
-
-class _Command:
-    def _initialize_options(self):
-        self.enable_threads = None
-        self.nfft_include_dir = None
-        self.nfft_library_dir = None
-
-    def _make_ext_nfft(self):
-        if self.enable_threads is not None:
-            enable_threads = self.enable_threads
-        else:
-            enable_threads = ENABLE_THREADS
-
-        library_dirs = []
-        if self.nfft_library_dir is not None:
-            library_dirs = [self.nfft_library_dir]
-        elif NFFT_LIBRARY_DIR is not None:
-            library_dirs = [NFFT_LIBRARY_DIR]
-        
-        libraries = ["nfft3"] if not enable_threads else ["nfft3_threads" ,"fftw3_threads" ,"fftw3"]
-        
-        include_dirs = [numpy.get_include()]
-        if self.nfft_include_dir is not None:
-            include_dirs += [self.nfft_include_dir]
-        elif NFFT_INCLUDE_DIR is not None:
-            include_dirs += [NFFT_INCLUDE_DIR]
-
-        define_macros = [] if not enable_threads else [("ENABLE_THREADS", None)]
-        
-        runtime_library_dirs = library_dirs
-
-        extra_link_args = []
-        if library_dirs:
-            extra_link_args = ['-Wl']
-            for d in library_dirs:
-                extra_link_args[0] += ',-rpath,%s' % d
-                extra_link_args[0] += ',-L,%s' % d
-
-        return Extension(
-            "condor.utils.nfft",
-            sources=[os.path.join('condor', 'utils', 'nfftmodule.c')],
-            library_dirs=library_dirs,
-            libraries=libraries,
-            include_dirs=include_dirs,
-            define_macros=define_macros,
-            runtime_library_dirs=runtime_library_dirs,
-            extra_link_args=extra_link_args,
-        )
-        
-    def _run(self):
-        self.distribution.ext_modules.append(self._make_ext_nfft())
-        
-
-class InstallCommand(_Command, setuptools.command.install.install):
-    user_options = setuptools.command.install.install.user_options + ADDITIONAL_USER_OPTIONS
+    # 2. Conditional NFFT Extension
+    # This logic is preserved from the original setup.py but simplified
+    # to rely only on environment variables.
     
-    def initialize_options(self):
-        self._initialize_options()
-        try:
-            super().initialize_options() # Python 3
-        except TypeError:
-            setuptools.command.install.install.initialize_options(self) # Python 2
-    
-    def run(self):
-        self._run()
-        try:
-            super().run() # Python 3
-        except TypeError:
-            setuptools.command.install.install.run(self) # Python 2
+    library_dirs = [NFFT_LIBRARY_DIR] if NFFT_LIBRARY_DIR else []
+    include_dirs = [numpy.get_include()]
+    if NFFT_INCLUDE_DIR:
+        include_dirs.append(NFFT_INCLUDE_DIR)
 
+    if ENABLE_THREADS:
+        libraries = ["nfft3_threads", "fftw3_threads", "fftw3"]
+        define_macros = [("ENABLE_THREADS", None)]
+    else:
+        libraries = ["nfft3"]
+        define_macros = []
 
+    # The -rpath argument helps the dynamic linker find the shared libraries at runtime
+    extra_link_args = []
+    if library_dirs:
+        rpath_arg = "-Wl," + ",".join(f"-rpath,{d}" for d in library_dirs)
+        extra_link_args.append(rpath_arg)
+        
+    ext_nfft = Extension(
+        "condor.utils.nfft",
+        sources=[os.path.join('condor', 'utils', 'nfftmodule.c')],
+        library_dirs=library_dirs,
+        libraries=libraries,
+        include_dirs=include_dirs,
+        define_macros=define_macros,
+        runtime_library_dirs=library_dirs, # For some linkers
+        extra_link_args=extra_link_args,
+    )
 
-class DevelopCommand(_Command, setuptools.command.develop.develop):
-    user_options = setuptools.command.develop.develop.user_options + ADDITIONAL_USER_OPTIONS
+    return [ext_icosahedron, ext_nfft]
 
-    def initialize_options(self):
-        self._initialize_options()
-        try:
-            super().initialize_options() # Python 3
-        except TypeError:
-            setuptools.command.develop.develop.initialize_options(self) # Python 2
-    
-    def run(self):
-        self._run()
-        try:
-            super().run() # Python 3
-        except TypeError:
-            setuptools.command.develop.develop.run(self) # Python 2
-
-
-# Get the long description from the README file
-with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = f.read()
-    
+# --- Setup Call ---
+# The 'setup()' call is now very minimal.
+# All metadata is in pyproject.toml. Setuptools reads it automatically.
+# We only need to provide the extension modules here.
 setup(
-    cmdclass={
-        'install'  : InstallCommand,
-        'develop' : DevelopCommand,
-    },
-    
-    name='condor',
-
-    # Versions should comply with PEP440.  For a discussion on single-sourcing
-    # the version across setup.py and the project code, see
-    # https://packaging.python.org/en/latest/single_source_version.html
-    version=get_property('__version__'),
-
-    description='Condor: Simulation of single particle X-ray diffraction patterns',
-    long_description=long_description,
-
-    # The project's main homepage.
-    url='https://github.com/FXIhub/condor',
-
-    # Author details
-    author='Hantke, Max Felix',
-    author_email='hantke@xray.bmc.uu.se',
-
-    # Choose your license
-    license='BSD',
-
-    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
-    classifiers=[
-        # How mature is this project? Common values are
-        #   3 - Alpha
-        #   4 - Beta
-        #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
-
-        # Indicate who your project is intended for
-        'Intended Audience :: Science/Research',
-        'Topic :: Scientific/Engineering :: Physics',
-
-        # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: BSD License',
-
-        # Specify the Python versions you support here. In particular, ensure
-        # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-    ],
-
-    # What does your project relate to?
-    keywords='X-ray diffraction single particle',
-
-    # You can just specify the packages manually here if your project is
-    # simple. Or you can use find_packages().
-    packages = ['condor', 'condor.utils', 'condor.particle', 'condor.scripts', 'condor.data'],
-    package_dir = {'condor':'condor'},
-    ext_modules = [
-        Extension(
-            "condor.utils.icosahedron",
-            sources=[os.path.join('condor', 'utils' , 'icosahedronmodule.c')],
-            include_dirs=[numpy.get_include()],
-        )
-    ],
-    
-    # Alternatively, if you want to distribute just a my_module.py, uncomment 
-    # this:
-    #   py_modules=["my_module"],
-
-    # List run-time dependencies here.  These will be installed by pip when
-    # your project is installed. For an analysis of "install_requires" vs pip's
-    # requirements files see:
-    # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['numpy', 'scipy', 'h5py'],
-
-    # List additional groups of dependencies here (e.g. development
-    # dependencies). You can install these using the following syntax,
-    # for example:
-    # $ pip install -e .[dev,test]
-    #extras_require={
-    #    'dev': ['check-manifest'],
-    #    'test': ['coverage'],
-    #},
-
-    # If there are data files included in your packages that need to be
-    # installed, specify them here.  If using Python 2.6 or less, then these
-    # have to be included in MANIFEST.in as well.
-    package_data={
-        'condor': [
-            os.path.join('data', '*.dat'),
-        ]
-    },
-
-    # Although 'package_data' is the preferred approach, in some case you may
-    # need to place data files outside of your packages. See:
-    # http://docs.python.org/3.4/distutils/setupscript.html#installing-additional-files # noqa
-    # In this case, 'data_file' will be installed into '<sys.prefix>/my_data'
-    #data_files=[('my_data', ['data/data_file'])],
-
-    # To provide executable scripts, use entry points in preference to the
-    # "scripts" keyword. Entry points provide cross-platform support and allow
-    # pip to create the appropriate form of executable for the target platform.
-    entry_points={
-        'console_scripts': [
-            'condor=condor.scripts.condor_script:main',
-        ],
-    },
+    ext_modules=get_extensions(),
 )
