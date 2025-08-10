@@ -1,5 +1,6 @@
 #include <Python.h>
 #include "structmember.h"
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION // Recommended for modern code
 #include <numpy/arrayobject.h>
 #include <nfft3.h>
 #include <math.h>
@@ -33,8 +34,8 @@ static PyObject *nfft(PyObject *self, PyObject *args, PyObject *kwargs)
     return NULL;
   }
   
-  PyObject *coord_array = PyArray_FROM_OTF(coord_obj, NPY_DOUBLE, NPY_IN_ARRAY);
-  PyObject *in_array = PyArray_FROM_OTF(in_obj, NPY_COMPLEX128, NPY_IN_ARRAY);
+  PyObject *coord_array = PyArray_FROM_OTF(coord_obj, NPY_DOUBLE, NPY_ARRAY_IN_ARRAY);
+  PyObject *in_array = PyArray_FROM_OTF(in_obj, NPY_COMPLEX128, NPY_ARRAY_IN_ARRAY);
   if (coord_array == NULL || in_array == NULL) {
     Py_XDECREF(coord_array);
     Py_XDECREF(in_array);
