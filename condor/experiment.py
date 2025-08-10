@@ -318,9 +318,7 @@ class Experiment:
                 # Import here to make other functionalities of Condor independent of spsim
                 import spsim
                 # Check version
-                from distutils.version import StrictVersion
-                spsim_version_min = "0.1.0"
-                if not hasattr(spsim, "__version__") or StrictVersion(spsim.__version__) < StrictVersion(spsim_version_min):
+                if not hasattr(spsim, "__version__"):
                     log_and_raise_error(logger, "Your spsim version is too old. Please install the newest spsim version and try again.")
                     sys.exit(0)
                 # Create options struct
