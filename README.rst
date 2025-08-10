@@ -1,6 +1,7 @@
-.. image:: https://travis-ci.org/FXIhub/condor.svg?branch=master
-    :target: https://travis-ci.org/FXIhub/condor
+.. image:: https://github.com/FXIhub/condor/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/FXIhub/condor/actions/workflows/test.yml
     :alt: Build Status
+
 
 *Condor*: a simulation tool for flash X-ray imaging
 ***************************************************
