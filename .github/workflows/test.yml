@@ -68,7 +68,7 @@ jobs:
       shell: bash -l {0}
       run: |
         pip install numpy scipy h5py
-        pip install -e --no-build-isolation .
+        pip install --no-build-isolation -e .
     - name: Test with pytest
       shell: bash -l {0}
       run: |
